@@ -1,5 +1,6 @@
 const DEFAULT_QWEN_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+import { guardVisionIdentityFields } from "./prompt-injection-guard.mjs";
 
 const restaurantSchema = {
   type: "object",
@@ -364,7 +365,8 @@ function parseAndValidateExtraction(outputText, provider) {
   } catch (cause) {
     throw new VisionExtractionError({ code: "INVALID_MODEL_OUTPUT", message: `${provider} returned invalid JSON`, provider, kind: "invalid_json", cause });
   }
-  value = normalizeExtractionCandidate(value);
+  value = guardVisionIdentityFields(value).extraction;
+  value = guardVisionIdentityFields(normalizeExtractionCandidate(value)).extraction;
   const validation = validateExtraction(value);
   if (!validation.valid) {
     const error = new VisionExtractionError({ code: "INVALID_MODEL_OUTPUT", message: `${provider} returned data that failed schema validation`, provider, kind: "schema_invalid" });
