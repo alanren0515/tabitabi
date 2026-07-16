@@ -1,0 +1,420 @@
+[
+  {
+    "id": "tiktok-homes-pasta-ueno-001",
+    "sourceType": "tiktok_screenshot",
+    "query": "ホームズパスタ 上野店 東京都台東区上野4-8-9 OAKビル 2F",
+    "clues": {
+      "name": "ホームズパスタ",
+      "branch": "上野店",
+      "address": "東京都台東区上野4-8-9 OAKビル 2F",
+      "area": "上野",
+      "category": "パスタ"
+    },
+    "expected": {
+      "nameIncludes": "ホームズパスタ",
+      "addressIncludes": "上野"
+    },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-10T00:00:00+09:00",
+    "officialSources": [
+      "https://homespasta1986.com/shop/2184/",
+      "https://homespasta1986.com/news/2168/"
+    ],
+    "notes": "店名、上野分店和地址已经品牌官方店铺页与开店公告交叉确认；配置 Places 后再补充 place_id。"
+  },
+  {
+    "id": "text-rokkasen-shinjuku-002",
+    "sourceType": "text",
+    "query": "六歌仙 新宿本店",
+    "clues": {
+      "name": "六歌仙",
+      "branch": "新宿本店",
+      "area": "新宿"
+    },
+    "expected": {
+      "placeId": "ChIJeQiJANeMGGAR8zaGpVXXXz4",
+      "nameIncludes": "六歌仙",
+      "addressIncludes": "西新宿"
+    },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T16:06:00+09:00",
+    "officialSources": [
+      "https://rokkasen.co.jp/"
+    ],
+    "notes": "真实 Google Places 浏览器回归确认西口本店候选；官网与 Hot Pepper 页面存在，但没有把平台店铺页误判为预约直达路径。"
+  },
+  {
+    "id": "text-ichiran-shibuya-003",
+    "sourceType": "text",
+    "query": "一蘭 渋谷店 東京都渋谷区神南1-22-7",
+    "clues": { "name": "一蘭", "branch": "渋谷店", "address": "東京都渋谷区神南1-22-7", "area": "渋谷" },
+    "expected": { "nameIncludes": "一蘭", "addressIncludes": "神南" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T22:00:00+09:00",
+    "officialSources": ["https://ichiran.com/shop/tokyo/shibuya/"],
+    "notes": "一蘭官方渋谷店页面确认分店名与神南地址。"
+  },
+  {
+    "id": "text-afuri-harajuku-004",
+    "sourceType": "text",
+    "query": "AFURI 原宿 東京都渋谷区千駄ヶ谷3-63-1",
+    "clues": { "name": "AFURI", "branch": "原宿", "address": "東京都渋谷区千駄ヶ谷3-63-1", "area": "原宿" },
+    "expected": { "nameIncludes": "AFURI", "addressIncludes": "千駄ヶ谷" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T22:00:00+09:00",
+    "officialSources": ["https://www.afuri.com/findus/"],
+    "notes": "AFURI 官方店舗一覧确认原宿店、电话与千駄ヶ谷地址。"
+  },
+  {
+    "id": "text-gyukatsu-motomura-shinjuku-005",
+    "sourceType": "text",
+    "query": "牛かつもと村 新宿本店 歌舞伎町1-25-3",
+    "clues": { "name": "牛かつもと村", "branch": "新宿本店", "address": "東京都新宿区歌舞伎町1-25-3", "area": "新宿" },
+    "expected": { "nameIncludes": "牛かつ", "addressIncludes": "歌舞伎町" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T22:00:00+09:00",
+    "officialSources": ["https://www.gyukatsu-motomura.com/store/Shinjuku-Main_Store"],
+    "notes": "品牌官方新宿本店页面确认该分店；地址片段用于防止匹配到其他新宿门店。"
+  },
+  {
+    "id": "text-tsurutontan-roppongi-006",
+    "sourceType": "text",
+    "query": "つるとんたん 六本木 東京都港区六本木7-8-6",
+    "clues": { "name": "つるとんたん", "branch": "六本木", "address": "東京都港区六本木7-8-6", "area": "六本木" },
+    "expected": { "nameAnyOf": ["つるとんたん", "TsuruTonTan"], "addressIncludes": "六本木" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T22:00:00+09:00",
+    "officialSources": ["https://www.tsurutontan.co.jp/roppongi/"],
+    "notes": "官方六本木页面确认迁址后的7丁目8-6地址，并直接链接 TableCheck。"
+  },
+  {
+    "id": "text-sushizanmai-tsukiji-007",
+    "sourceType": "text",
+    "query": "すしざんまい 本店 東京都中央区築地4-11-9",
+    "clues": { "name": "すしざんまい", "branch": "本店", "address": "東京都中央区築地4-11-9", "area": "築地" },
+    "expected": { "nameIncludes": "すしざんまい", "addressIncludes": "築地" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T22:00:00+09:00",
+    "officialSources": ["https://www.kiyomura.co.jp/store/detail/1?vm=r"],
+    "notes": "品牌官方本店页面与築地场外市场官方目录确认本店。"
+  },
+  {
+    "id": "text-rokurinsha-tokyo-008",
+    "sourceType": "text",
+    "query": "六厘舎 東京駅 東京ラーメンストリート 丸の内1-9-1",
+    "clues": { "name": "六厘舎", "branch": "東京駅", "address": "東京都千代田区丸の内1-9-1", "area": "東京駅" },
+    "expected": { "nameIncludes": "六厘舎", "addressIncludes": "丸の内" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T22:00:00+09:00",
+    "officialSources": ["https://www.tokyoeki-1bangai.co.jp/shop/detail/?cd=000044"],
+    "notes": "东京站一番街官方店铺指南确认东京拉面街门店、电话、营业时间与丸之内地址。"
+  },
+  {
+    "id": "text-ichiran-namba-009",
+    "sourceType": "text",
+    "query": "一蘭 なんば御堂筋店 大阪市中央区心斎橋筋2-4-2",
+    "clues": { "name": "一蘭", "branch": "なんば御堂筋店", "address": "大阪府大阪市中央区心斎橋筋2-4-2", "area": "なんば" },
+    "expected": { "nameIncludes": "一蘭", "addressIncludes": "心斎橋筋" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T23:00:00+09:00",
+    "officialSources": ["https://ichiran.com/np/shop/kinki/namba-midosuji.html"],
+    "notes": "一蘭官方页面确认大阪なんば御堂筋店及心斎橋筋地址；用于跨城市同品牌分店测试。"
+  },
+  {
+    "id": "text-ippudo-kyoto-porta-010",
+    "sourceType": "text",
+    "query": "一風堂 京都ポルタ店 京都市下京区東塩小路町902",
+    "clues": { "name": "一風堂", "branch": "京都ポルタ店", "address": "京都府京都市下京区東塩小路町902", "area": "京都駅" },
+    "expected": { "nameAnyOf": ["一風堂", "IPPUDO"], "addressIncludes": "東塩小路町" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T23:00:00+09:00",
+    "officialSources": ["https://stores.ippudo.com/1095", "https://www.porta.co.jp/shopguide/detail/156"],
+    "notes": "一風堂官方店铺页和京都Porta官方目录共同确认京都站门店。"
+  },
+  {
+    "id": "text-shinshin-tenjin-011",
+    "sourceType": "text",
+    "query": "博多らーめん ShinShin 天神本店 福岡市中央区天神3-2-19",
+    "clues": { "name": "博多らーめん ShinShin", "branch": "天神本店", "address": "福岡県福岡市中央区天神3-2-19", "area": "天神" },
+    "expected": { "nameAnyOf": ["ShinShin", "Shin-Shin", "博多らーめん"], "addressIncludes": "天神" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T23:00:00+09:00",
+    "officialSources": ["https://www.hakata-shinshin.com/tenpo_tenjin"],
+    "notes": "品牌官方天神本店页面确认地址、电话与交通；覆盖英文品牌拼写变体。"
+  },
+  {
+    "id": "text-shingen-sapporo-012",
+    "sourceType": "text",
+    "query": "らーめん信玄 南6条店 札幌市中央区南6条西8丁目",
+    "clues": { "name": "らーめん信玄", "branch": "南6条店", "address": "北海道札幌市中央区南6条西8丁目", "area": "札幌" },
+    "expected": { "nameIncludes": "信玄", "addressIncludes": "南6条西8" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T23:00:00+09:00",
+    "officialSources": ["https://www.susukino.gr.jp/tabe-dokoro/shop-detail.php?sid=86"],
+    "notes": "すすきの地区官方店铺目录确认南6条店、电话、营业时间与地址。"
+  },
+  {
+    "id": "text-houraiken-nagoya-013",
+    "sourceType": "text",
+    "query": "あつた蓬莱軒 本店 名古屋市熱田区神戸町503",
+    "clues": { "name": "あつた蓬莱軒", "branch": "本店", "address": "愛知県名古屋市熱田区神戸町503", "area": "名古屋" },
+    "expected": { "nameIncludes": "蓬莱軒", "addressIncludes": "神戸町" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T23:00:00+09:00",
+    "officialSources": ["https://www.houraiken.com/access.html"],
+    "notes": "品牌官方访问页确认本店与神戸町503地址，并区分神宮店和松坂屋店。"
+  },
+  {
+    "id": "text-kushikatsu-daruma-shinsekai-014",
+    "sourceType": "text",
+    "query": "串かつだるま 新世界総本店 大阪市浪速区恵美須東2-3-9",
+    "clues": { "name": "串かつだるま", "branch": "新世界総本店", "address": "大阪府大阪市浪速区恵美須東2-3-9", "area": "新世界" },
+    "expected": { "nameAnyOf": ["串かつだるま", "串カツだるま"], "addressIncludes": "恵美須東" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-12T23:00:00+09:00",
+    "officialSources": ["https://www.kushikatu-daruma.com/location/shinsekai"],
+    "notes": "官方新世界総本店页面明确地址且标注预约不可；用于不可预约规则的官方证据场景。"
+  },
+  {
+    "id": "text-kurasushi-asakusa-rox-015",
+    "sourceType": "text",
+    "query": "くら寿司 グローバル旗艦店 浅草ROX 東京都台東区浅草1-25-15",
+    "clues": { "name": "くら寿司", "branch": "グローバル旗艦店 浅草ROX", "address": "東京都台東区浅草1-25-15 浅草ROX4F", "area": "浅草" },
+    "expected": { "nameAnyOf": ["くら寿司", "無添くら寿司"], "addressIncludes": "浅草1-25-15" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T14:00:00+09:00",
+    "officialSources": ["https://shop.kurasushi.co.jp/detail/530"],
+    "notes": "くら寿司官方门店页确认浅草ROX全球旗舰店、浅草1-25-15与ROX 4F；覆盖商场楼层地址。"
+  },
+  {
+    "id": "text-katsugyu-gion-yasaka-016",
+    "sourceType": "text",
+    "query": "牛カツ京都勝牛 祇園八坂店 京都市東山区清井町492-19",
+    "clues": { "name": "牛カツ京都勝牛", "branch": "祇園八坂店", "address": "京都府京都市東山区清井町492-19", "area": "祇園" },
+    "expected": { "nameAnyOf": ["牛カツ京都勝牛", "京都勝牛"], "addressIncludes": "清井町492-19" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T14:00:00+09:00",
+    "officialSources": ["https://gyukatsu-kyotokatsugyu.com/store/gionyasaka"],
+    "notes": "品牌官方门店页确认祇園八坂店、清井町492-19、电话与营业时间。"
+  },
+  {
+    "id": "text-torikizoku-shibuya-inokashira-017",
+    "sourceType": "text",
+    "query": "鳥貴族 渋谷井の頭通り店 東京都渋谷区宇田川町31-3",
+    "clues": { "name": "鳥貴族", "branch": "渋谷井の頭通り店", "address": "東京都渋谷区宇田川町31-3 第3田中ビル3階", "area": "渋谷" },
+    "expected": { "nameIncludes": "鳥貴族", "addressIncludes": "宇田川町31-3" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T14:00:00+09:00",
+    "officialSources": ["https://map.torikizoku.co.jp/detail/181/"],
+    "notes": "鳥貴族官方门店页确认渋谷井の頭通り店与宇田川町31-3；附近有多家同品牌门店，用于高密度分店测试。"
+  },
+  {
+    "id": "text-yoshinoya-himeyuri-okinawa-018",
+    "sourceType": "text",
+    "query": "吉野家 ひめゆり通り店 沖縄県那覇市壺屋2-6-5",
+    "clues": { "name": "吉野家", "branch": "ひめゆり通り店", "address": "沖縄県那覇市壺屋2-6-5", "area": "那覇" },
+    "expected": { "nameIncludes": "吉野家", "addressIncludes": "壺屋2-6-5" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T14:00:00+09:00",
+    "officialSources": ["https://stores.yoshinoya.com/yoshinoya/spot/detail?code=ysn_059711"],
+    "notes": "吉野家官方门店页确认冲绳那霸ひめゆり通り店与壺屋2-6-5；扩展到九州以南区域。"
+  },
+  {
+    "id": "text-lucky-pierrot-bayarea-019",
+    "sourceType": "text",
+    "query": "ラッキーピエロ ベイエリア本店 函館市末広町23-18",
+    "clues": { "name": "ラッキーピエロ", "branch": "ベイエリア本店", "address": "北海道函館市末広町23-18", "area": "函館" },
+    "expected": { "nameIncludes": "ラッキーピエロ", "addressIncludes": "末広町23-18" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T15:00:00+09:00",
+    "officialSources": ["https://luckypierrot.jp/shop/bayarea/"],
+    "notes": "品牌官方页面确认第一号店贝イエリア本店、函馆末广町23-18及电话；覆盖地方罗马字片假名品牌。"
+  },
+  {
+    "id": "text-morimori-omicho-kanazawa-020",
+    "sourceType": "text",
+    "query": "もりもり寿し 近江町店 金沢市青草町88 近江町市場",
+    "clues": { "name": "もりもり寿し", "branch": "近江町店", "address": "石川県金沢市青草町88 近江町市場内", "area": "金沢" },
+    "expected": { "nameAnyOf": ["もりもり寿し", "もりもり寿司"], "addressIncludes": "青草町88" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T15:00:00+09:00",
+    "officialSources": ["https://www.pref.ishikawa.jp/nousan/jibamono/gurume/guide/shop/146.html"],
+    "notes": "石川县官方地场美食目录确认近江町市场内门店、青草町88、电话与营业时间。"
+  },
+  {
+    "id": "text-micchan-hatchobori-hiroshima-021",
+    "sourceType": "text",
+    "query": "お好み焼みっちゃん総本店 八丁堀本店 広島市中区八丁堀6-7",
+    "clues": { "name": "お好み焼みっちゃん総本店", "branch": "八丁堀本店", "address": "広島県広島市中区八丁堀6-7 チュリス八丁堀1F", "area": "広島" },
+    "expected": { "nameAnyOf": ["みっちゃん総本店", "お好み焼みっちゃん"], "addressIncludes": "八丁堀6-7" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T15:00:00+09:00",
+    "officialSources": ["https://www.okonomi.co.jp/shop.html"],
+    "notes": "品牌官方门店列表确认八丁堀本店、八丁堀6-7与1F；同时明确堂食不可预约，仅外带可预约。"
+  },
+  {
+    "id": "text-mujyaki-tenmonkan-kagoshima-022",
+    "sourceType": "text",
+    "query": "天文館むじゃき 本店 白熊菓琲 鹿児島市千日町5-8",
+    "clues": { "name": "天文館むじゃき", "branch": "本店 白熊菓琲", "address": "鹿児島県鹿児島市千日町5-8 天文館むじゃきビル1F", "area": "鹿児島" },
+    "expected": { "nameAnyOf": ["天文館むじゃき", "白熊菓琲"], "addressIncludes": "千日町5-8" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T15:00:00+09:00",
+    "officialSources": ["https://mujyaki.co.jp/business-information/"],
+    "notes": "品牌官方营业页面确认天文馆本店1F白熊菓琲、千日町5-8、电话及季节性营业提醒。"
+  },
+  {
+    "id": "text-udon-baka-ichidai-takamatsu-023",
+    "sourceType": "text",
+    "query": "手打十段 うどんバカ一代 高松市多賀町1-6-7",
+    "clues": { "name": "手打十段 うどんバカ一代", "branch": "", "address": "香川県高松市多賀町1-6-7", "area": "高松" },
+    "expected": { "nameAnyOf": ["うどんバカ一代", "手打十段"], "addressIncludes": "多賀町1-6-7" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T16:00:00+09:00",
+    "officialSources": ["https://www.udonbakaichidai.co.jp/company.html"],
+    "notes": "品牌官方店铺介绍确认手打十段うどんバカ一代、多贺町1-6-7、电话与营业时间；扩展四国覆盖。"
+  },
+  {
+    "id": "text-bandai-soba-niigata-024",
+    "sourceType": "text",
+    "query": "名物 万代そば バスセンターのカレー 新潟市中央区万代1-6-1",
+    "clues": { "name": "名物 万代そば", "branch": "バスセンター", "address": "新潟県新潟市中央区万代1-6-1 バスセンタービル1F", "area": "新潟" },
+    "expected": { "nameAnyOf": ["万代そば", "名物 万代そば"], "addressIncludes": "万代1-6-1" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T16:00:00+09:00",
+    "officialSources": ["https://bandaicity.com/shop/", "https://www.nvcb.or.jp/feature/bandaisoba"],
+    "notes": "万代城官方商店页与新潟市官方观光指南共同确认巴士中心1F万代そば及万代1-6-1；覆盖菜名比店名更知名的情况。"
+  },
+  {
+    "id": "text-irohado-zenkoji-nagano-025",
+    "sourceType": "text",
+    "query": "いろは堂 善光寺仲見世店 長野市元善町486",
+    "clues": { "name": "いろは堂", "branch": "善光寺仲見世店", "address": "長野県長野市元善町486", "area": "善光寺" },
+    "expected": { "nameIncludes": "いろは堂", "addressIncludes": "元善町486" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T16:00:00+09:00",
+    "officialSources": ["https://irohado.com/pages/nakamise"],
+    "notes": "品牌官方门店页确认善光寺仲见世店、元善町486及外带专门店属性。"
+  },
+  {
+    "id": "text-katsuretsutei-shinshigai-kumamoto-026",
+    "sourceType": "text",
+    "query": "勝烈亭 新市街本店 熊本市中央区新市街8-18",
+    "clues": { "name": "勝烈亭", "branch": "新市街本店", "address": "熊本県熊本市中央区新市街8-18", "area": "熊本" },
+    "expected": { "nameIncludes": "勝烈亭", "addressIncludes": "新市街8-18" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T16:00:00+09:00",
+    "officialSources": ["https://hayashi-sangyo.jp/shops/"],
+    "notes": "品牌官方店铺列表确认新市街本店、新市街8-18、电话与营业时间；扩展熊本覆盖。"
+  },
+  {
+    "id": "text-rikyu-sendai-west-027",
+    "sourceType": "text",
+    "query": "牛たん炭焼 利久 西口本店 仙台市青葉区中央1-6-1",
+    "clues": { "name": "牛たん炭焼 利久", "branch": "西口本店", "address": "宮城県仙台市青葉区中央1-6-1 Herb SENDAIビル5F", "area": "仙台" },
+    "expected": { "nameAnyOf": ["牛たん炭焼 利久", "利久"], "addressIncludes": "中央1-6-1" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T17:00:00+09:00",
+    "officialSources": ["https://corp.rikyu-gyutan.co.jp/shop/rikyu/113/"],
+    "notes": "品牌官方门店页确认仙台西口本店、中央1-6-1、Herb SENDAI 5F与预约入口；扩展东北覆盖。"
+  },
+  {
+    "id": "text-ogura-honten-miyazaki-028",
+    "sourceType": "text",
+    "query": "おぐら本店 チキン南蛮 宮崎市橘通東3-4-24",
+    "clues": { "name": "おぐら", "branch": "本店", "address": "宮崎県宮崎市橘通東3-4-24", "area": "宮崎" },
+    "expected": { "nameAnyOf": ["おぐら本店", "味のおぐら"], "addressIncludes": "橘通東3-4-24" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T17:00:00+09:00",
+    "officialSources": ["https://www.miyazaki-city.tourism.or.jp/feature/chicken_nanban"],
+    "notes": "宫崎市官方观光页确认チキン南蛮名店おぐら本店、橘通东3-4-24、电话与营业时间。"
+  },
+  {
+    "id": "text-ajinosaaporo-onishi-aomori-029",
+    "sourceType": "text",
+    "query": "味の札幌 大西 味噌カレー牛乳ラーメン 青森市古川1-15-6",
+    "clues": { "name": "味の札幌 大西", "branch": "", "address": "青森県青森市古川1-15-6 大西クリエイトビル1F", "area": "青森" },
+    "expected": { "nameAnyOf": ["味の札幌 大西", "味の札幌大西"], "addressIncludes": "古川1-15-6" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T17:00:00+09:00",
+    "officialSources": ["https://aomori-tourism.com/feature/detail_138.html"],
+    "notes": "青森县官方观光站确认味の札幌大西、古川1-15-6、电话及当前营业说明；覆盖菜名与店名混合查询。"
+  },
+  {
+    "id": "text-toyoken-beppu-030",
+    "sourceType": "text",
+    "query": "レストラン東洋軒 とり天 別府市石垣東7-8-22",
+    "clues": { "name": "レストラン東洋軒", "branch": "", "address": "大分県別府市石垣東7-8-22", "area": "別府" },
+    "expected": { "nameAnyOf": ["レストラン東洋軒", "東洋軒"], "addressIncludes": "石垣東7-8-22" },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-13T17:00:00+09:00",
+    "officialSources": ["https://cm.visit-oita.jp/other/downloads/b92fd8da-30ad-49b5-b03a-6bfe45089e3c/"],
+    "notes": "大分县官方观光资料确认别府とり天发祥店东洋轩、石垣东7-8-22、电话及营业时间。"
+  },
+  {
+    "id": "tiktok-nikulemon-ueno-031",
+    "sourceType": "tiktok_screenshot",
+    "query": "肉ときどきレモンサワー。 上野駅前店 東京都台東区上野6-13-2 渡辺上野ビル 4F",
+    "clues": {
+      "name": "肉ときどきレモンサワー。",
+      "branch": "上野駅前店",
+      "address": "東京都台東区上野6-13-2 渡辺上野ビル 4F",
+      "area": "上野",
+      "nearestStation": "上野駅",
+      "category": "居酒屋"
+    },
+    "expected": {
+      "placeId": "ChIJ806UkPyPGGAR4sgKTsaallQ",
+      "nameIncludes": "肉ときどきレモンサワー",
+      "addressIncludes": "上野6-13-2"
+    },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-14T14:48:00+09:00",
+    "officialSources": ["https://store.gosso.co.jp/detail/nikulemon_ueno/"],
+    "notes": "用户提供的公开 TikTok 截图（帖子约发布于2026-06-24）在请求内完成真实 Qwen、Google Places 与官网核验；评测集未保存原图、公开帖子 URL、创作者账号、标题或互动数据。"
+  },
+  {
+    "id": "instagram-jincook-kanda-032",
+    "sourceType": "instagram_screenshot",
+    "query": "カリー屋 ジンコック 神保町",
+    "clues": {
+      "name": "カリー屋 ジンコック",
+      "branch": "",
+      "address": "",
+      "area": "神保町",
+      "nearestStation": "",
+      "category": "カレー"
+    },
+    "expected": {
+      "placeId": "ChIJtZ-j77GNGGARFWePKILzQP4",
+      "nameIncludes": "ジンコック",
+      "addressIncludes": "神田須田町1"
+    },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-14T15:08:00+09:00",
+    "officialSources": ["https://kanda-curry.com/%E3%82%B8%E3%83%B3%E3%82%B3%E3%83%83%E3%82%AF/"],
+    "notes": "用户提供 Instagram 截图并补充‘神保町’；截图只显示店名与帖子观点。Google Places、食べログ和神田カレーグランプリ店铺资料共同确认唯一门店位于神田须田町1-2-3、最近为淡路町/小川町。神田カレーグランプリ是地区活动主办方资料，不被当作餐厅官方预约规则。评测集未保存原图、创作者账号或互动数据。"
+  },
+  {
+    "id": "tiktok-beef-men-tobu-nerima-033",
+    "sourceType": "tiktok_screenshot",
+    "query": "ビーフメン東武練馬 東武練馬駅",
+    "clues": {
+      "name": "ビーフメン東武練馬",
+      "branch": "",
+      "address": "",
+      "area": "",
+      "nearestStation": "東武練馬駅",
+      "category": "油そば専門店"
+    },
+    "expected": {
+      "placeId": "ChIJQXtsXQDtGGAR-2ubeGrTu14",
+      "nameIncludes": "BEEF-MEN",
+      "addressIncludes": "徳丸3"
+    },
+    "verificationStatus": "confirmed",
+    "confirmedAt": "2026-07-14T18:32:00+09:00",
+    "officialSources": ["https://www.instagram.com/beef_men29/"],
+    "notes": "真实 TikTok 截图只可靠显示搜索词、油そば类型与东武练马站，正文和账号被主动遮挡。Qwen 生成的建筑残片已从地址字段移除；Google Places、当前食べログ店铺资料及其标注的官方 Instagram 共同确认 BEEF-MEN 位于板桥区德丸3-1-3。评测集未保存原图、创作者账号、遮挡内容或互动数据。"
+  }
+]

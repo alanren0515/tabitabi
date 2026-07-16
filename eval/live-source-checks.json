@@ -1,0 +1,34 @@
+[
+  {
+    "id": "mk-sasebo-daito-temporary-closure-20260713",
+    "placeId": "ChIJncpzrQSXajUR4ID-9Tq9e5c",
+    "restaurant": "ＭＫレストラン 佐世保大塔店",
+    "checkedAt": "2026-07-13T05:14:45.891Z",
+    "officialSource": "https://store.mkrestaurants.co.jp/b/mkrestaurants/info/70007/",
+    "googleBusinessStatus": "CLOSED_TEMPORARILY",
+    "officialBusinessStatus": "CLOSED_TEMPORARILY",
+    "recommendation": "temporarily_unavailable",
+    "confidence": "high",
+    "primaryActionProvider": "official_website",
+    "thirdPartyBookingLinkStillPresent": "https://www.hotpepper.jp/strJ003298732/yoyaku/hpds/",
+    "bookingLinkSuppressedAsPrimary": true,
+    "notes": "真实 Places 详情和已核验官网同时显示临时休业。官网仍链接 Hot Pepper 预约路径，但最终主行动保持为核对官网状态。Hot Pepper API 返回的同名旧地址 enrichment 已被拒绝。"
+  },
+  {
+    "id": "tsurutontan-roppongi-relocation-20260713",
+    "placeId": "ChIJcZmGAZuLGGARFH9qHiK5xVg",
+    "restaurant": "TsuruTonTan UDON NOODLE Brasserie 六本木",
+    "checkedAt": "2026-07-13T05:24:22.172Z",
+    "oldAddressInput": "東京都港区六本木3-14-12",
+    "currentGoogleAddress": "〒106-0032 東京都港区六本木７丁目８−６ アクソール六本木 7F",
+    "officialRelocationNotice": "https://www.tsurutontan.co.jp/news/news-75/",
+    "officialCurrentStorePage": "https://www.tsurutontan.co.jp/shop/roppongi/",
+    "oldAddressReference": "https://tabelog.com/tokyo/A1307/A130701/13001859/dtlmap/",
+    "recommendation": "recommended",
+    "confidence": "high",
+    "primaryActionProvider": "tablecheck",
+    "addressConflictResolvedByOfficial": true,
+    "currentBookingLink": "https://www.tablecheck.com/ja/shops/tsurutontan-roppongi/reserve",
+    "notes": "真实 Places、官方迁址公告和当前官方门店页确认该店已于 2024-09-01 迁至アクソール六本木7F。旧址输入会显示迁址警告；当前官网直接链接的 TableCheck 入口仍可作为主行动，但要求用户先核对现址与分店。"
+  }
+]

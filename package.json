@@ -1,0 +1,23 @@
+{
+  "name": "tabitabi-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "audit": "node scripts/start-audit-workbench.mjs",
+    "audit:mobile": "node scripts/start-audit-workbench.mjs --lan",
+    "dev:static": "python3 -m http.server 4173",
+    "test": "node --test",
+    "eval:candidates": "node scripts/evaluate-candidates.mjs",
+    "eval:decisions": "node scripts/evaluate-decisions.mjs",
+    "eval:platform-urls": "node scripts/check-platform-urls.mjs",
+    "eval:platform-navigation": "node scripts/check-platform-navigation-audits.mjs",
+    "eval:validate": "node scripts/validate-eval-cases.mjs",
+    "eval:release-gate": "node scripts/release-gate.mjs",
+    "metrics:summary": "node scripts/summarize-metrics.mjs",
+    "pilot:gate": "node scripts/pilot-gate.mjs",
+    "status": "node scripts/project-status.mjs"
+  }
+}

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#18231f" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="/src/audit-workbench.css" />
+    <title>TabiTabi 本地发布审计</title>
+  </head>
+  <body>
+    <header class="audit-header">
+      <div><span>LOCAL RELEASE AUDIT</span><h1>TabiTabi 审计工作台</h1></div>
+      <p>仅用于受控本地审计；手机模式只在可信 Wi-Fi 使用。原始截图不要写入评估文件。</p>
+    </header>
+    <main id="audit-app"><div class="loading">正在读取评估数据…</div></main>
+    <div id="audit-toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/src/audit-workbench.js"></script>
+  </body>
+</html>

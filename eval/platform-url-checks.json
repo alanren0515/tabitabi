@@ -1,0 +1,162 @@
+[
+  {
+    "id": "hotpepper-listing-tarumi-20260713",
+    "scope": "url_shape_only",
+    "provider": "hotpepper",
+    "url": "https://www.hotpepper.jp/strJ001279836/",
+    "expectedCapability": "platform_listing",
+    "checkedAt": "2026-07-13T16:30:00+09:00",
+    "evidenceUrl": "https://www.hotpepper.jp/strJ001279836/",
+    "notes": "公开店铺页；页面存在不等于 TabiTabi 可以声明预约可用。"
+  },
+  {
+    "id": "hotpepper-booking-tarumi-20260713",
+    "scope": "url_shape_only",
+    "provider": "hotpepper",
+    "url": "https://www.hotpepper.jp/strJ001279836/yoyaku/hpds/",
+    "expectedCapability": "provider_booking_flow",
+    "checkedAt": "2026-07-13T16:30:00+09:00",
+    "evidenceUrl": "https://www.hotpepper.jp/strJ001279836/",
+    "notes": "店铺公开页明确列出该预约路径；仍不推断即时确认、库存或最终成立。"
+  },
+  {
+    "id": "tabelog-listing-tsurutontan-20260713",
+    "scope": "url_shape_only",
+    "provider": "tabelog",
+    "url": "https://tabelog.com/tokyo/A1307/A130701/13001859/",
+    "expectedCapability": "platform_listing",
+    "checkedAt": "2026-07-13T16:30:00+09:00",
+    "evidenceUrl": "https://tabelog.com/tokyo/A1307/A130701/13001859/",
+    "notes": "普通店铺页保持 listing。"
+  },
+  {
+    "id": "tabelog-request-guide-20260713",
+    "scope": "url_shape_only",
+    "provider": "tabelog",
+    "url": "https://tabelog.com/ai_request_booking/guide/index",
+    "expectedCapability": "provider_booking_flow",
+    "checkedAt": "2026-07-13T16:30:00+09:00",
+    "evidenceUrl": "https://tabelog.com/ai_request_booking/guide/index",
+    "notes": "官方说明该流程由平台联系餐厅且可能不成立；不是具体餐厅审计。"
+  },
+  {
+    "id": "tabelog-current-booking-tsurutontan-20260716",
+    "scope": "url_shape_only",
+    "provider": "tabelog",
+    "url": "https://tabelog.com/booking/form/new?member=2&rcd=13299475&visit_date=20260716&visit_time=1900",
+    "expectedCapability": "online_reservation_flow",
+    "checkedAt": "2026-07-16T07:20:00+09:00",
+    "evidenceUrl": "https://tabelog.com/tokyo/A1307/A130701/13299475/",
+    "notes": "当前公开门店页的预约按钮使用 /booking/form/new；识别为网络预约流程，但不声称有位或预约已经成立。"
+  },
+  {
+    "id": "tablecheck-tsurutontan-roppongi-20260713",
+    "scope": "url_shape_only",
+    "provider": "tablecheck",
+    "url": "https://www.tablecheck.com/ja/shops/tsurutontan-roppongi/reserve",
+    "expectedCapability": "online_reservation_flow",
+    "checkedAt": "2026-07-13T16:30:00+09:00",
+    "evidenceUrl": "https://www.tsurutontan.co.jp/shop/roppongi/",
+    "notes": "已核验餐厅官网公开链接的 TableCheck 直达路径。"
+  },
+  {
+    "id": "tablecheck-legacy-domain-sushi-shikon-20260713",
+    "scope": "url_shape_only",
+    "provider": "tablecheck",
+    "url": "https://tablecheck.jp/en/shops/sushi-shikon/reserve",
+    "expectedCapability": "online_reservation_flow",
+    "checkedAt": "2026-07-13T16:45:00+09:00",
+    "evidenceUrl": "https://corp.tablecheck.com/files/news/20160613_en.pdf",
+    "notes": "TableCheck 旧官方资料中的历史域名；仅做兼容分类，不能自动获得餐厅关联或推荐资格。"
+  },
+  {
+    "id": "gurunavi-current-plan-delimmo-20260713",
+    "scope": "url_shape_only",
+    "provider": "gurunavi",
+    "url": "https://r.gnavi.co.jp/plan/5ffhfsuj0000/plan-reserve/plan/plan_list/",
+    "expectedCapability": "online_reservation_flow",
+    "checkedAt": "2026-07-13T16:30:00+09:00",
+    "evidenceUrl": "https://r.gnavi.co.jp/5ffhfsuj0000/",
+    "notes": "公开店铺页列出的新版预约路径。"
+  },
+  {
+    "id": "gurunavi-legacy-plan-tsuchikori-20260713",
+    "scope": "url_shape_only",
+    "provider": "gurunavi",
+    "url": "https://plan.gnavi.co.jp/g853147/plan-reserve/plan/plan_list/",
+    "expectedCapability": "online_reservation_flow",
+    "checkedAt": "2026-07-13T16:30:00+09:00",
+    "evidenceUrl": "https://r.gnavi.co.jp/g853147/map/route1/",
+    "notes": "部分公开页面仍引用不含 /plan/{id} 前缀的旧式 plan.gnavi.co.jp 路径。"
+  },
+  {
+    "id": "gurunavi-gorp-listing-ohjuri-20260716",
+    "scope": "url_shape_only",
+    "provider": "gurunavi",
+    "url": "https://ohjuri.gorp.jp/",
+    "expectedCapability": "platform_listing",
+    "checkedAt": "2026-07-16T07:18:00+09:00",
+    "evidenceUrl": "https://ohjuri.gorp.jp/",
+    "notes": "公开 gorp.jp 托管店铺页；即使页面以门店品牌呈现，也必须保持 Gurunavi 平台 listing，不能冒充独立餐厅官网或直订流程。"
+  },
+  {
+    "id": "reserve-with-google-oimachi-20260716",
+    "scope": "url_shape_only",
+    "provider": "google_reserve",
+    "url": "https://www.google.com/maps/reserve/v/dine/c/yDhRy4G8Ke4",
+    "expectedCapability": "provider_booking_flow",
+    "checkedAt": "2026-07-16T07:15:00+09:00",
+    "evidenceUrl": "https://www.google.com/maps/reserve/v/dine/c/yDhRy4G8Ke4",
+    "notes": "明确 Reserve with Google 餐饮路径；公开页当前显示该商家不接受 Google 预约，证明入口存在也不等于当前可订。"
+  },
+  {
+    "id": "foodies-reserve-tsukasa-20260713",
+    "scope": "url_shape_only",
+    "provider": "foodies_reserve",
+    "url": "https://www.foodies-reserve.com/en/restaurants/RS54ELV7QJP0Y8OK",
+    "expectedCapability": "provider_booking_flow",
+    "checkedAt": "2026-07-13T17:10:00+09:00",
+    "evidenceUrl": "https://www.foodies-reserve.com/en/static/tos",
+    "notes": "平台餐厅页；条款以确认邮件作为预约成立边界，并可能包含预付和取消费用。"
+  },
+  {
+    "id": "jpneazy-sushitokoro-masaru-20260713",
+    "scope": "url_shape_only",
+    "provider": "jpneazy",
+    "url": "https://jpneazy.com/jp/restaurants/35495",
+    "expectedCapability": "provider_booking_flow",
+    "checkedAt": "2026-07-13T17:10:00+09:00",
+    "evidenceUrl": "https://jpneazy.com/jp/restaurants/35495",
+    "notes": "页面明确为 Request Your Table，并说明确认前不收费；不作为即时预约或库存证据。"
+  },
+  {
+    "id": "my-concierge-sushi-ryoma-listing-20260713",
+    "scope": "url_shape_only",
+    "provider": "my_concierge_japan",
+    "url": "https://myconciergejapan.com/restaurants/sushi-ryoma/",
+    "expectedCapability": "platform_listing",
+    "checkedAt": "2026-07-13T17:10:00+09:00",
+    "evidenceUrl": "https://myconciergejapan.com/restaurants/sushi-ryoma/",
+    "notes": "餐厅介绍页保持 listing；页面另行链接预约域名。"
+  },
+  {
+    "id": "my-concierge-sushi-ryoma-booking-20260713",
+    "scope": "url_shape_only",
+    "provider": "my_concierge_japan",
+    "url": "https://mycon-jp.net/reservation/sushi-ryoma/en",
+    "expectedCapability": "provider_booking_flow",
+    "checkedAt": "2026-07-13T17:10:00+09:00",
+    "evidenceUrl": "https://myconciergejapan.com/restaurants/sushi-ryoma/",
+    "notes": "介绍页公开链接的预约域名；仍需核对服务费、预付、取消政策和最终确认。"
+  },
+  {
+    "id": "japan-food-travel-support-20260713",
+    "scope": "url_shape_only",
+    "provider": "japan_food_travel",
+    "url": "https://www.japanfood.travel/",
+    "expectedCapability": "platform_listing",
+    "checkedAt": "2026-07-13T17:10:00+09:00",
+    "evidenceUrl": "https://www.japanfood.travel/",
+    "notes": "人工代订服务入口；按人收取服务费，咨询或付款前均不代表餐厅已确认。"
+  }
+]

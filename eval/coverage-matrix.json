@@ -1,0 +1,512 @@
+[
+  {
+    "id": "cv-01",
+    "sourceType": "tiktok_screenshot",
+    "riskTags": [
+      "multilingual",
+      "branch",
+      "budget"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "tiktok-homes-pasta-ueno-001"
+  },
+  {
+    "id": "cv-02",
+    "sourceType": "text",
+    "riskTags": [
+      "branch",
+      "reservation_unknown",
+      "high_rating"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "text-rokkasen-shinjuku-002"
+  },
+  {
+    "id": "cv-03",
+    "sourceType": "instagram_screenshot",
+    "riskTags": [
+      "multilingual",
+      "low_resolution"
+    ],
+    "status": "confirmed",
+    "implementationEvidence": [
+      "instagram-jincook-kanda-032",
+      "server/vision-extraction.mjs",
+      "src/screenshot-extraction.js",
+      "test/vision-extraction.test.js",
+      "test/analyzer.test.js"
+    ],
+    "remainingVerification": "真实 Instagram 中日文截图已验证店名抽取、平台人工提示覆盖和作者账号隔离；服务端现会直接读取像素尺寸，低于 360×640 级别的截图确定性要求人工确认且不会浪费备用模型调用。仍需要真实低分辨率 Instagram 截图及移动端视觉审计。",
+    "evidence": [
+      "output/manual/cv-03-instagram-low-resolution-result.jpg"
+    ],
+    "notes": "在 390×844 手机视口使用公开 Instagram 帖子画面制作 524×600 低清副本完成真实流程；仅补充餐厅名与公开地址。系统直接显示低分辨率警告并强制人工确认，之后只返回一个地址匹配候选；用户确认门店后，结果保持信息不足/电话确认，未把未核验 TableCheck 入口升级为主操作。评估文件仅保存本产品结果页证据。"
+  },
+  {
+    "id": "cv-04",
+    "sourceType": "xiaohongshu_screenshot",
+    "riskTags": [
+      "multilingual",
+      "opinion_vs_fact"
+    ],
+    "status": "planned",
+    "implementationEvidence": [
+      "server/vision-extraction.mjs",
+      "src/app.js",
+      "test/vision-extraction.test.js",
+      "test/candidate-confirmation-flow.test.js"
+    ],
+    "remainingVerification": "模型 schema、确定性警告和界面标签已把画面文字、帖子说法与观点分开，观点不会进入门店查询或预约判断；仍需真实小红书多语言截图与移动端视觉审计。"
+  },
+  {
+    "id": "cv-05",
+    "sourceType": "x_screenshot",
+    "riskTags": [
+      "short_caption",
+      "temporary_closure"
+    ],
+    "status": "confirmed",
+    "implementationEvidence": [
+      "server/vision-extraction.mjs",
+      "server/verified-official-sources.mjs",
+      "server/decision-engine.mjs",
+      "src/app.js",
+      "test/vision-extraction.test.js",
+      "test/verified-official-sources.test.js",
+      "test/decision-engine.test.js"
+    ],
+    "remainingVerification": "截图中的临时休业、闭店、搬迁或预约文字会被确定性标为未核验帖子线索，不能直接改变行动结论；官方临时休业覆盖第三方入口已有测试。仍需真实 X 短帖截图与移动端完整审计。",
+    "evidence": [
+      "output/manual/cv-05-x-temporary-closure-result.jpg"
+    ],
+    "notes": "在 390×844 手机视口用公开 X 短帖完成真实截图流程；模型将临时休业明确标为未核验帖子说法，要求当前来源复核。确认千叶佐仓门店后，Google Maps 当前状态仍正常，最终结论保持信息不足/电话确认，未把帖子状态直接升级为当前闭店结论。"
+  },
+  {
+    "id": "cv-06",
+    "sourceType": "tiktok_screenshot",
+    "riskTags": [
+      "same_name",
+      "branch"
+    ],
+    "status": "confirmed",
+    "implementationEvidence": [
+      "server/vision-extraction.mjs",
+      "src/screenshot-extraction.js",
+      "src/candidate-selection.js",
+      "server/google-places.mjs",
+      "test/vision-extraction.test.js",
+      "test/analyzer.test.js",
+      "test/candidate-selection.test.js",
+      "test/google-places.test.js"
+    ],
+    "remainingVerification": "截图多门店、分店线索、Places 重排和人工确认门槛已实现；仍需真实 TikTok 同名分店截图与移动端候选选择审计。",
+    "linkedCaseId": "tiktok-nikulemon-ueno-031",
+    "evidence": [
+      "output/manual/cv-06-tiktok-branch-result.jpg"
+    ],
+    "notes": "在 390×844 手机视口使用用户此前提供的公开 TikTok URL，经官方公开嵌入页完成截图流程。补充文字提供上野駅前店与公开地址；系统把活动内容保留为帖子说法，并要求人工核对。人工修正被楼层污染的店名后，Places 仅把上野駅前店作为强匹配，分店名与地址均一致；确认后官网直达 plan/1 成为主操作，空位和预约成立状态仍保持未知。"
+  },
+  {
+    "id": "cv-07",
+    "sourceType": "instagram_screenshot",
+    "riskTags": [
+      "address_missing",
+      "station_only"
+    ],
+    "status": "confirmed",
+    "implementationEvidence": [
+      "instagram-jincook-kanda-032",
+      "tiktok-beef-men-tobu-nerima-033",
+      "src/screenshot-extraction.js",
+      "server/vision-extraction.mjs",
+      "server/text-input.mjs",
+      "server/restaurant-sources.mjs",
+      "src/analysis-queue.js",
+      "test/analyzer.test.js",
+      "test/vision-extraction.test.js",
+      "test/text-input.test.js",
+      "test/restaurant-sources.test.js",
+      "test/analysis-queue.test.js"
+    ],
+    "remainingVerification": "真实 TikTok 仅车站截图已验证残缺地址清理、非餐饮候选过滤和东武练马站定位；真实 Instagram 无地址截图已验证地区文字合并。仍缺同时满足 Instagram 平台与仅车站输入的移动端完整审计。",
+    "evidence": [
+      "output/manual/cv-07-instagram-station-only-result.jpg"
+    ],
+    "notes": "在 390×844 手机视口使用公开 Instagram 完整帖子画面，不添加补充文字。截图仅显示店名 WK2 与“東京駅地下”，没有门牌地址；Qwen 将地址丢弃并保留 Tokyo Station 车站线索，要求人工确认。Places 以店名＋车站得到唯一强匹配的东京站丸之内地下门店；确认后结果保持信息不足/电话确认，未把未独立核验的 Tabelog 请求入口升级为主操作。"
+  },
+  {
+    "id": "cv-08",
+    "sourceType": "xiaohongshu_screenshot",
+    "riskTags": [
+      "old_post",
+      "relocation"
+    ],
+    "status": "planned",
+    "implementationEvidence": [
+      "https://www.tsurutontan.co.jp/news/news-75/",
+      "https://www.tsurutontan.co.jp/shop/roppongi/",
+      "https://tabelog.com/tokyo/A1307/A130701/13001859/dtlmap/",
+      "eval/live-source-checks.json",
+      "server/verified-official-sources.mjs",
+      "server/restaurant-sources.mjs",
+      "server/decision-engine.mjs",
+      "test/restaurant-sources.test.js",
+      "test/verified-official-sources.test.js"
+    ],
+    "remainingVerification": "真实旧址、现址、官网与当前 TableCheck 链路已核验；仍需要真实小红书旧帖截图与移动端视觉审计"
+  },
+  {
+    "id": "cv-09",
+    "sourceType": "tiktok_screenshot",
+    "riskTags": [
+      "engagement_not_popularity",
+      "reservation_unknown"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "tiktok-beef-men-tobu-nerima-033",
+    "evidence": [
+      "test/analyzer.test.js",
+      "test/vision-extraction.test.js",
+      "test/restaurant-sources.test.js",
+      "test/decision-engine.test.js",
+      "eval/manual-audits.json"
+    ]
+  },
+  {
+    "id": "cv-10",
+    "sourceType": "instagram_screenshot",
+    "riskTags": [
+      "creator_handle_not_restaurant",
+      "multilingual"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "instagram-jincook-kanda-032",
+    "evidence": [
+      "src/screenshot-extraction.js",
+      "server/text-input.mjs",
+      "test/analyzer.test.js",
+      "test/text-input.test.js",
+      "eval/manual-audits.json"
+    ],
+    "notes": "真实 Instagram 中日文截图确认模型把画面店名与作者账号分开；评测集未保存作者账号或互动数据，用户声明的平台可覆盖模型错误平台标签。"
+  },
+  {
+    "id": "cv-11",
+    "sourceType": "text",
+    "riskTags": [
+      "date_time_party",
+      "branch"
+    ],
+    "status": "confirmed",
+    "evidence": [
+      "test/text-input.test.js",
+      "test/saved-plans.test.js"
+    ]
+  },
+  {
+    "id": "cv-12",
+    "sourceType": "text",
+    "riskTags": [
+      "romanized_name",
+      "multilingual"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "text-shinshin-tenjin-011",
+    "evidence": [
+      "https://www.hakata-shinshin.com/tenpo_tenjin",
+      "eval/latest-candidate-results.json"
+    ]
+  },
+  {
+    "id": "cv-13",
+    "sourceType": "text",
+    "riskTags": [
+      "chinese_alias",
+      "same_name"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "text-ichiran-namba-009",
+    "evidence": [
+      "https://ichiran.com/np/shop/kinki/namba-midosuji.html",
+      "server/restaurant-aliases.mjs",
+      "test/text-input.test.js",
+      "test/restaurant-sources.test.js"
+    ]
+  },
+  {
+    "id": "cv-14",
+    "sourceType": "text",
+    "riskTags": [
+      "japanese_name",
+      "partial_address"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "text-gyukatsu-motomura-shinjuku-005",
+    "evidence": [
+      "https://www.gyukatsu-motomura.com/store/Shinjuku-Main_Store",
+      "test/restaurant-sources.test.js"
+    ]
+  },
+  {
+    "id": "cv-15",
+    "sourceType": "text",
+    "riskTags": [
+      "closed_permanently",
+      "third_party_listing"
+    ],
+    "status": "confirmed",
+    "evidence": [
+      "test/decision-engine.test.js",
+      "test/restaurant-sources.test.js"
+    ]
+  },
+  {
+    "id": "cv-16",
+    "sourceType": "text",
+    "riskTags": [
+      "closed_temporarily",
+      "official_status"
+    ],
+    "status": "confirmed",
+    "evidence": [
+      "https://store.mkrestaurants.co.jp/b/mkrestaurants/info/70007/",
+      "eval/live-source-checks.json",
+      "server/verified-official-sources.mjs",
+      "test/reservation-link-discovery.test.js",
+      "test/verified-official-sources.test.js",
+      "test/restaurant-sources.test.js",
+      "test/decision-engine.test.js"
+    ]
+  },
+  {
+    "id": "cv-17",
+    "sourceType": "text",
+    "riskTags": [
+      "tablecheck_direct",
+      "direct_booking"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "text-tsurutontan-roppongi-006"
+  },
+  {
+    "id": "cv-18",
+    "sourceType": "text",
+    "riskTags": [
+      "omakase_direct",
+      "direct_booking",
+      "prepayment_unknown"
+    ],
+    "status": "confirmed",
+    "evidence": [
+      "https://omakase.in/",
+      "test/reservation-options.test.js",
+      "test/reservation-link-discovery.test.js"
+    ]
+  },
+  {
+    "id": "cv-19",
+    "sourceType": "text",
+    "riskTags": [
+      "hotpepper_listing",
+      "reservation_unknown"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "text-rokkasen-shinjuku-002",
+    "evidence": [
+      "test/reservation-options.test.js",
+      "test/decision-engine.test.js",
+      "test/restaurant-sources.test.js"
+    ]
+  },
+  {
+    "id": "cv-20",
+    "sourceType": "text",
+    "riskTags": [
+      "tabelog_discovery",
+      "fee_warning"
+    ],
+    "status": "confirmed",
+    "evidence": [
+      "test/reservation-options.test.js"
+    ]
+  },
+  {
+    "id": "cv-21",
+    "sourceType": "social_link",
+    "riskTags": [
+      "tiktok",
+      "link_only",
+      "content_not_read"
+    ],
+    "status": "confirmed",
+    "evidence": [
+      "test/text-input.test.js"
+    ]
+  },
+  {
+    "id": "cv-22",
+    "sourceType": "social_link",
+    "riskTags": [
+      "instagram",
+      "link_only",
+      "content_not_read"
+    ],
+    "status": "confirmed",
+    "evidence": [
+      "test/text-input.test.js"
+    ]
+  },
+  {
+    "id": "cv-23",
+    "sourceType": "social_link",
+    "riskTags": [
+      "xiaohongshu",
+      "link_plus_caption"
+    ],
+    "status": "confirmed",
+    "evidence": [
+      "test/text-input.test.js"
+    ]
+  },
+  {
+    "id": "cv-24",
+    "sourceType": "social_link",
+    "riskTags": [
+      "x",
+      "link_plus_caption",
+      "multilingual"
+    ],
+    "status": "confirmed",
+    "evidence": [
+      "test/text-input.test.js"
+    ]
+  },
+  {
+    "id": "cv-25",
+    "sourceType": "text",
+    "riskTags": [
+      "phone_only",
+      "japanese_script",
+      "standard_and_short",
+      "walk_in_script"
+    ],
+    "status": "confirmed",
+    "implementationEvidence": [
+      "output/manual/text-kushikatsu-daruma-shinsekai-014-result.jpeg",
+      "output/manual/text-kushikatsu-daruma-shinsekai-014-phone-script.jpeg",
+      "src/analyzer.js",
+      "test/analyzer.test.js"
+    ],
+    "remainingVerification": "不可预约餐厅的现场话术、标准/简短/日语不熟练版、复制按钮和移动端视觉审计已完成；仍需一个真实电话确认型结果页完成同类复验。",
+    "linkedCaseId": "text-toyoken-beppu-030",
+    "evidence": [
+      "output/manual/cv-25-phone-script-result.png",
+      "output/manual/text-toyoken-beppu-030-result.png"
+    ],
+    "notes": "在 390×844 手机视口完成真实电话确认型结果复验；标准版、简短版、日语不熟练版均可切换且内容不同，复制入口可见，未实际拨号。"
+  },
+  {
+    "id": "cv-26",
+    "sourceType": "text",
+    "riskTags": [
+      "walk_in_claim",
+      "official_evidence_required",
+      "address_hyphen_not_date",
+      "platform_hosted_website",
+      "phone_source_conflict"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "text-kushikatsu-daruma-shinsekai-014",
+    "evidence": [
+      "output/manual/text-kushikatsu-daruma-shinsekai-014-candidates.jpeg",
+      "output/manual/text-kushikatsu-daruma-shinsekai-014-confirmed.jpeg",
+      "output/manual/text-kushikatsu-daruma-shinsekai-014-result.jpeg",
+      "output/manual/text-kushikatsu-daruma-shinsekai-014-phone-script.jpeg",
+      "https://www.kushikatu-daruma.com/location/shinsekai",
+      "test/text-input.test.js",
+      "test/verified-official-sources.test.js",
+      "test/reservation-link-discovery.test.js",
+      "test/restaurant-sources.test.js",
+      "test/decision-engine.test.js"
+    ]
+  },
+  {
+    "id": "cv-27",
+    "sourceType": "tiktok_screenshot",
+    "riskTags": [
+      "multiple_restaurants",
+      "user_confirmation",
+      "candidate_rejection"
+    ],
+    "status": "confirmed",
+    "implementationEvidence": [
+      "server/vision-extraction.mjs",
+      "src/screenshot-extraction.js",
+      "src/candidate-selection.js",
+      "test/vision-extraction.test.js",
+      "test/analyzer.test.js",
+      "test/candidate-selection.test.js"
+    ],
+    "remainingVerification": "多餐厅抽取、选择与候选排除已实现；仍需要真实多餐厅截图和移动端逐个排除审计",
+    "evidence": [
+      "output/manual/cv-27-tiktok-multi-restaurant-result.jpg"
+    ],
+    "notes": "在 390×844 手机视口使用公开 TikTok 展开正文的单张真实画面完成流程；画面同时列出 6 家餐厅，未拼接视频帧。Qwen 分离出 6 个可选择条目，选定第六家 butter 后把其余 5 家加入本机待分析队列且不保存截图。Places 将 PRESS BUTTER SAND 错列首选，但保留了正确的 BUTTER 美瑛放牧酪農場；人工排除错误首选后确认正确候选。结果保持信息不足/电话确认，并提示东京站宽泛位置冲突。"
+  },
+  {
+    "id": "cv-28",
+    "sourceType": "instagram_screenshot",
+    "riskTags": [
+      "no_restaurant_name",
+      "low_confidence"
+    ],
+    "status": "confirmed",
+    "implementationEvidence": [
+      "server/vision-extraction.mjs",
+      "src/screenshot-extraction.js",
+      "src/app.js",
+      "test/vision-extraction.test.js",
+      "test/analyzer.test.js"
+    ],
+    "remainingVerification": "无店名会阻断搜索，低置信度要求用户勾选人工确认；仍缺真实 Instagram 低置信度截图与移动端审计",
+    "evidence": [
+      "output/manual/cv-28-instagram-no-name-blocked.jpg"
+    ],
+    "notes": "在 390×844 手机视口使用公开 Instagram 完整帖子画面，不添加任何补充文字。Qwen 正确识别平台并把账号与餐厅实体隔离，店名、地址、地区均保持为空；页面明确显示“还不能搜索候选”。实际点击继续后仍停留在当前页并聚焦店名输入框，没有发起 Places 搜索或生成候选。评估文件仅保存本产品阻止页证据。"
+  },
+  {
+    "id": "cv-29",
+    "sourceType": "text",
+    "riskTags": [
+      "same_name",
+      "different_city",
+      "branch"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "text-ichiran-namba-009"
+  },
+  {
+    "id": "cv-30",
+    "sourceType": "text",
+    "riskTags": [
+      "direct_booking",
+      "source_conflict",
+      "mobile_flow"
+    ],
+    "status": "confirmed",
+    "linkedCaseId": "text-tsurutontan-roppongi-006",
+    "evidence": [
+      "eval/live-source-checks.json",
+      "output/manual/text-tsurutontan-roppongi-006-candidates.jpeg",
+      "output/manual/text-tsurutontan-roppongi-006-confirmed.jpeg",
+      "output/manual/text-tsurutontan-roppongi-006-result.jpeg",
+      "https://www.tsurutontan.co.jp/shop/roppongi/",
+      "https://www.tablecheck.com/ja/shops/tsurutontan-roppongi/reserve",
+      "server/restaurant-sources.mjs",
+      "server/decision-engine.mjs",
+      "test/restaurant-sources.test.js",
+      "test/decision-engine.test.js"
+    ],
+    "notes": "真实迁址来源、当前门店身份、官网直链 TableCheck 与来源冲突阻断逻辑已有证据；400px Chrome 真实流程完成候选确认、身份门槛和预约结果页复验。"
+  }
+]

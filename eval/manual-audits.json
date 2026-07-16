@@ -1,0 +1,475 @@
+[
+  {
+    "caseId": "tiktok-homes-pasta-ueno-001",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "test/analyzer.test.js",
+      "output/playwright/reservation-options-live.png"
+    ],
+    "auditedAt": "2026-07-12T00:00:00+09:00"
+  },
+  {
+    "caseId": "text-rokkasen-shinjuku-002",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/playwright/evidence-gated-decision.png",
+      "output/playwright/saved-plan-flow.png"
+    ],
+    "auditedAt": "2026-07-12T16:07:00+09:00"
+  },
+  {
+    "caseId": "text-ichiran-shibuya-003",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-ichiran-shibuya-003-candidates.jpeg",
+      "output/manual/text-ichiran-shibuya-003-confirmed.jpeg",
+      "output/manual/text-ichiran-shibuya-003-result.jpeg",
+      "https://ichiran.com/shop/tokyo/shibuya/"
+    ],
+    "auditedAt": "2026-07-14T18:54:39+09:00",
+    "notes": "Chrome 400px 响应式视口完整走通文字解析、两家涩谷候选、系统首选说明、人工确认、详情/预约二次选择与结果页。渋谷店店名和神南地址与确认来源一致；结果保持预约未知并优先电话确认，没有把评分、平台查找入口或 Google 所列网站误写为已开放预约。"
+  },
+  {
+    "caseId": "text-afuri-harajuku-004",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-afuri-harajuku-004-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:46:34.913Z"
+  },
+  {
+    "caseId": "text-gyukatsu-motomura-shinjuku-005",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-gyukatsu-motomura-shinjuku-005-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:48:05.398Z"
+  },
+  {
+    "caseId": "text-tsurutontan-roppongi-006",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-tsurutontan-roppongi-006-candidates.jpeg",
+      "output/manual/text-tsurutontan-roppongi-006-confirmed.jpeg",
+      "output/manual/text-tsurutontan-roppongi-006-result.jpeg",
+      "https://www.tsurutontan.co.jp/shop/roppongi/",
+      "https://www.tablecheck.com/ja/shops/tsurutontan-roppongi/reserve",
+      "test/decision-engine.test.js"
+    ],
+    "auditedAt": "2026-07-14T19:03:25+09:00",
+    "notes": "Chrome 400px 响应式视口完整走通文字解析、候选确认、详情/预约二次选择与结果页。店名、六本木 7-8-6 地址和电话与当前官网一致；官网直链 TableCheck 被正确识别为预约流程，同时明确空位未知、完成确认页或收到通知后才算预约成功。审计还发现并修正了单个低置信度候选被误写成‘几个结果’的文案。"
+  },
+  {
+    "caseId": "text-sushizanmai-tsukiji-007",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-sushizanmai-tsukiji-007-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:48:42.143Z"
+  },
+  {
+    "caseId": "text-rokurinsha-tokyo-008",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-rokurinsha-tokyo-008-regression.png"
+    ],
+    "auditedAt": "2026-07-15T21:00:43.177Z",
+    "notes": "修复后回归通过：餐厅名已与地址分离用于排序，“六厘舎 東京ラーメンストリート店”成为唯一首选，详情和预约安全建议正常。"
+  },
+  {
+    "caseId": "text-ichiran-namba-009",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-ichiran-namba-009-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:50:37.109Z"
+  },
+  {
+    "caseId": "text-ippudo-kyoto-porta-010",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-ippudo-kyoto-porta-010-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:50:42.858Z"
+  },
+  {
+    "caseId": "text-shinshin-tenjin-011",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-shinshin-tenjin-011-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:50:48.792Z"
+  },
+  {
+    "caseId": "text-shingen-sapporo-012",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-shingen-sapporo-012-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:51:10.658Z"
+  },
+  {
+    "caseId": "text-houraiken-nagoya-013",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-houraiken-nagoya-013-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:51:16.559Z"
+  },
+  {
+    "caseId": "text-kushikatsu-daruma-shinsekai-014",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-kushikatsu-daruma-shinsekai-014-candidates.jpeg",
+      "output/manual/text-kushikatsu-daruma-shinsekai-014-confirmed.jpeg",
+      "output/manual/text-kushikatsu-daruma-shinsekai-014-result.jpeg",
+      "output/manual/text-kushikatsu-daruma-shinsekai-014-phone-script.jpeg",
+      "https://www.kushikatu-daruma.com/location/shinsekai",
+      "test/text-input.test.js",
+      "test/verified-official-sources.test.js",
+      "test/reservation-link-discovery.test.js",
+      "test/restaurant-sources.test.js",
+      "test/decision-engine.test.js",
+      "test/analyzer.test.js"
+    ],
+    "auditedAt": "2026-07-14T19:12:16+09:00",
+    "notes": "Chrome 400px 响应式视口完成文字解析、强匹配候选、人工确认、预约入口选择、现场到店结论和电话话术复验。官网确认新世界総本店地址、06-6645-7056 和预约不可；页面正确优先官网号码并把 Google 050 号码标为冲突，提供现场等待话术而非预约话术。审计发现解析器曾借用下方难波本店的‘仅平日预约’规则，已改为按页面顺序优先当前门店字段并以真实页面回归通过；标准版、简短版、日语不熟练版和复制按钮均已操作复验。"
+  },
+  {
+    "caseId": "text-kurasushi-asakusa-rox-015",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-kurasushi-asakusa-rox-015-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:51:22.859Z"
+  },
+  {
+    "caseId": "text-katsugyu-gion-yasaka-016",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-katsugyu-gion-yasaka-016-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:51:37.776Z"
+  },
+  {
+    "caseId": "text-torikizoku-shibuya-inokashira-017",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-torikizoku-shibuya-inokashira-017-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:51:43.392Z"
+  },
+  {
+    "caseId": "text-yoshinoya-himeyuri-okinawa-018",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-yoshinoya-himeyuri-okinawa-018-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:51:49.809Z"
+  },
+  {
+    "caseId": "text-lucky-pierrot-bayarea-019",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-lucky-pierrot-bayarea-019-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:52:06.825Z"
+  },
+  {
+    "caseId": "text-morimori-omicho-kanazawa-020",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-morimori-omicho-kanazawa-020-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:52:12.659Z"
+  },
+  {
+    "caseId": "text-micchan-hatchobori-hiroshima-021",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-micchan-hatchobori-hiroshima-021-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:52:18.541Z"
+  },
+  {
+    "caseId": "text-mujyaki-tenmonkan-kagoshima-022",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-mujyaki-tenmonkan-kagoshima-022-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:52:32.442Z"
+  },
+  {
+    "caseId": "text-udon-baka-ichidai-takamatsu-023",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-udon-baka-ichidai-takamatsu-023-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:52:38.558Z"
+  },
+  {
+    "caseId": "text-bandai-soba-niigata-024",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-bandai-soba-niigata-024-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:53:05.575Z"
+  },
+  {
+    "caseId": "text-irohado-zenkoji-nagano-025",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-irohado-zenkoji-nagano-025-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:53:21.058Z"
+  },
+  {
+    "caseId": "text-katsuretsutei-shinshigai-kumamoto-026",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-katsuretsutei-shinshigai-kumamoto-026-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:53:27.625Z"
+  },
+  {
+    "caseId": "text-rikyu-sendai-west-027",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-rikyu-sendai-west-027-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:53:33.975Z"
+  },
+  {
+    "caseId": "text-ogura-honten-miyazaki-028",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-ogura-honten-miyazaki-028-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:53:50.707Z"
+  },
+  {
+    "caseId": "text-ajinosaaporo-onishi-aomori-029",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-ajinosaaporo-onishi-aomori-029-regression.png"
+    ],
+    "auditedAt": "2026-07-15T21:00:59.256Z",
+    "notes": "修复后回归通过：店名中的“札幌”不再被当作地区；搜索使用完整店名和青森地址，首选正确且结果页不再显示来源冲突。"
+  },
+  {
+    "caseId": "text-toyoken-beppu-030",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/text-toyoken-beppu-030-result.png"
+    ],
+    "auditedAt": "2026-07-15T20:54:43.791Z"
+  },
+  {
+    "caseId": "tiktok-nikulemon-ueno-031",
+    "status": "decision_audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pending",
+    "evidence": [
+      "eval/latest-candidate-results.json",
+      "https://store.gosso.co.jp/detail/nikulemon_ueno/",
+      "test/verified-official-sources.test.js",
+      "test/reservation-link-discovery.test.js",
+      "test/reservation-options.test.js",
+      "test/decision-engine.test.js"
+    ],
+    "auditedAt": "2026-07-14T14:48:00+09:00",
+    "notes": "真实截图识别与门店匹配通过；发现并修复同域官网直订入口未被识别、导致电话错误成为首选的问题。修复后真实详情 API 首选 GOSSO 官网 plan/1 预约流程，同时继续把空位与预约成立状态标为未知；尚未完成该样本的移动端视觉复验。"
+  },
+  {
+    "caseId": "instagram-jincook-kanda-032",
+    "status": "decision_audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pending",
+    "evidence": [
+      "eval/latest-candidate-results.json",
+      "https://kanda-curry.com/%E3%82%B8%E3%83%B3%E3%82%B3%E3%83%83%E3%82%AF/",
+      "https://tabelog.com/tokyo/A1310/A131002/13102075/dtlmap/",
+      "test/text-input.test.js",
+      "test/analyzer.test.js",
+      "test/restaurant-sources.test.js",
+      "test/vision-extraction.test.js"
+    ],
+    "auditedAt": "2026-07-14T15:08:00+09:00",
+    "notes": "真实 Qwen 读取正确店名但误判平台且缺少位置；发现并修复截图与补充文字不能合并、用户地区覆盖当前地图区域两个问题。现在用户声明的 Instagram 与神保町只补充缺失字段，结果显示实际神田须田町地址并提示地区偏差。第三方资料虽写预约不可，因缺少餐厅官方规则仍保守输出预约未知；尚未完成移动端视觉复验。"
+  },
+  {
+    "caseId": "tiktok-beef-men-tobu-nerima-033",
+    "status": "decision_audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pending",
+    "evidence": [
+      "eval/latest-candidate-results.json",
+      "https://www.instagram.com/beef_men29/",
+      "https://tabelog.com/tokyo/A1322/A132203/13318278/",
+      "test/vision-extraction.test.js",
+      "test/restaurant-sources.test.js",
+      "test/decision-engine.test.js"
+    ],
+    "auditedAt": "2026-07-14T18:32:00+09:00",
+    "notes": "真实截图发现并修复三个问题：被遮挡文字残片误入地址、东武练马站本身排在餐厅候选之前、不可推荐的通用 Tabelog 请求页面被决策摘要误写为可预约。修复后 BEEF-MEN 为 Top-1，结果显示当前板桥区地址和官方电话，预约状态保持 unknown；尚未完成移动端视觉复验。"
+  }
+]

@@ -1,0 +1,11 @@
+.DS_Store
+.playwright-cli/
+output/playwright/
+output/manual/
+output/platform-audit/
+.env
+.env.local
+.env.*.local
+!.env.example
+data/*.jsonl
+data/daily-budget.json

@@ -1,0 +1,25 @@
+import { readFile } from "node:fs/promises";
+import { evaluatePilotGate, summarizePilotMetrics } from "./pilot-metrics.mjs";
+
+export const PILOT_REPORT_NOTE = "只计算 trafficType=product、sourceMode=live 且带一次性 analysisRunId 的流程；审计和旧版事件不进入试用门槛。7 日回访为无用户标识的本机下界，仅报告，不作为当前通过条件。";
+
+export async function loadPilotReport(eventsPath, now = new Date()) {
+  const events = await readEventLines(eventsPath);
+  const metrics = summarizePilotMetrics(events);
+  return {
+    generatedAt: now.toISOString(),
+    ...evaluatePilotGate(metrics),
+    metrics,
+    note: PILOT_REPORT_NOTE
+  };
+}
+
+export async function readEventLines(path) {
+  try {
+    const content = await readFile(path, "utf8");
+    return content.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+}
