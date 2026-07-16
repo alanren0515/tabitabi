@@ -11,9 +11,21 @@ test("discovers known reservation providers linked by the restaurant website", a
   assert.deepEqual(result.links.map((item) => item.provider), ["tablecheck", "tabelog"]);
 });
 
+test("blocks private DNS results before reservation-link discovery", async () => {
+  let requested = false;
+  const result = await discoverReservationLinks({
+    websiteUri: "https://internal.example/",
+    lookupImpl: async () => [{ address: "10.0.0.5", family: 4 }],
+    fetchImpl: async () => { requested = true; return new Response("ok"); }
+  });
+  assert.equal(result.status, "unsafe_redirect");
+  assert.equal(requested, false);
+});
+
 test("discovers a same-origin official booking flow only from an explicit reservation anchor", async () => {
   const result = await discoverReservationLinks({
     websiteUri: "https://store.gosso.co.jp/detail/nikulemon_ueno/",
+    lookupImpl: async () => [{ address: "93.184.216.34", family: 4 }],
     fetchImpl: async () => new Response(`
       <a href="/detail/nikulemon_ueno/plan_list/">予約する</a>
       <a href="/detail/nikulemon_ueno/plan/1/">プランを見る</a>

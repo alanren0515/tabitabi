@@ -1,38 +1,23 @@
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
 import { validatePublicWebsiteUrl } from "./reservation-link-discovery.mjs";
+import { safeFetchHtml, SafeHtmlFetchError } from "./safe-html-fetch.mjs";
 
-const MAX_HTML_BYTES = 512 * 1024;
-const MAX_REDIRECTS = 3;
 const RESTAURANT_TYPES = new Set(["restaurant", "foodestablishment", "cafeorcoffeeshop", "barorpub", "bakery", "icecreamshop"]);
 
-export async function extractPublicWebpageClues({ url, fetchImpl = fetch, lookupImpl = lookup, timeoutMs = 8_000 }) {
+export async function extractPublicWebpageClues({ url, fetchImpl, requestImpl = fetchImpl, lookupImpl, timeoutMs = 8_000 }) {
   let currentUrl = validatePublicWebsiteUrl(url);
   if (!currentUrl) throw new WebpageExtractionError("INVALID_URL", "A public http(s) URL is required", 400);
-
-  let response;
-  for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
-    await assertPublicHostname(currentUrl, lookupImpl);
-    response = await fetchImpl(currentUrl, {
-      headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "TabiTabi-WebpageClues/0.1" },
-      redirect: "manual",
-      signal: AbortSignal.timeout(timeoutMs)
+  let fetched;
+  try {
+    fetched = await safeFetchHtml({
+      url: currentUrl, requestImpl, lookupImpl, timeoutMs,
+      headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "TabiTabi-WebpageClues/0.1" }
     });
-    if (![301, 302, 303, 307, 308].includes(response.status)) break;
-    if (redirects === MAX_REDIRECTS) throw new WebpageExtractionError("TOO_MANY_REDIRECTS", "The webpage redirected too many times", 400);
-    const location = response.headers.get("location");
-    const nextUrl = location ? validatePublicWebsiteUrl(new URL(location, currentUrl).href) : "";
-    if (!nextUrl) throw new WebpageExtractionError("UNSAFE_REDIRECT", "The webpage redirected to an unsafe URL", 400);
-    currentUrl = nextUrl;
+  } catch (error) {
+    if (error instanceof SafeHtmlFetchError) throw new WebpageExtractionError(error.code, error.message, error.status);
+    throw error;
   }
-
-  if (!response?.ok) throw new WebpageExtractionError("UPSTREAM_ERROR", `The webpage returned HTTP ${response?.status || 0}`, 502);
-  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-  if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) throw new WebpageExtractionError("NOT_HTML", "The URL did not return an HTML page", 400);
-  const declaredLength = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_HTML_BYTES) throw new WebpageExtractionError("TOO_LARGE", "The webpage is too large to inspect", 413);
-  const html = (await response.text()).slice(0, MAX_HTML_BYTES + 1);
-  if (Buffer.byteLength(html) > MAX_HTML_BYTES) throw new WebpageExtractionError("TOO_LARGE", "The webpage is too large to inspect", 413);
+  const { html, sourceUrl } = fetched;
+  currentUrl = sourceUrl;
 
   const structured = findRestaurantJsonLd(html);
   const pageTitle = metaContent(html, "property", "og:title") || tagText(html, "title");
@@ -58,26 +43,6 @@ export async function extractPublicWebpageClues({ url, fetchImpl = fetch, lookup
 
 export class WebpageExtractionError extends Error {
   constructor(code, message, status) { super(message); this.name = "WebpageExtractionError"; this.code = code; this.status = status; }
-}
-
-async function assertPublicHostname(value, lookupImpl) {
-  const hostname = new URL(value).hostname.replace(/^\[|\]$/g, "");
-  const literalVersion = isIP(hostname);
-  const addresses = literalVersion ? [{ address: hostname, family: literalVersion }] : await lookupImpl(hostname, { all: true, verbatim: true });
-  if (!addresses.length || addresses.some((item) => isPrivateAddress(item.address))) throw new WebpageExtractionError("UNSAFE_HOST", "The webpage hostname resolves to a private or reserved address", 400);
-}
-
-function isPrivateAddress(address) {
-  const version = isIP(address);
-  if (version === 4) {
-    const [a, b] = address.split(".").map(Number);
-    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 0) || (a === 192 && b === 168) || (a === 198 && [18, 19].includes(b)) || a >= 224;
-  }
-  if (version === 6) {
-    const normalized = address.toLowerCase();
-    return normalized === "::" || normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || /^fe[89ab]/.test(normalized) || normalized.startsWith("ff");
-  }
-  return true;
 }
 
 function findRestaurantJsonLd(html) {

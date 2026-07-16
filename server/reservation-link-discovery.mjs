@@ -1,32 +1,24 @@
-import { isIP } from "node:net";
 import { platformForUrl, reservationLinkPriority } from "./reservation-options.mjs";
+import { safeFetchHtml, SafeHtmlFetchError, validatePublicHttpUrl } from "./safe-html-fetch.mjs";
 
-const MAX_HTML_BYTES = 1024 * 1024;
-const MAX_REDIRECTS = 3;
-
-export async function discoverReservationLinks({ websiteUri, fetchImpl = fetch, timeoutMs = 5_000 }) {
+export async function discoverReservationLinks({ websiteUri, fetchImpl, requestImpl = fetchImpl, lookupImpl, timeoutMs = 5_000 }) {
   let currentUrl = validatePublicWebsiteUrl(websiteUri);
   if (!currentUrl) return { links: [], status: "invalid_url" };
-
-  let response;
-  for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
-    response = await fetchImpl(currentUrl, {
-      headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "TabiTabi-LinkDiscovery/0.1" },
-      redirect: "manual",
-      signal: AbortSignal.timeout(timeoutMs)
+  let fetched;
+  try {
+    fetched = await safeFetchHtml({
+      url: currentUrl, requestImpl, lookupImpl, timeoutMs,
+      headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "TabiTabi-LinkDiscovery/0.1" }
     });
-    if (![301, 302, 303, 307, 308].includes(response.status)) break;
-    const nextUrl = validatePublicWebsiteUrl(new URL(response.headers.get("location") || "", currentUrl).href);
-    if (!nextUrl || redirects === MAX_REDIRECTS) return { links: [], status: "unsafe_redirect" };
-    currentUrl = nextUrl;
+  } catch (error) {
+    if (!(error instanceof SafeHtmlFetchError)) throw error;
+    const status = error.code === "TOO_LARGE" ? "too_large"
+      : ["UNSAFE_HOST", "UNSAFE_REDIRECT", "TOO_MANY_REDIRECTS", "INVALID_URL"].includes(error.code) ? "unsafe_redirect"
+        : error.code === "NOT_HTML" ? "not_html" : "upstream_error";
+    return { links: [], status };
   }
-  if (!response?.ok) return { links: [], status: `http_${response?.status || 0}` };
-  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-  if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) return { links: [], status: "not_html" };
-  const declaredLength = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_HTML_BYTES) return { links: [], status: "too_large" };
-  const html = (await response.text()).slice(0, MAX_HTML_BYTES + 1);
-  if (Buffer.byteLength(html) > MAX_HTML_BYTES) return { links: [], status: "too_large" };
+  const { html, sourceUrl } = fetched;
+  currentUrl = sourceUrl;
 
   const links = [];
   const socialLinks = [];
@@ -225,26 +217,7 @@ function firstMatchIndex(text, rules) {
 }
 
 export function validatePublicWebsiteUrl(value) {
-  try {
-    const url = new URL(String(value || ""));
-    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) return "";
-    const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-    if (!hostname || hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local")) return "";
-    if (isPrivateIpLiteral(hostname)) return "";
-    url.hash = "";
-    return url.href;
-  } catch { return ""; }
-}
-
-function isPrivateIpLiteral(hostname) {
-  const version = isIP(hostname);
-  if (!version) return false;
-  if (version === 4) {
-    const [a, b] = hostname.split(".").map(Number);
-    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224;
-  }
-  const normalized = hostname.toLowerCase();
-  return normalized === "::" || normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb");
+  return validatePublicHttpUrl(value);
 }
 
 function extractAnchors(html) {
