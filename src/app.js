@@ -6,7 +6,7 @@ import { candidateDecision, candidateDecisionCopy, rejectCandidate, restoreCandi
 import { TERMS_EFFECTIVE_DATE, TERMS_SECTIONS } from "./terms-data.js";
 import { addRecentAnalysis, createRecentAnalysis, normalizeRecentAnalyses, RECENT_STORAGE_KEY } from "./recent-analyses.js";
 import { buildSharePayload } from "./share-result.js";
-import { DEFAULT_SETTINGS, normalizeSettings, settingsFromForm, SETTINGS_STORAGE_KEY } from "./settings.js";
+import { DEFAULT_SETTINGS, normalizeSettings, pilotAccessHeaders, settingsFromForm, SETTINGS_STORAGE_KEY } from "./settings.js";
 import { addPendingRestaurants, normalizePendingAnalyses, parseBatchRestaurantLines, pendingAnalysisToTextExtraction, PENDING_STORAGE_KEY, removePendingAnalysis, restaurantClueKey } from "./analysis-queue.js";
 import { parseShareTarget, urlWithoutShareTarget } from "./shared-input.js";
 import { createCapabilitiesLoader } from "./capabilities.js";
@@ -319,7 +319,7 @@ async function extractTextInput(text) {
 async function extractWebpageInput(url) {
   const response = await fetch("/api/extract-webpage", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
     body: JSON.stringify({ url })
   });
   const payload = await response.json().catch(() => ({}));
@@ -786,7 +786,7 @@ async function extractScreenshot(file) {
   try {
     const response = await fetch("/api/extract-screenshot", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
       body: JSON.stringify({ imageDataUrl })
     });
     const payload = await response.json().catch(() => ({}));
@@ -859,7 +859,7 @@ async function searchCandidates(query, clues = {}) {
 
   const response = await fetch("/api/restaurants/search", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
     body: JSON.stringify({ query, clues })
   });
   const payload = await response.json().catch(() => ({}));
@@ -884,7 +884,7 @@ async function loadCandidatePreview(placeId) {
   try {
     const response = await fetch("/api/restaurants/candidate-preview", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
       body: JSON.stringify({ placeId })
     });
     const payload = await response.json().catch(() => ({}));
@@ -908,7 +908,7 @@ async function loadRestaurantDetails(candidate, selection = {}) {
   try {
     const response = await fetch("/api/restaurants/details", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
       body: JSON.stringify({ placeId: candidate.placeId, clues: state.currentClues, plan: state.currentPlanIntent, userProvidedLinks: state.userProvidedReservationLinks })
     });
     const payload = await response.json().catch(() => ({}));
@@ -1224,6 +1224,7 @@ function renderSettings() {
       <label>默认人数<input type="number" name="defaultPartySize" min="1" max="20" value="${esc(state.settings.defaultPartySize)}"></label>
       <label>电话预约姓名（可选）<input type="text" name="reservationName" maxlength="60" autocomplete="name" value="${esc(state.settings.reservationName)}" placeholder="例如：Guo"><small>仅保存在当前浏览器，用于生成电话话术，不会发送给分析 API。</small></label>
       <label>默认电话话术<select name="defaultPhoneScript"><option value="standard" ${state.settings.defaultPhoneScript === "standard" ? "selected" : ""}>标准版</option><option value="short" ${state.settings.defaultPhoneScript === "short" ? "selected" : ""}>简短版</option><option value="easy" ${state.settings.defaultPhoneScript === "easy" ? "selected" : ""}>日语不熟练</option></select></label>
+      <label>试点访问码（可选）<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="由试点管理员提供"><small>${capabilities.pilotAccessRequired ? "当前服务要求访问码；保存后会随受保护请求发送。" : "当前服务未要求；仅保存在这个浏览器。"}</small></label>
       <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>保存最近分析</strong><small>最多 10 条；实时餐厅仅保存 Place ID、你的线索和计划。</small></span></label>
       <button type="submit" class="primary-button">保存本机设置</button>
     </form></section>

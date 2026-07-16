@@ -18,6 +18,7 @@ import { AuditWorkbenchError, auditAccessInfo, auditLanMode, auditRequestAuthori
 import { createJsonlStore } from "./server/jsonl-store.mjs";
 import { serviceReadiness } from "./server/readiness.mjs";
 import { createDailyBudgetStore, dailyBudgetSnapshot, DailyBudgetExceededError } from "./server/daily-budget.mjs";
+import { pilotAccessAuthorized, pilotAccessRequired, protectedPilotApiPath } from "./server/pilot-access.mjs";
 
 const ROOT = resolve(process.cwd());
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
@@ -64,6 +65,10 @@ const server = createServer(async (request, response) => {
       sendJson(response, 401, { code: "AUDIT_AUTH_REQUIRED", error: "手机审计会话已过期或无效，请在 Mac 终端重新运行 npm run audit:mobile 并打开新地址。" });
       return;
     }
+    if (protectedPilotApiPath(request.method, requestPath) && !pilotAccessAuthorized(request, process.env)) {
+      sendJson(response, 401, { code: "PILOT_ACCESS_REQUIRED", error: "需要有效的试点访问码。请在设置页保存后重试。" });
+      return;
+    }
     if (request.method === "GET" && request.url === "/healthz") {
       sendJson(response, 200, { status: "ok", visionExtraction: visionCapabilities.visionExtraction, placesSearch: Boolean(process.env.GOOGLE_MAPS_API_KEY) });
       return;
@@ -83,6 +88,7 @@ const server = createServer(async (request, response) => {
         placesSearch: Boolean(process.env.GOOGLE_MAPS_API_KEY),
         hotPepper: Boolean(process.env.HOTPEPPER_API_KEY),
         webpageExtraction: true,
+        pilotAccessRequired: pilotAccessRequired(process.env),
         dailyBudget: dailyBudgetStatus
       });
       return;

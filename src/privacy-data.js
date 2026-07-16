@@ -11,7 +11,7 @@ export function summarizeLocalData(savedPlans = [], recentAnalyses = [], pending
     savedPlanCount: Array.isArray(savedPlans) ? savedPlans.length : 0,
     recentAnalysisCount: Array.isArray(recentAnalyses) ? recentAnalyses.length : 0,
     pendingAnalysisCount: Array.isArray(pendingAnalyses) ? pendingAnalyses.length : 0,
-    fields: ["餐厅标识与用户保存的名称", "计划日期、时间、人数和状态", "用户提供的搜索线索与待分析餐厅", "可选预约姓名、默认人数、话术版本和历史记录开关", "保存、分析、首次与最近访问时间"],
+    fields: ["餐厅标识与用户保存的名称", "计划日期、时间、人数和状态", "用户提供的搜索线索与待分析餐厅", "可选预约姓名、试点访问码、默认人数、话术版本和历史记录开关", "保存、分析、首次与最近访问时间"],
     thirdPartyDetailsPersisted: false
   };
 }

@@ -14,6 +14,7 @@ Optional:
 
 - `OPENAI_API_KEY` for the quality fallback
 - `HOTPEPPER_API_KEY` for listing enrichment
+- `PILOT_ACCESS_CODE` for a closed pilot; when set, participants enter the same value in Settings and the browser sends it only to protected same-origin APIs
 - `TRUST_PROXY=true` only when the service is behind a trusted reverse proxy that overwrites `X-Forwarded-For`
 
 Never copy `.env.local` into an image or commit it. The included `.dockerignore` excludes all local environment files, runtime metrics, screenshots, tests, and development artifacts.
@@ -33,6 +34,7 @@ The image creates `/app/data` as a writable directory for privacy-minimized even
 
 1. Terminate TLS at the hosting platform.
 2. Store keys in the platform secret manager.
+   If `PILOT_ACCESS_CODE` is used, generate a long random value and distribute it only to pilot participants. It is a lightweight shared gate, not an account system.
 3. Set `TRUST_PROXY=true` only if the proxy is controlled by the hosting platform.
 4. Confirm Google Places daily quotas remain at 100 Text Search and 100 Place Details requests.
    The application defaults `DAILY_PLACES_SEARCH_LIMIT` and `DAILY_PLACES_DETAILS_LIMIT` to 90, leaving ten console-quota calls for diagnosis. `DAILY_VISION_REQUEST_LIMIT` also defaults to 90. Counters persist in `/app/data/daily-budget.json`, reset on the next Tokyo calendar day, and are consumed only before an upstream call; Places cache hits do not consume another application-budget unit.
