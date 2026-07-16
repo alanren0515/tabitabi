@@ -48,3 +48,32 @@ test("blocks a redirect to a private literal before making the next request", as
   }), (error) => error instanceof SafeHtmlFetchError && error.code === "UNSAFE_REDIRECT");
   assert.equal(requests, 1);
 });
+
+test("stops and destroys a streaming body as soon as it exceeds 512 KB", async () => {
+  let destroyed = false;
+  const body = {
+    async *[Symbol.asyncIterator]() {
+      yield Buffer.alloc(MAX_HTML_BYTES);
+      yield Buffer.from("x");
+      yield Buffer.from("must-not-be-read");
+    },
+    destroy() { destroyed = true; }
+  };
+  await assert.rejects(() => safeFetchHtml({
+    url: "https://restaurant.example/large",
+    lookupImpl: publicLookup,
+    requestImpl: async () => ({ status: 200, headers: { "content-type": "text/html" }, body })
+  }), (error) => error instanceof SafeHtmlFetchError && error.code === "TOO_LARGE" && error.status === 413);
+  assert.equal(destroyed, true);
+});
+
+test("rejects an oversized Content-Length without reading the body", async () => {
+  let read = false;
+  const body = { async *[Symbol.asyncIterator]() { read = true; yield Buffer.from("x"); } };
+  await assert.rejects(() => safeFetchHtml({
+    url: "https://restaurant.example/declared-large",
+    lookupImpl: publicLookup,
+    requestImpl: async () => ({ status: 200, headers: { "content-type": "text/html", "content-length": String(MAX_HTML_BYTES + 1) }, body })
+  }), (error) => error instanceof SafeHtmlFetchError && error.code === "TOO_LARGE");
+  assert.equal(read, false);
+});
