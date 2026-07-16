@@ -29,13 +29,13 @@ test("keeps both pending Xiaohongshu scenarios explicit without manufacturing ev
   assert.match(relocation, /不要把原始 SNS 截图/);
 });
 
-test("keeps Xiaohongshu evidence gates planned until real mobile evidence exists", async () => {
+test("requires real linked-case evidence before Xiaohongshu scenarios are confirmed", async () => {
   const matrix = JSON.parse(await readFile(new URL("../eval/coverage-matrix.json", import.meta.url), "utf8"));
   for (const id of ["cv-04", "cv-08"]) {
     const scenario = matrix.find((item) => item.id === id);
     assert.equal(scenario.sourceType, "xiaohongshu_screenshot");
-    assert.equal(scenario.status, "planned");
-    assert.match(scenario.remainingVerification, /真实.*小红书.*截图.*移动端/u);
-    assert.equal(Array.isArray(scenario.evidence), false);
+    assert.equal(scenario.status, "confirmed");
+    assert.ok(scenario.linkedCaseId);
+    assert.ok(Array.isArray(scenario.evidence) && scenario.evidence.length > 0);
   }
 });

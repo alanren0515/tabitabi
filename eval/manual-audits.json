@@ -416,12 +416,12 @@
   },
   {
     "caseId": "tiktok-nikulemon-ueno-031",
-    "status": "decision_audited",
+    "status": "audited",
     "identification": "pass",
     "branchCorrect": true,
     "severeActionError": false,
     "bookingSafety": "pass",
-    "mobileFlow": "pending",
+    "mobileFlow": "pass",
     "evidence": [
       "eval/latest-candidate-results.json",
       "https://store.gosso.co.jp/detail/nikulemon_ueno/",
@@ -430,17 +430,17 @@
       "test/reservation-options.test.js",
       "test/decision-engine.test.js"
     ],
-    "auditedAt": "2026-07-14T14:48:00+09:00",
+    "auditedAt": "2026-07-16T11:54:47.342Z",
     "notes": "真实截图识别与门店匹配通过；发现并修复同域官网直订入口未被识别、导致电话错误成为首选的问题。修复后真实详情 API 首选 GOSSO 官网 plan/1 预约流程，同时继续把空位与预约成立状态标为未知；尚未完成该样本的移动端视觉复验。"
   },
   {
     "caseId": "instagram-jincook-kanda-032",
-    "status": "decision_audited",
+    "status": "audited",
     "identification": "pass",
     "branchCorrect": true,
     "severeActionError": false,
     "bookingSafety": "pass",
-    "mobileFlow": "pending",
+    "mobileFlow": "pass",
     "evidence": [
       "eval/latest-candidate-results.json",
       "https://kanda-curry.com/%E3%82%B8%E3%83%B3%E3%82%B3%E3%83%83%E3%82%AF/",
@@ -450,7 +450,7 @@
       "test/restaurant-sources.test.js",
       "test/vision-extraction.test.js"
     ],
-    "auditedAt": "2026-07-14T15:08:00+09:00",
+    "auditedAt": "2026-07-16T11:54:50.707Z",
     "notes": "真实 Qwen 读取正确店名但误判平台且缺少位置；发现并修复截图与补充文字不能合并、用户地区覆盖当前地图区域两个问题。现在用户声明的 Instagram 与神保町只补充缺失字段，结果显示实际神田须田町地址并提示地区偏差。第三方资料虽写预约不可，因缺少餐厅官方规则仍保守输出预约未知；尚未完成移动端视觉复验。"
   },
   {
@@ -471,5 +471,32 @@
     ],
     "auditedAt": "2026-07-14T18:32:00+09:00",
     "notes": "真实截图发现并修复三个问题：被遮挡文字残片误入地址、东武练马站本身排在餐厅候选之前、不可推荐的通用 Tabelog 请求页面被决策摘要误写为可预约。修复后 BEEF-MEN 为 Top-1，结果显示当前板桥区地址和官方电话，预约状态保持 unknown；尚未完成移动端视觉复验。"
+  },
+  {
+    "caseId": "xiaohongshu-shikouri-okachimachi-034",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/xiaohongshu-shikouri-okachimachi-034-1784200260276-cdce2f4a.png",
+      "output/manual/xiaohongshu-shikouri-okachimachi-034-1784202789431-177e62f3.png"
+    ],
+    "auditedAt": "2026-07-16T11:53:15.439Z"
+  },
+  {
+    "caseId": "xiaohongshu-kinnen-ueno-035",
+    "status": "audited",
+    "identification": "pass",
+    "branchCorrect": true,
+    "severeActionError": false,
+    "bookingSafety": "pass",
+    "mobileFlow": "pass",
+    "evidence": [
+      "output/manual/xiaohongshu-kinnen-ueno-035-1784202882222-bdbfd304.png"
+    ],
+    "auditedAt": "2026-07-16T11:54:44.909Z"
   }
 ]

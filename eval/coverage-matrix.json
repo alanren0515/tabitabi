@@ -49,14 +49,19 @@
       "multilingual",
       "opinion_vs_fact"
     ],
-    "status": "planned",
+    "status": "confirmed",
+    "linkedCaseId": "xiaohongshu-shikouri-okachimachi-034",
+    "evidence": [
+      "output/manual/xiaohongshu-shikouri-okachimachi-034-1784200260276-cdce2f4a.png",
+      "output/manual/xiaohongshu-shikouri-okachimachi-034-1784202789431-177e62f3.png"
+    ],
     "implementationEvidence": [
       "server/vision-extraction.mjs",
       "src/app.js",
       "test/vision-extraction.test.js",
       "test/candidate-confirmation-flow.test.js"
     ],
-    "remainingVerification": "模型 schema、确定性警告和界面标签已把画面文字、帖子说法与观点分开，观点不会进入门店查询或预约判断；仍需真实小红书多语言截图与移动端视觉审计。"
+    "notes": "关联案例 034 已完成真实小红书截图识别与移动端结果页审计。系统区分食光里、杨国福等身份线索，以及作者推荐、性价比、味道和排队等帖子观点；观点未进入门店查询或预约判断。"
   },
   {
     "id": "cv-05",
@@ -141,7 +146,11 @@
       "old_post",
       "relocation"
     ],
-    "status": "planned",
+    "status": "confirmed",
+    "linkedCaseId": "xiaohongshu-kinnen-ueno-035",
+    "evidence": [
+      "output/manual/xiaohongshu-kinnen-ueno-035-1784202882222-bdbfd304.png"
+    ],
     "implementationEvidence": [
       "https://www.tsurutontan.co.jp/news/news-75/",
       "https://www.tsurutontan.co.jp/shop/roppongi/",
@@ -153,7 +162,7 @@
       "test/restaurant-sources.test.js",
       "test/verified-official-sources.test.js"
     ],
-    "remainingVerification": "真实旧址、现址、官网与当前 TableCheck 链路已核验；仍需要真实小红书旧帖截图与移动端视觉审计"
+    "notes": "关联案例 035 已完成真实小红书旧帖识别与移动端结果页审计。系统识别出旧店信息后以当前 CLOSED_PERMANENTLY 状态为准，没有沿用旧帖价格、营业信息或预约暗示。"
   },
   {
     "id": "cv-09",

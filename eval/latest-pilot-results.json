@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-14T11:24:31.253Z",
+  "generatedAt": "2026-07-16T12:02:34.694Z",
   "gatePassed": false,
   "gates": {
     "inputSample": false,
@@ -30,6 +30,13 @@
     "savedRuns": 0,
     "feedbackRuns": 0,
     "helpfulRuns": 0,
+    "willingnessToPayResponses": 0,
+    "willingnessToPayDistribution": {
+      "consider": 0,
+      "depends_on_price": 0,
+      "would_not": 0,
+      "unsure": 0
+    },
     "analysisCompletionRate": null,
     "identificationRate": null,
     "actionRate": null,
@@ -38,9 +45,9 @@
     "firstOpens": 0,
     "returnsWithin7Days": 0,
     "sevenDayReturnLowerBound": null,
-    "excludedAuditEvents": 0,
+    "excludedAuditEvents": 192,
     "excludedLegacyEvents": 39,
     "excludedDemoRuns": 0
   },
-  "note": "只计算 trafficType=product、sourceMode=live 且带一次性 analysisRunId 的流程；审计和旧版事件不进入试用门槛。7 日回访为无用户标识的本机下界，仅报告，不作为当前通过条件。"
+  "note": "只计算 trafficType=product、sourceMode=live 且带一次性 analysisRunId 的流程；审计和旧版事件不进入试用门槛。7 日回访与付费意愿分布只报告，不作为当前通过条件。"
 }

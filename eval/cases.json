@@ -416,5 +416,54 @@
     "confirmedAt": "2026-07-14T18:32:00+09:00",
     "officialSources": ["https://www.instagram.com/beef_men29/"],
     "notes": "真实 TikTok 截图只可靠显示搜索词、油そば类型与东武练马站，正文和账号被主动遮挡。Qwen 生成的建筑残片已从地址字段移除；Google Places、当前食べログ店铺资料及其标注的官方 Instagram 共同确认 BEEF-MEN 位于板桥区德丸3-1-3。评测集未保存原图、创作者账号、遮挡内容或互动数据。"
+  },
+  {
+    "id": "xiaohongshu-shikouri-okachimachi-034",
+    "sourceType": "xiaohongshu_screenshot",
+    "query": "食光里 御徒町 麻辣烫",
+    "clues": {
+      "name": "食光里",
+      "branch": "",
+      "address": "",
+      "area": "御徒町",
+      "nearestStation": "",
+      "category": "麻辣烫"
+    },
+    "expected": {
+      "nameIncludes": "食光里",
+      "addressIncludes": "東上野1丁目14-14",
+      "placeId": "ChIJUx0LdwCPGGARFT0DEFHVB7Q"
+    },
+    "verificationStatus": "pending",
+    "officialSources": [
+      "https://tabelog.com/tokyo/A1311/A131101/13304611/",
+      "https://www.hotpepper.jp/strJ004004292/"
+    ],
+    "notes": "用户提供的小红书截图已由 Qwen3.6-Flash 识别。模型将食光里识别为主要餐厅，将杨国福保留为对比对象；作者推荐、性价比、味道和排队描述分别作为观点或未核验帖子说法。Google Places 唯一匹配食光里 マーラータン，当前状态 OPERATIONAL，地址为東京都台東区東上野1丁目14-14，官方网页为 shokukouri.owst.jp。尚待移动端结果页审计。评估集不保存原图、作者账号或互动数据。"
+  },
+  {
+    "id": "xiaohongshu-kinnen-ueno-035",
+    "sourceType": "xiaohongshu_screenshot",
+    "query": "鑫燃焼肉 上野店 03-6803-2666",
+    "clues": {
+      "name": "鑫燃焼肉",
+      "branch": "上野店",
+      "address": "東京都台東区上野6-16-7 D・B上野IIビル5F",
+      "area": "上野",
+      "nearestStation": "上野駅",
+      "category": "焼肉"
+    },
+    "expected": {
+      "nameIncludes": "鑫燃",
+      "addressIncludes": "上野6-16-7",
+      "placeId": "ChIJr9iDIQCPGGARBsH2C1GV40s"
+    },
+    "verificationStatus": "pending",
+    "officialSources": [
+      "https://gurunavi.com/en/gjg5600/rst/",
+      "https://tabelog.com/tokyo/A1311/A131101/13303635/dtlmap/",
+      "https://www.city.taito.lg.jp/kenkohukusi/kenkokukikanriei/syokuhin-sisetu/index.files/2024-07-PER-PDF.pdf"
+    ],
+    "notes": "用户提供的小红书截图已由 Qwen3.6-Flash 识别为鑫燃/KINNEN烧肉，上野，海报价格范围1200–3980日元，电话与公开资料一致。用户说明该帖为一年多前且门店已搬走；Google Places 唯一匹配原店并返回 CLOSED_PERMANENTLY，地址为上野6-16-7 D・B上野IIビル5F。食べログ同时标注掲載保留，因此系统不得沿用旧帖的价格、营业时间或预约暗示，结果应优先提示关闭/现址核对。尚待移动端结果页审计。评估集不保存原图、作者账号或互动数据。"
   }
 ]
