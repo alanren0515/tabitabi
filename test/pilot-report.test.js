@@ -11,6 +11,7 @@ test("builds the current pilot report directly from the event log", async () => 
   const events = [
     { event: "input_submitted", trafficType: "product", sourceMode: "live", analysisRunId: "run_live_001" },
     { event: "restaurant_identified", trafficType: "product", sourceMode: "live", analysisRunId: "run_live_001" },
+    { event: "feedback_submitted", trafficType: "product", sourceMode: "live", analysisRunId: "run_live_001", helpful: true, willingnessToPay: "consider" },
     { event: "input_submitted", trafficType: "audit", sourceMode: "live", analysisRunId: "run_audit_001" }
   ];
   await writeFile(path, `${events.map((item) => JSON.stringify(item)).join("\n")}\n`);
@@ -20,6 +21,8 @@ test("builds the current pilot report directly from the event log", async () => 
   assert.equal(report.metrics.inputRuns, 1);
   assert.equal(report.metrics.identifiedRuns, 1);
   assert.equal(report.metrics.excludedAuditEvents, 1);
+  assert.deepEqual(report.metrics.willingnessToPayDistribution, { consider: 1, depends_on_price: 0, would_not: 0, unsure: 0 });
+  assert.equal("willingnessToPay" in report.gates, false);
   assert.equal(report.gatePassed, false);
 });
 

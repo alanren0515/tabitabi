@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { evaluatePilotGate, summarizePilotMetrics } from "./pilot-metrics.mjs";
 
-export const PILOT_REPORT_NOTE = "只计算 trafficType=product、sourceMode=live 且带一次性 analysisRunId 的流程；审计和旧版事件不进入试用门槛。7 日回访为无用户标识的本机下界，仅报告，不作为当前通过条件。";
+export const PILOT_REPORT_NOTE = "只计算 trafficType=product、sourceMode=live 且带一次性 analysisRunId 的流程；审计和旧版事件不进入试用门槛。7 日回访与付费意愿分布只报告，不作为当前通过条件。";
 
 export async function loadPilotReport(eventsPath, now = new Date()) {
   const events = await readEventLines(eventsPath);

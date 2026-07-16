@@ -29,6 +29,7 @@ export const ALLOWED_EVENTS = new Set([
 
 export function sanitizeEvent(body = {}, now = new Date()) {
   if (!ALLOWED_EVENTS.has(body.event)) return null;
+  const willingnessToPay = allowedValue(body.willingnessToPay, ["consider", "depends_on_price", "would_not", "unsure"]);
   return {
     event: body.event,
     placeId: limitedString(body.placeId, 160),
@@ -47,6 +48,7 @@ export function sanitizeEvent(body = {}, now = new Date()) {
     helpful: typeof body.helpful === "boolean" ? body.helpful : null,
     bookingOutcome: allowedValue(body.bookingOutcome, ["succeeded", "not_succeeded", "not_tried"]),
     accuracy: allowedValue(body.accuracy, ["accurate", "partly_wrong", "wrong"]),
+    ...(willingnessToPay ? { willingnessToPay } : {}),
     feedbackText: limitedString(body.feedbackText, 500),
     visitType: allowedValue(body.visitType, ["first_open", "return_within_7d", "return_after_7d"]),
     occurredAt: now.toISOString()

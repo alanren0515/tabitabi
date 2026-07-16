@@ -13,7 +13,7 @@ test("deduplicates clicks per analysis and excludes audit and legacy events", ()
     event("analysis_completed", "run_0001"),
     event("primary_action_clicked", "run_0001"),
     event("primary_action_clicked", "run_0001"),
-    event("feedback_submitted", "run_0001", { helpful: true }),
+    event("feedback_submitted", "run_0001", { helpful: true, willingnessToPay: "consider" }),
     event("analysis_completed", "orphan_01"),
     event("primary_action_clicked", "orphan_01"),
     event("input_submitted", "audit_001", { trafficType: "audit" }),
@@ -25,8 +25,22 @@ test("deduplicates clicks per analysis and excludes audit and legacy events", ()
   assert.equal(metrics.actionRuns, 1);
   assert.equal(metrics.actionRate, 1);
   assert.equal(metrics.helpfulRate, 1);
+  assert.equal(metrics.willingnessToPayResponses, 1);
+  assert.deepEqual(metrics.willingnessToPayDistribution, { consider: 1, depends_on_price: 0, would_not: 0, unsure: 0 });
   assert.equal(metrics.excludedAuditEvents, 1);
   assert.equal(metrics.excludedLegacyEvents, 1);
+});
+
+test("reports willingness-to-pay distribution without adding a pilot gate", () => {
+  const metrics = summarizePilotMetrics([
+    event("feedback_submitted", "pay_0001", { helpful: true, willingnessToPay: "consider" }),
+    event("feedback_submitted", "pay_0002", { helpful: true, willingnessToPay: "depends_on_price" }),
+    event("feedback_submitted", "pay_0003", { helpful: false, willingnessToPay: "would_not" }),
+    event("feedback_submitted", "pay_0004", { helpful: false })
+  ]);
+  assert.equal(metrics.willingnessToPayResponses, 3);
+  assert.deepEqual(metrics.willingnessToPayDistribution, { consider: 1, depends_on_price: 1, would_not: 1, unsure: 0 });
+  assert.equal("willingnessToPay" in evaluatePilotGate({ inputRuns: 20, feedbackRuns: 10, analysisCompletionRate: 0.8, actionRate: 0.35, helpfulRate: 0.6 }).gates, false);
 });
 
 test("reports privacy-safe seven-day return lower bound", () => {

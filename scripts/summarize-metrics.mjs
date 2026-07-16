@@ -75,6 +75,8 @@ console.log(JSON.stringify({
     saveRate: pilot.saveRate,
     feedbackSubmitted: pilot.feedbackRuns,
     helpfulRate: pilot.helpfulRate,
+    willingnessToPayResponses: pilot.willingnessToPayResponses,
+    willingnessToPayDistribution: pilot.willingnessToPayDistribution,
     accurateRate: feedback.length ? accurateFeedback / feedback.length : null,
     bookingSuccessRateAmongAttempts: attemptedBookings.length ? successfulBookings / attemptedBookings.length : null,
     feedbackHelpful: eventCounts.feedback_helpful || 0,

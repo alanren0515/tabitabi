@@ -11,6 +11,7 @@ test("accepts the complete MVP feedback event without unrelated payload fields",
     helpful: true,
     bookingOutcome: "succeeded",
     accuracy: "partly_wrong",
+    willingnessToPay: "depends_on_price",
     feedbackText: "营业时间需要更新",
     rawInput: "must not be logged",
     screenshot: "must not be logged"
@@ -19,6 +20,7 @@ test("accepts the complete MVP feedback event without unrelated payload fields",
   assert.equal(record.helpful, true);
   assert.equal(record.bookingOutcome, "succeeded");
   assert.equal(record.accuracy, "partly_wrong");
+  assert.equal(record.willingnessToPay, "depends_on_price");
   assert.equal(record.feedbackText, "营业时间需要更新");
   assert.equal(record.occurredAt, now.toISOString());
   assert.equal("rawInput" in record, false);
@@ -30,6 +32,7 @@ test("rejects unsupported events and strips invalid categorical values", () => {
   const record = sanitizeEvent({ event: "input_submitted", inputType: "password", bookingOutcome: "maybe" });
   assert.equal(record.inputType, null);
   assert.equal(record.bookingOutcome, null);
+  assert.equal("willingnessToPay" in sanitizeEvent({ event: "feedback_submitted", willingnessToPay: "maybe" }), false);
 });
 
 test("accepts webpage as a privacy-safe input type without recording its URL", () => {

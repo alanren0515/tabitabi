@@ -17,6 +17,7 @@ export function summarizePilotMetrics(events = []) {
   const savedRuns = runIds(live, "saved_to_list");
   const feedbackByRun = uniqueRunEvents(live, "feedback_submitted");
   const helpfulRuns = feedbackByRun.filter((item) => item.helpful === true).length;
+  const willingnessToPayDistribution = countWillingness(feedbackByRun);
   const identifiedInputRunIds = intersection(identifiedRuns, inputRuns);
   const completedInputRunIds = intersection(completedRuns, inputRuns);
   const actionCompletedRuns = intersectionSize(actionRuns, completedInputRunIds);
@@ -32,6 +33,8 @@ export function summarizePilotMetrics(events = []) {
     savedRuns: savedCompletedRuns,
     feedbackRuns: feedbackByRun.length,
     helpfulRuns,
+    willingnessToPayResponses: Object.values(willingnessToPayDistribution).reduce((sum, value) => sum + value, 0),
+    willingnessToPayDistribution,
     analysisCompletionRate: rate(completedInputRunIds.size, inputRuns.size),
     identificationRate: rate(identifiedInputRunIds.size, inputRuns.size),
     actionRate: rate(actionCompletedRuns, completedInputRunIds.size),
@@ -44,6 +47,12 @@ export function summarizePilotMetrics(events = []) {
     excludedLegacyEvents: events.filter((item) => !["product", "audit"].includes(item?.trafficType)).length,
     excludedDemoRuns: demoRunIds.size
   };
+}
+
+function countWillingness(events) {
+  const distribution = { consider: 0, depends_on_price: 0, would_not: 0, unsure: 0 };
+  for (const event of events) if (Object.hasOwn(distribution, event.willingnessToPay)) distribution[event.willingnessToPay] += 1;
+  return distribution;
 }
 
 export function pilotEligibleLiveEvents(events = []) {

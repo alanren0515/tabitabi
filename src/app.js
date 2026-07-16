@@ -637,6 +637,7 @@ function renderResult() {
       <fieldset><legend>结果有帮助吗？</legend><label><input type="radio" name="helpful" value="yes" required> 有帮助</label><label><input type="radio" name="helpful" value="no"> 没有帮助</label></fieldset>
       <fieldset><legend>最后预约成功了吗？</legend><label><input type="radio" name="bookingOutcome" value="succeeded" required> 成功</label><label><input type="radio" name="bookingOutcome" value="not_succeeded"> 没成功</label><label><input type="radio" name="bookingOutcome" value="not_tried"> 没尝试</label></fieldset>
       <fieldset><legend>信息准确吗？</legend><label><input type="radio" name="accuracy" value="accurate" required> 准确</label><label><input type="radio" name="accuracy" value="partly_wrong"> 部分错误</label><label><input type="radio" name="accuracy" value="wrong"> 完全不对</label></fieldset>
+      <fieldset><legend>你会考虑为这类服务付费吗？（可选）</legend><label><input type="radio" name="willingnessToPay" value="consider"> 会考虑</label><label><input type="radio" name="willingnessToPay" value="depends_on_price"> 看价格</label><label><input type="radio" name="willingnessToPay" value="would_not"> 不会</label><label><input type="radio" name="willingnessToPay" value="unsure"> 不确定</label></fieldset>
       <label class="feedback-text">哪里需要改进？（可选）<textarea name="feedbackText" maxlength="500" rows="3" placeholder="例如：营业时间已经变化"></textarea></label>
       <button type="submit">提交反馈</button>
     </form></section>
@@ -673,6 +674,7 @@ function renderResult() {
       helpful: values.helpful === "yes",
       bookingOutcome: values.bookingOutcome,
       accuracy: values.accuracy,
+      willingnessToPay: values.willingnessToPay,
       feedbackText: values.feedbackText
     });
     if (!accepted) {
