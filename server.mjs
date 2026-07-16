@@ -19,6 +19,7 @@ import { createJsonlStore } from "./server/jsonl-store.mjs";
 import { serviceReadiness } from "./server/readiness.mjs";
 import { createDailyBudgetStore, dailyBudgetSnapshot, DailyBudgetExceededError } from "./server/daily-budget.mjs";
 import { pilotAccessAuthorized, pilotAccessRequired, protectedPilotApiPath } from "./server/pilot-access.mjs";
+import { installFatalProcessHandlers } from "./server/process-failures.mjs";
 
 const ROOT = resolve(process.cwd());
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
@@ -175,6 +176,8 @@ const server = createServer(async (request, response) => {
     else response.end();
   }
 });
+
+installFatalProcessHandlers({ processImpl: process, close: (done) => server.close(done) });
 
 server.listen(PORT, HOST, () => {
   console.log(`TabiTabi running at http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}`);
