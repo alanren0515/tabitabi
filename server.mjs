@@ -82,7 +82,7 @@ const server = createServer(async (request, response) => {
     }
     if (protectedPilotApiPath(request.method, requestPath) && !pilotAccessAuthorized(request, process.env)) {
       if (!allowExpensiveRequest(request, response, pilotAuthFailureLimiter)) return;
-      sendJson(response, 401, { code: "PILOT_ACCESS_REQUIRED", error: "有効な招待アクセスコードが必要です。設定画面に保存してから再試行してください。" });
+      sendJson(response, 401, { code: "PILOT_ACCESS_REQUIRED", error: "招待アクセスコードが正しくありません。ホーム画面で入力し直してください。" });
       return;
     }
     if (paidProviderApiPath(request.method, requestPath) && paidApiEmergencyStopped()) {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_SETTINGS, loadSettingsFromStorage, normalizeSettings, persistentSettings, pilotAccessHeaders, PILOT_ACCESS_SESSION_KEY, savePilotAccessForSession, settingsFromForm, settingsWithSessionAccess, SETTINGS_STORAGE_KEY } from "../src/settings.js";
+import { DEFAULT_SETTINGS, loadSettingsFromStorage, normalizeSettings, persistentSettings, pilotAccessHeaders, pilotAccessLocked, pilotAccessRejected, PILOT_ACCESS_SESSION_KEY, savePilotAccessForSession, settingsFromForm, settingsWithoutPilotAccess, settingsWithSessionAccess, SETTINGS_STORAGE_KEY } from "../src/settings.js";
 
 test("normalizes local preferences to bounded supported values", () => {
   assert.deepEqual(normalizeSettings({}), DEFAULT_SETTINGS);
@@ -17,6 +17,25 @@ test("normalizes local preferences to bounded supported values", () => {
   assert.equal(normalizeSettings({ pilotAccessCode: `  code\n${"x".repeat(300)}  ` }).pilotAccessCode.length, 256);
   assert.deepEqual(pilotAccessHeaders({ pilotAccessCode: " pilot-code " }), { "X-Pilot-Access": "pilot-code" });
   assert.deepEqual(pilotAccessHeaders({}), {});
+});
+
+test("locks protected pilot actions only when the current session has no access code", () => {
+  assert.equal(pilotAccessLocked({ pilotAccessRequired: true }, {}), true);
+  assert.equal(pilotAccessLocked({ pilotAccessRequired: true }, { pilotAccessCode: " session-code " }), false);
+  assert.equal(pilotAccessLocked({ pilotAccessRequired: false }, {}), false);
+  assert.equal(pilotAccessLocked({}, {}), false);
+});
+
+test("recognizes a rejected access code and clears only that session value", () => {
+  assert.equal(pilotAccessRejected({ code: "PILOT_ACCESS_REQUIRED" }), true);
+  assert.equal(pilotAccessRejected({ code: "VISION_RATE_LIMITED" }), false);
+  assert.deepEqual(settingsWithoutPilotAccess({ defaultPartySize: 4, pilotAccessCode: "wrong-code" }), {
+    defaultPartySize: 4,
+    reservationName: "",
+    defaultPhoneScript: "standard",
+    saveRecentAnalyses: true,
+    pilotAccessCode: ""
+  });
 });
 
 test("keeps the pilot access code out of persistent settings and only in session storage", () => {

@@ -28,6 +28,18 @@ export function pilotAccessHeaders(settings = {}) {
   return code ? { "X-Pilot-Access": code } : {};
 }
 
+export function pilotAccessLocked(capabilities = {}, settings = {}) {
+  return capabilities?.pilotAccessRequired === true && !normalizePilotAccessCode(settings?.pilotAccessCode);
+}
+
+export function pilotAccessRejected(error) {
+  return error?.code === "PILOT_ACCESS_REQUIRED";
+}
+
+export function settingsWithoutPilotAccess(settings = {}) {
+  return normalizeSettings({ ...settings, pilotAccessCode: "" });
+}
+
 export function persistentSettings(settings = {}) {
   const normalized = normalizeSettings(settings);
   const { pilotAccessCode: _discarded, ...persistent } = normalized;

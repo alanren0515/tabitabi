@@ -6,7 +6,7 @@ import { candidateDecision, candidateDecisionCopy, rejectCandidate, restoreCandi
 import { TERMS_EFFECTIVE_DATE, TERMS_SECTIONS } from "./terms-data.js";
 import { addRecentAnalysis, createRecentAnalysis, normalizeRecentAnalyses, RECENT_STORAGE_KEY } from "./recent-analyses.js";
 import { buildSharePayload } from "./share-result.js";
-import { DEFAULT_SETTINGS, loadSettingsFromStorage, persistentSettings, pilotAccessHeaders, savePilotAccessForSession, settingsFromForm, SETTINGS_STORAGE_KEY } from "./settings.js";
+import { DEFAULT_SETTINGS, loadSettingsFromStorage, normalizeSettings, persistentSettings, pilotAccessHeaders, pilotAccessLocked, pilotAccessRejected, savePilotAccessForSession, settingsFromForm, settingsWithoutPilotAccess, SETTINGS_STORAGE_KEY } from "./settings.js";
 import { addPendingRestaurants, normalizePendingAnalyses, parseBatchRestaurantLines, pendingAnalysisToTextExtraction, PENDING_STORAGE_KEY, removePendingAnalysis, restaurantClueKey } from "./analysis-queue.js";
 import { parseShareTarget, urlWithoutShareTarget } from "./shared-input.js";
 import { createCapabilitiesLoader } from "./capabilities.js";
@@ -166,6 +166,7 @@ function renderHome() {
   const visionFallback = Boolean(state.capabilities?.fallbackAvailable);
   const capabilitiesUnavailable = Boolean(state.capabilities?.capabilitiesUnavailable);
   const offline = navigator.onLine === false;
+  const accessLocked = pilotAccessLocked(state.capabilities, state.settings);
   app.innerHTML = `
     <section class="hero">
       <div class="eyebrow">SNSで見つけた店を、確かな次の一歩へ</div>
@@ -173,6 +174,11 @@ function renderHome() {
       <p class="hero-copy">リンク、店名、スクリーンショットから店舗を確認。予約・電話・来店のうち、いま取るべき行動を整理します。</p>
       ${state.sharedInputPending ? `<aside class="shared-input-banner"><strong>共有内容を受け取りました</strong><span>共有されたタイトル、文章、リンクを入力欄に反映しました。内容を確認してから開始してください。</span></aside>` : ""}
       ${offline ? `<aside class="offline-banner"><strong>オフラインです</strong><span>保存済みのリストは確認できます。新しい画像解析、店舗検索、公式サイト確認にはインターネット接続が必要です。</span></aside>` : ""}
+      ${accessLocked ? `<form id="pilot-access-form" class="pilot-access-card" aria-labelledby="pilot-access-title">
+        <div class="pilot-access-copy"><span>クローズドテスト</span><strong id="pilot-access-title">招待アクセスコードを入力</strong><p id="pilot-access-help">管理者から案内されたコードです。このタブを閉じるまでだけ保持し、店舗確認を始めるときに本サービスへ送信します。</p></div>
+        <label for="pilot-access-code">招待アクセスコード</label>
+        <div class="pilot-access-controls"><input id="pilot-access-code" name="pilotAccessCode" type="password" maxlength="256" autocomplete="off" required aria-describedby="pilot-access-help" placeholder="アクセスコード"><button type="submit">このタブで使用</button></div>
+      </form>` : ""}
       <form id="analyze-form" class="input-card">
         <label for="clue">お店の手がかり</label>
         <textarea id="clue" name="clue" rows="4" placeholder="Instagram / TikTok のリンク、または店名を入力…" ${state.analysisError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
@@ -183,8 +189,8 @@ function renderHome() {
           ${state.uploadName ? '<button type="button" class="remove-upload" id="remove-upload">画像を外す</button>' : '<span class="privacy-note" id="upload-help">画像は店舗確認のためだけに使用します</span>'}
         </div>
         ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="確認するスクリーンショット"><div><strong>画面全体を確認します</strong><span>店名、住所、価格、投稿者、本文、反応数を分けて扱います。</span></div></div>` : ""}
-        ${state.analysisError ? `<aside class="inline-error" id="analysis-error" role="alert"><strong>画像を確認できませんでした</strong><span>${esc(state.analysisError)}</span></aside>` : ""}
-        <button class="primary-button" type="submit">確認をはじめる ${icons.arrow}</button>
+        ${state.analysisError ? `<aside class="inline-error" id="analysis-error" role="alert"><strong>入力内容を確認できませんでした</strong><span>${esc(state.analysisError)}</span></aside>` : ""}
+        <button class="primary-button" type="submit" ${accessLocked ? 'disabled aria-describedby="pilot-access-help"' : ""}>確認をはじめる ${icons.arrow}</button>
       </form>
       <div class="examples">
         <span>デモを試す：</span>
@@ -203,6 +209,21 @@ function renderHome() {
     <aside class="demo-banner ${visionLive ? "live" : ""}"><strong>${capabilitiesUnavailable ? "サービス状態を確認できません" : visionLive ? "スクリーンショット解析を利用できます" : "画像解析のデモモード"}</strong><span>${capabilitiesUnavailable ? "一時的な通信エラーを未設定とは判定しません。接続を確認して再試行してください。" : visionLive ? `${esc(visionModel)} で画面全体を確認します。${visionFallback ? "結果の品質が低い場合は予備モデルを使用します" : "予備モデルは未設定のため、確度が低い場合は手動確認が必要です"}。検索前に店名と住所を確認できます。` : "画像解析 API を設定すると任意のスクリーンショットを確認できます。現在はサンプル画像のみデモ解析できます。"}</span></aside>`;
 
   document.querySelector("#analyze-form").addEventListener("submit", handleAnalyze);
+  document.querySelector("#pilot-access-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const code = new FormData(event.currentTarget).get("pilotAccessCode");
+    state.settings = normalizeSettings({ ...state.settings, pilotAccessCode: code });
+    if (!state.settings.pilotAccessCode) {
+      showToast("招待アクセスコードを入力してください");
+      document.querySelector("#pilot-access-code")?.focus();
+      return;
+    }
+    syncSettings();
+    state.analysisError = "";
+    showToast("アクセスコードを入力しました");
+    renderHome();
+    document.querySelector("#clue")?.focus();
+  });
   document.querySelector("#upload-trigger").addEventListener("click", () => document.querySelector("#screenshot").click());
   document.querySelector("#screenshot").addEventListener("change", (event) => attachScreenshotFile(event.target.files[0] || null));
   document.querySelector("#clue").addEventListener("paste", (event) => {
@@ -260,6 +281,14 @@ async function handleAnalyze(event) {
   if (capabilities.capabilitiesUnavailable) {
     state.analysisError = "サービス状態を確認できません。通信環境を確認して再試行してください。";
     renderHome();
+    return;
+  }
+  if (pilotAccessLocked(capabilities, state.settings)) {
+    state.capabilities = capabilities;
+    state.analysisError = "";
+    renderHome();
+    document.querySelector("#pilot-access-code")?.focus();
+    showToast("先に招待アクセスコードを入力してください");
     return;
   }
   state.input = value || state.uploadName;
@@ -336,6 +365,7 @@ async function handleAnalyze(event) {
     state.view = "text_extraction";
     render();
   } catch (error) {
+    if (recoverFromPilotAccessError(error)) return;
     state.analysisError = error.message || "店舗検索を一時的に利用できません。";
     state.view = "home";
     render();
@@ -360,7 +390,7 @@ async function extractWebpageInput(url) {
     body: JSON.stringify({ url })
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "公開ページから店舗情報を確認できませんでした。店名を入力するか、スクリーンショットを追加してください。");
+  if (!response.ok) throw apiResponseError(payload, "公開ページから店舗情報を確認できませんでした。店名を入力するか、スクリーンショットを追加してください。");
   return payload;
 }
 
@@ -385,7 +415,12 @@ function renderTextExtraction() {
     const form = Object.fromEntries(new FormData(event.currentTarget));
     const search = [form.name, form.branch, form.area, form.address].filter(Boolean).join(" ");
     try { await searchCandidates(search, form); }
-    catch (error) { state.view = "text_extraction"; showToast(error.message || "店舗検索を一時的に利用できません"); render(); }
+    catch (error) {
+      if (recoverFromPilotAccessError(error)) return;
+      state.view = "text_extraction";
+      showToast(error.message || "店舗検索を一時的に利用できません");
+      render();
+    }
   });
 }
 
@@ -842,8 +877,9 @@ async function extractScreenshot(file) {
         requiresUserConfirmation: Boolean(payload.requiresUserConfirmation)
       }
     };
-    throw new Error(visionErrorMessage(payload));
+    throw apiResponseError(payload, visionErrorMessage(payload));
   } catch (error) {
+    if (pilotAccessRejected(error)) throw error;
     if (!isKnownSampleScreenshot(file)) throw error;
   }
 
@@ -904,7 +940,7 @@ async function searchCandidates(query, clues = {}) {
     body: JSON.stringify({ query, clues })
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "実在する店舗を検索できませんでした。");
+  if (!response.ok) throw apiResponseError(payload, "実在する店舗を検索できませんでした。");
   if (!payload.candidates?.length) throw new Error("確認できる店舗が見つかりません。店名やエリアを追加してください。");
   state.candidates = payload.candidates;
   state.candidatePreviews = {};
@@ -929,14 +965,15 @@ async function loadCandidatePreview(placeId) {
       body: JSON.stringify({ placeId })
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || "評価を取得できませんでした。店舗の確認はそのまま続けられます。");
+    if (!response.ok) throw apiResponseError(payload, "評価を取得できませんでした。店舗の確認はそのまま続けられます。");
     state.candidatePreviews = { ...state.candidatePreviews, [placeId]: payload.preview };
     postEvent("candidate_preview_loaded", { placeId, sourceMode: state.analysisSourceMode || "live", cacheStatus: payload.cacheStatus });
   } catch (error) {
+    if (recoverFromPilotAccessError(error)) return;
     showToast(error.message || "評価を取得できませんでした");
   } finally {
     state.candidatePreviewLoadingId = "";
-    renderCandidates();
+    if (state.view === "candidates") renderCandidates();
   }
 }
 
@@ -953,7 +990,7 @@ async function loadRestaurantDetails(candidate, selection = {}) {
       body: JSON.stringify({ placeId: candidate.placeId, clues: state.currentClues, plan: state.currentPlanIntent, userProvidedLinks: state.userProvidedReservationLinks })
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || "店舗情報を確認できませんでした。");
+    if (!response.ok) throw apiResponseError(payload, "店舗情報を確認できませんでした。");
     if (selection.recordConfirmation !== false) postEvent("candidate_confirmed", { placeId: candidate.placeId, sourceMode: state.analysisSourceMode || "live", selectedRank: selection.selectedRank || null, candidateCount: selection.candidateCount || null });
     state.restaurant = payload.restaurant;
     if (state.restaurant.conflict) postEvent("source_conflict_seen");
@@ -968,10 +1005,30 @@ async function loadRestaurantDetails(candidate, selection = {}) {
     }
   } catch (error) {
     if (recordsNewAnalysis) state.analysisStartedAt = null;
+    if (recoverFromPilotAccessError(error)) return;
     state.view = selection.returnView || "candidates";
     showToast(error.message || "店舗情報を確認できませんでした");
     render();
   }
+}
+
+function apiResponseError(payload = {}, fallbackMessage) {
+  const error = new Error(payload.error || fallbackMessage);
+  error.code = typeof payload.code === "string" ? payload.code : "";
+  return error;
+}
+
+function recoverFromPilotAccessError(error) {
+  if (!pilotAccessRejected(error)) return false;
+  state.settings = settingsWithoutPilotAccess(state.settings);
+  state.loadingMode = "";
+  state.analysisError = "アクセスコードが正しくありません。管理者から案内されたコードをもう一度入力してください。";
+  state.view = "home";
+  syncSettings();
+  render();
+  requestAnimationFrame(() => document.querySelector("#pilot-access-code")?.focus());
+  showToast("アクセスコードが正しくありません");
+  return true;
 }
 
 function formatClientTime(value) {
