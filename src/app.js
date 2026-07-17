@@ -400,7 +400,7 @@ function renderLinkGuidance() {
 }
 
 function platformLabel(value) {
-  return { tiktok: "TikTok", instagram: "Instagram", youtube: "YouTube", x: "X", threads: "Threads", lemon8: "Lemon8", line: "LINE", facebook: "Facebook", xiaohongshu: "小紅書", web: "公開ページ", tablecheck: "TableCheck", tabelog: "食べログ", hotpepper: "Hot Pepper", gurunavi: "ぐるなび", omakase: "OMAKASE", pocket_concierge: "Pocket Concierge", tableall: "TABLEALL", ikyu: "一休.comレストラン", opentable: "OpenTable", google_reserve: "Google で予約", epark: "EPARK", autoreserve: "AutoReserve", hitosara: "ヒトサラ", savor_japan: "SAVOR JAPAN", toreta: "Toreta", ebica: "ebica", paypay_gourmet: "PayPayグルメ", ozmall: "OZmall", retty: "Retty", byfood: "byFood", foodies_reserve: "Foodies Reserve", jpneazy: "JPNEAZY", my_concierge_japan: "My Concierge Japan", japan_food_travel: "JapanFoodTravel", unknown: "画像の手掛かり" }[value] || "予約サービス";
+  return { tiktok: "TikTok", instagram: "Instagram", youtube: "YouTube", x: "X", threads: "Threads", lemon8: "Lemon8", line: "LINE", facebook: "Facebook", xiaohongshu: "小紅書", web: "公開ページ", tablecheck: "TableCheck", tabelog: "食べログ", hotpepper: "ホットペッパーグルメ", gurunavi: "楽天ぐるなび", omakase: "OMAKASE", pocket_concierge: "Pocket Concierge", tableall: "TABLEALL", ikyu: "一休.comレストラン", opentable: "OpenTable", google_reserve: "Google で予約", epark: "EPARK", autoreserve: "AutoReserve", hitosara: "ヒトサラ", savor_japan: "SAVOR JAPAN", toreta: "Toreta", ebica: "ebica", paypay_gourmet: "PayPayグルメ", ozmall: "OZmall", retty: "Retty", byfood: "byFood", foodies_reserve: "Foodies Reserve", jpneazy: "JPNEAZY", my_concierge_japan: "My Concierge Japan", japan_food_travel: "JapanFoodTravel", unknown: "画像の手掛かり" }[value] || "予約サービス";
 }
 
 function renderLoading() {
