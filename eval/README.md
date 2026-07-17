@@ -28,7 +28,7 @@
 
 人工审计状态：`decision_audited` 表示已核对识别与预约决策、但移动端专项流程仍待完成；只有 `audited` 才计入最终 30 例发布样本。
 
-运行 `npm run eval:release-gate`。只有至少 30 个 confirmed + audited 案例、识别准确率不低于 70%、严重行动建议错误率低于 5%、预约安全通过率不低于 95%，且 30 个风险场景全部完成时才允许通过。当前原型预计应显示未通过，直到真实案例补齐。
+运行 `npm run eval:release-gate`。只有至少 30 个 confirmed + audited 案例、识别准确率不低于 70%、严重行动建议错误率低于 5%、预约安全通过率不低于 95%，且 30 个风险场景全部完成时才允许通过。当前技术评测已达到该门槛；正式公开发布仍必须通过线上真实 pilot 和 `npm run release:formal-gate`，不能把技术评测通过等同于产品验证完成。
 
 启动本地服务后运行 `npm run eval:candidates` 会调用真实 Places 搜索，并将不含原始输入和第三方详情的名次结果写入 `latest-candidate-results.json`。总发布门槛要求至少 30 个已确认案例的 Top-3 召回率达到 90%。
 

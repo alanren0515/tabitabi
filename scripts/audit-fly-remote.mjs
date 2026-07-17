@@ -1,8 +1,9 @@
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { flyApplicationName } from "../server/deployment-preflight.mjs";
 import { evaluateFlyRemoteState, parseFlyChecksJson, parseFlyJson } from "../server/fly-remote-audit.mjs";
+import { currentGitState } from "../server/release-revision.mjs";
 
 const run = promisify(execFile);
 
@@ -16,10 +17,17 @@ try {
     flyJson(["secrets", "list", "-a", app, "--json"])
   ]);
   const result = evaluateFlyRemoteState({ machines: machineResult, volumes: volumeResult, checks: checkResult, secrets: secretResult });
-  console.log(JSON.stringify({ app, ...result }, null, 2));
+  const git = await currentGitState();
+  const report = { generatedAt: new Date().toISOString(), app, revision: git.revision, repositoryClean: git.clean, ...result };
+  await mkdir("data/release-evidence", { recursive: true });
+  await writeFile("data/release-evidence/latest-fly.json", `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  console.log(JSON.stringify(report, null, 2));
   if (!result.passed) process.exitCode = 1;
 } catch (error) {
-  console.error(JSON.stringify({ passed: false, error: safeMessage(error) }, null, 2));
+  const report = { generatedAt: new Date().toISOString(), passed: false, error: safeMessage(error) };
+  await mkdir("data/release-evidence", { recursive: true }).catch(() => {});
+  await writeFile("data/release-evidence/latest-fly.json", `${JSON.stringify(report, null, 2)}\n`, "utf8").catch(() => {});
+  console.error(JSON.stringify(report, null, 2));
   process.exitCode = 1;
 }
 

@@ -21,6 +21,8 @@
     "status": "node scripts/project-status.mjs",
     "release:preflight": "node scripts/predeploy-check.mjs",
     "release:smoke": "node scripts/postdeploy-smoke.mjs",
-    "release:fly-audit": "node scripts/audit-fly-remote.mjs"
+    "release:fly-audit": "node scripts/audit-fly-remote.mjs",
+    "release:pilot-remote": "node scripts/audit-remote-pilot.mjs",
+    "release:formal-gate": "node scripts/formal-release-gate.mjs"
   }
 }

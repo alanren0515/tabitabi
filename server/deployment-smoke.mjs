@@ -15,7 +15,7 @@ export function validateSmokeImageMetadata({ extension = "", size = 0 } = {}) {
   return mime;
 }
 
-export async function runDeploymentSmoke({ baseUrl, allowedOrigin = "https://tabitabi-jp.fly.dev", accessCode = "", screenshotDataUrl = "", live = false, fetchImpl = fetch } = {}) {
+export async function runDeploymentSmoke({ baseUrl, allowedOrigin = "https://tabitabi-jp.fly.dev", expectedRevision = "", accessCode = "", screenshotDataUrl = "", live = false, fetchImpl = fetch } = {}) {
   const parsedBaseUrl = new URL(baseUrl);
   const local = ["127.0.0.1", "localhost"].includes(parsedBaseUrl.hostname);
   if (parsedBaseUrl.username || parsedBaseUrl.password || (parsedBaseUrl.protocol !== "https:" && !local)) {
@@ -27,7 +27,10 @@ export async function runDeploymentSmoke({ baseUrl, allowedOrigin = "https://tab
   const checks = {};
   checks.health = await expectJson("health", fetchImpl, `${origin}/healthz`, {}, (value) => value.status === "ok");
   checks.readiness = await expectJson("readiness", fetchImpl, `${origin}/readyz`, {}, (value) => value.ready === true);
-  checks.capabilities = await expectJson("capabilities", fetchImpl, `${origin}/api/capabilities`, {}, (value) => value.visionExtraction === true && value.placesSearch === true && value.pilotAccessRequired === true);
+  const capabilities = await fetchJson("capabilities", fetchImpl, `${origin}/api/capabilities`);
+  checks.capabilities = capabilities.visionExtraction === true && capabilities.placesSearch === true && capabilities.pilotAccessRequired === true
+    && (!expectedRevision || capabilities.releaseRevision === expectedRevision);
+  if (!checks.capabilities) throw new DeploymentSmokeError("capabilities", null, "本番機能と埋め込み release revision を確認してください。");
   checks.privacy = await expectDocument("privacy", fetchImpl, `${origin}/privacy`);
   checks.terms = await expectDocument("terms", fetchImpl, `${origin}/terms`);
   if (live) {
@@ -41,7 +44,7 @@ export async function runDeploymentSmoke({ baseUrl, allowedOrigin = "https://tab
     checks.placesDetails = Boolean(candidate.placeId && details.restaurant?.placeId === candidate.placeId);
     if (!checks.placesDetails) throw new Error("Live Place Details smoke returned a mismatched restaurant");
   }
-  return { passed: Object.values(checks).every(Boolean), live, checks };
+  return { passed: Object.values(checks).every(Boolean), live, releaseRevision: capabilities.releaseRevision || null, checks };
 }
 
 function post(body, headers) { return { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(60_000) }; }

@@ -118,6 +118,7 @@ const server = createServer(async (request, response) => {
         dailyBudget: dailyBudgetStatus,
         providerCircuit: providerCircuitStatus,
         emergencyStop: paidApiEmergencyStopped(),
+        releaseRevision: /^[a-f0-9]{40}$/.test(String(process.env.RELEASE_REVISION || "")) ? process.env.RELEASE_REVISION : null,
         publicInfo: publicOperatorInfo(process.env)
       });
       return;

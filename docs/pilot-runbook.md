@@ -28,13 +28,25 @@
 
 ## 每天复核
 
-在保存事件日志的同一环境运行：
+本地开发时可在保存事件日志的同一环境运行：
 
 ```bash
 npm run metrics:summary
 npm run pilot:gate
 npm run status
 ```
+
+正式 Fly 试运行以线上 Volume 为准。不要把本机日志复制或合并到线上，也不要用本机 `pilot:gate` 代替生产证据。先用 provider-free smoke 唤醒现有 Machine，然后运行：
+
+```bash
+TABITABI_BASE_URL=https://tabitabi-jp.fly.dev npm run release:smoke
+npm run release:pilot-remote
+npm run release:preflight
+npm run release:fly-audit
+npm run release:formal-gate
+```
+
+`release:pilot-remote` 在 Fly 容器内聚合 `/app/data/events.jsonl`，只把计数、比例和 gate 结果写回本机，不输出原始事件。该命令可能短暂唤醒现有 Machine，但不会调用 Qwen、Google Places 或 Hot Pepper。
 
 `pilot:gate` 要求：20 次不同 live 输入、10 次有效反馈、分析完成率至少 80%、行动率至少 35%、有帮助比例至少 60%。命令在尚未达标时返回非零是正常现象，并仍会更新 `eval/latest-pilot-results.json`。
 

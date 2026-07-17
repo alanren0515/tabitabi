@@ -16,6 +16,8 @@ Official references checked on 2026-07-17: [Fly.io resource pricing](https://fly
 
 This decision is for the first closed pilot, not a claim that Railway is the permanent production platform. Before public launch, re-evaluate data residency, backup requirements, traffic volume, and whether the local JSONL store should move to shared managed storage.
 
+Formal public release is separately gated. The technical evaluation gate is necessary but not sufficient: the production Fly Volume must also contain a passing real-user pilot. Production images embed the full Git commit through the reviewed `RELEASE_REVISION` build argument. After a provider-free smoke wakes the Machine, run `npm run release:pilot-remote`; it computes the pilot report inside the container and returns only aggregate metrics. Then refresh `release:preflight`, `release:fly-audit`, and `release:smoke`, and run `npm run release:formal-gate`. The gate requires a clean repository, matching Git revision and Fly image digest, production pilot provenance, post-deployment evidence, and reports no older than 24 hours.
+
 ### Fly.io setup values
 
 - App config: deploy the checked-in `fly.toml` and `Dockerfile`.
@@ -137,6 +139,7 @@ Run exactly one application instance for this MVP. Rate limits and request cache
 5. Add a stable production egress IP restriction to the Google key when the host provides one.
 6. Review provider dashboards after the first real users and lower rate limits if abuse appears.
 7. Keep outbound DNS and HTTP egress controls enabled. The public-webpage endpoint rejects private/reserved DNS results, unsafe redirects, non-HTML responses, and bodies over 512 KB, but production network policy should remain the final SSRF boundary.
+8. Run `npm run release:formal-gate`. Do not remove the shared pilot access code, buy a custom domain, or describe the service as formally released until it passes.
 
 ## Browser security boundary
 

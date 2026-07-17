@@ -103,11 +103,15 @@ npm run eval:decisions
 npm run eval:platform-navigation
 npm run metrics:summary
 npm run pilot:gate
+npm run release:pilot-remote
+npm run release:formal-gate
 ```
 
-真实案例保存在 `eval/cases.json`。当前共有 33 个已确认案例，超过 30 例候选基线。`eval:decisions` 会在候选匹配后继续获取同一 Place ID 的详情，并检查推荐预约、闭店、同名分店冲突、官方不接受预约证据、发现页误升级和“预约成功”误导文案；报告写入 `eval/latest-decision-results.json`。该审计会产生真实 Places 及可选数据源调用，但不会修改人工审计记录。发布审计仍单独要求 30 个真实移动端完整流程，不能用候选命中、决策回归或单元测试替代。
+真实案例保存在 `eval/cases.json`。当前共有 35 个已确认案例，超过 30 例候选基线。`eval:decisions` 会在候选匹配后继续获取同一 Place ID 的详情，并检查推荐预约、闭店、同名分店冲突、官方不接受预约证据、发现页误升级和“预约成功”误导文案；报告写入 `eval/latest-decision-results.json`。该审计会产生真实 Places 及可选数据源调用，但不会修改人工审计记录。发布审计仍单独要求至少 30 个真实移动端完整流程，不能用候选命中、决策回归或单元测试替代。
 
 `pilot:gate` 只计算新版本产生的真实产品流量，要求至少 20 次 live 输入、10 次有效反馈、分析完成率 ≥80%、行动率 ≥35%、有帮助比例 ≥60%。重复点击按一次分析去重；审计和无法归属到新分析运行的旧事件被排除。7 日内回访和可选的付费意愿分布（会考虑 / 看价格 / 不会 / 不确定）目前只报告，不作为通过条件。
+
+正式部署的 pilot 数据位于 Fly Volume，而不是开发机的事件日志。先运行 provider-free smoke 唤醒 Machine，再用 `npm run release:pilot-remote` 在容器内聚合事件，只把匿名统计报告写入被 Git 忽略的 `data/release-evidence/`；原始事件不会经 SSH 输出。`npm run release:formal-gate` 只有在技术 release gate、线上真实 pilot、部署 preflight、Fly 远端审计和 provider-free smoke 全部通过，且同属当前干净 Git commit、当前 Fly image、目标 Volume 并在部署后 24 小时内生成时才通过。技术 `eval:release-gate` 单独通过不等于允许正式公开发布。
 
 小范围试运行的人员分配、输入组合、隐私边界和每日复核步骤见 [docs/pilot-runbook.md](./docs/pilot-runbook.md)。反馈只有在服务端确认接收后才显示提交成功；网络失败时表单会保留并允许重试。
 

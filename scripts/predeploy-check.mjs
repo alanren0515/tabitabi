@@ -1,7 +1,8 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { evaluateDeploymentPreflight, parseEnvironmentFile } from "../server/deployment-preflight.mjs";
 import { evaluateReleaseEvidence } from "../server/release-evidence.mjs";
 import { readMacKeychainSecret } from "../server/keychain-secret.mjs";
+import { currentGitState } from "../server/release-revision.mjs";
 
 const [localEnv, flyConfig, dockerfile, cases, matrix, audits, candidateResults, decisionResults] = await Promise.all([
   readText(".env.local"), readText("fly.toml"), readText("Dockerfile"), readJson("eval/cases.json"), readJson("eval/coverage-matrix.json"),
@@ -11,6 +12,8 @@ const env = { ...parseEnvironmentFile(localEnv), ...process.env };
 if (!env.PILOT_ACCESS_CODE) env.PILOT_ACCESS_CODE = await readMacKeychainSecret({ service: "tabitabi-jp-pilot-access" });
 const releaseGate = evaluateReleaseEvidence({ cases, matrix, audits, candidateResults, decisionResults });
 const result = evaluateDeploymentPreflight({ env, flyConfig, dockerfile, releaseGate });
+const git = await currentGitState();
+const persisted = { generatedAt: new Date().toISOString(), revision: git.revision, repositoryClean: git.clean, ...result };
 const guidance = {
   qwenKey: "在 .env.local 设置 DASHSCOPE_API_KEY。",
   qwenEndpoint: "将 DASHSCOPE_BASE_URL 设为新加坡 International 官方端点。",
@@ -29,7 +32,9 @@ const guidance = {
   pinnedContainerBase: "重新固定 Dockerfile 的 Node 镜像 digest。",
   releaseEvidence: "先运行 npm run eval:release-gate 并修复失败项。"
 };
-console.log(JSON.stringify({ ...result, nextSteps: result.missing.map((key) => guidance[key]) }, null, 2));
+await mkdir("data/release-evidence", { recursive: true });
+await writeFile("data/release-evidence/latest-preflight.json", `${JSON.stringify(persisted, null, 2)}\n`, "utf8");
+console.log(JSON.stringify({ ...persisted, nextSteps: result.missing.map((key) => guidance[key]) }, null, 2));
 if (!result.passed) process.exitCode = 1;
 
 async function readText(path) { try { return await readFile(path, "utf8"); } catch (error) { if (error.code === "ENOENT") return ""; throw error; } }

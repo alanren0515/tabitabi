@@ -1,7 +1,8 @@
-import { readFile, stat } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { runDeploymentSmoke, validateSmokeImageMetadata } from "../server/deployment-smoke.mjs";
 import { flyApplicationName, parseEnvironmentFile } from "../server/deployment-preflight.mjs";
+import { currentGitState } from "../server/release-revision.mjs";
 
 try {
   const localEnv = parseEnvironmentFile(await readText(".env.local"));
@@ -13,11 +14,18 @@ try {
   const accessCode = process.env.PILOT_ACCESS_CODE || localEnv.PILOT_ACCESS_CODE || "";
   const live = process.env.SMOKE_LIVE === "true";
   const screenshotDataUrl = live ? await imageDataUrl(process.env.SMOKE_SCREENSHOT_PATH || "") : "";
-  const result = await runDeploymentSmoke({ baseUrl, allowedOrigin, accessCode, screenshotDataUrl, live });
-  console.log(JSON.stringify(result, null, 2));
+  const git = await currentGitState();
+  const result = await runDeploymentSmoke({ baseUrl, allowedOrigin, expectedRevision: git.revision, accessCode, screenshotDataUrl, live });
+  const report = { generatedAt: new Date().toISOString(), baseUrl, revision: git.revision, repositoryClean: git.clean, ...result };
+  await mkdir("data/release-evidence", { recursive: true });
+  await writeFile("data/release-evidence/latest-smoke.json", `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  console.log(JSON.stringify(report, null, 2));
   if (!result.passed) process.exitCode = 1;
 } catch (error) {
-  console.error(JSON.stringify({ passed: false, stage: error.stage || "configuration", status: error.status || null, error: error.message }, null, 2));
+  const report = { generatedAt: new Date().toISOString(), baseUrl: process.env.TABITABI_BASE_URL || null, passed: false, stage: error.stage || "configuration", status: error.status || null, error: error.message };
+  await mkdir("data/release-evidence", { recursive: true }).catch(() => {});
+  await writeFile("data/release-evidence/latest-smoke.json", `${JSON.stringify(report, null, 2)}\n`, "utf8").catch(() => {});
+  console.error(JSON.stringify(report, null, 2));
   process.exitCode = 1;
 }
 
