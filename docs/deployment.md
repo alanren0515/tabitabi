@@ -55,6 +55,14 @@ docker build -t tabitabi .
 docker run --rm -p 4173:4173 --env-file .env.local tabitabi
 ```
 
+Before creating or changing any paid Fly resource, run the local release preflight:
+
+```bash
+npm run release:preflight
+```
+
+The command checks required configuration, provider budget caps, Fly's checked-in Tokyo/idle lifecycle/VM/HTTPS/health/volume/snapshot settings, the pinned container base and the current release evidence. It prints only boolean check names and repair hints, never secret values. This is a static local check: it cannot prove the remote Machine or Volume count. A failure is a hard stop for deployment.
+
 Initial Fly deployment, after installing `flyctl` and signing in:
 
 ```bash
@@ -66,8 +74,28 @@ fly secrets import --stage -a tabitabi-jp
 fly deploy --ha=false
 fly scale count 1 -a tabitabi-jp
 fly machine list -a tabitabi-jp
+fly volumes list -a tabitabi-jp
 fly checks list
 ```
+
+Do not continue until `fly machine list` shows exactly one Tokyo Machine with the configured 512 MB shape and `fly volumes list` shows exactly one Tokyo `tabitabi_data` Volume. This remote-state check is a hard gate because local `fly.toml` cannot prove existing Fly resources.
+
+After deployment, first run the provider-free smoke test. It checks liveness, readiness, capabilities, privacy and terms without calling Qwen or Google Places. It can wake an auto-stopped Fly Machine and therefore may incur a small amount of Fly compute/network usage:
+
+```bash
+TABITABI_BASE_URL=https://tabitabi-jp.fly.dev npm run release:smoke
+```
+
+Then run one explicitly authorized live provider smoke with a non-private test screenshot. This consumes one Qwen request, one Google Places Text Search request and one Place Details request:
+
+```bash
+TABITABI_BASE_URL=https://tabitabi-jp.fly.dev \
+SMOKE_LIVE=true \
+SMOKE_SCREENSHOT_PATH=/absolute/path/to/test.png \
+npm run release:smoke
+```
+
+`TABITABI_BASE_URL` is mandatory and must exactly match the `fly.dev` origin derived from the committed `app` value in `fly.toml`; arbitrary origin overrides and redirects are rejected. If the globally unique app name changes, update and review `fly.toml` before running the smoke test. The script reads `PILOT_ACCESS_CODE` from the process environment or local `.env.local`, sends it only to protected same-origin endpoints, and never prints the code or screenshot contents. Do not run the live smoke repeatedly; if the daily application budget is already exhausted, wait for the next Tokyo calendar day.
 
 Use the random output as `PILOT_ACCESS_CODE`; production readiness rejects codes shorter than 24 characters. Do not reuse an account password. Before inviting users, restore the latest volume snapshot to a temporary replacement volume once and verify the JSONL files are readable; this is a recovery drill, not a second continuously billed Machine.
 

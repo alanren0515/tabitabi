@@ -1,8 +1,10 @@
 import { pilotAccessCodeStrong } from "./pilot-access.mjs";
+import { DEFAULT_QWEN_BASE_URL, isApprovedQwenBaseUrl } from "./qwen-endpoint.mjs";
 
 export function serviceReadiness({ visionCapabilities = {}, env = {}, dataStoreWritable = true } = {}) {
   const missing = [];
   if (!visionCapabilities.visionExtraction) missing.push("vision_extraction");
+  if (env.NODE_ENV === "production" && !isApprovedQwenBaseUrl(env.DASHSCOPE_BASE_URL || env.QWEN_BASE_URL || DEFAULT_QWEN_BASE_URL)) missing.push("qwen_endpoint");
   if (!env.GOOGLE_MAPS_API_KEY) missing.push("places_search");
   if (env.NODE_ENV === "production" && !pilotAccessCodeStrong(env)) missing.push("pilot_access");
   if (env.NODE_ENV === "production" && !String(env.PUBLIC_OPERATOR_NAME || "").trim()) missing.push("operator_name");

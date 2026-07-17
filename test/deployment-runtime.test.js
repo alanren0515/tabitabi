@@ -75,5 +75,6 @@ test("audit entry route supports GET and HEAD while remaining explicitly gated",
 
 test("public privacy and terms URLs serve the application shell", async () => {
   const serverSource = await readFile(resolve(ROOT, "server.mjs"), "utf8");
-  assert.match(serverSource, /\["\/privacy", "\/terms"\]\.includes\(requestPath\) \? "\/index\.html"/);
+  assert.match(serverSource, /standaloneDocument = \["\/privacy", "\/terms"\]\.includes\(requestPath\)/);
+  assert.match(serverSource, /"X-TabiTabi-Document": standaloneDocument/);
 });

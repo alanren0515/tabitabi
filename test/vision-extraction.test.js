@@ -95,6 +95,19 @@ test("reports Qwen as primary and OpenAI as fallback when both are configured", 
   assert.deepEqual(capabilities.models.map((item) => item.provider), ["qwen", "openai"]);
 });
 
+test("never configures Qwen with a non-Singapore or arbitrary endpoint", () => {
+  const capabilities = getVisionCapabilities({
+    DASHSCOPE_API_KEY: "qwen-test-key",
+    DASHSCOPE_BASE_URL: "https://attacker.example/compatible-mode/v1"
+  });
+  assert.equal(capabilities.visionExtraction, false);
+  const singapore = getVisionCapabilities({
+    DASHSCOPE_API_KEY: "qwen-test-key",
+    DASHSCOPE_BASE_URL: "https://workspace-id.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
+  });
+  assert.equal(singapore.primaryProvider, "qwen");
+});
+
 test("uses Qwen without calling OpenAI when Qwen returns a valid high-confidence extraction", async () => {
   const calls = [];
   const result = await extractScreenshotWithFallback({

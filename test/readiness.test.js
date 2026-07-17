@@ -34,3 +34,19 @@ test("requires live vision and Places but keeps fallback and enrichment optional
   const unwritable = serviceReadiness({ visionCapabilities: { visionExtraction: true }, env: { GOOGLE_MAPS_API_KEY: "configured" }, dataStoreWritable: false });
   assert.deepEqual(unwritable.missing, ["data_store_writable"]);
 });
+
+test("production readiness rejects an unapproved Qwen endpoint even when another vision provider exists", () => {
+  const result = serviceReadiness({
+    visionCapabilities: { visionExtraction: true },
+    env: {
+      NODE_ENV: "production",
+      DASHSCOPE_BASE_URL: "https://attacker.example/compatible-mode/v1",
+      GOOGLE_MAPS_API_KEY: "configured",
+      PILOT_ACCESS_CODE: "a-strong-random-access-code",
+      PUBLIC_OPERATOR_NAME: "TabiTabi",
+      PUBLIC_CONTACT_EMAIL: "support@example.com"
+    }
+  });
+  assert.equal(result.ready, false);
+  assert.ok(result.missing.includes("qwen_endpoint"));
+});

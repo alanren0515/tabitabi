@@ -1,6 +1,6 @@
-const DEFAULT_QWEN_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 import { guardVisionIdentityFields } from "./prompt-injection-guard.mjs";
+import { DEFAULT_QWEN_BASE_URL, isApprovedQwenBaseUrl } from "./qwen-endpoint.mjs";
 
 const restaurantSchema = {
   type: "object",
@@ -334,11 +334,12 @@ function providerHttpError(provider, status, payload, requestId) {
 }
 
 function configuredProviders(env) {
+  const qwenBaseUrl = trimTrailingSlash(env.DASHSCOPE_BASE_URL || env.QWEN_BASE_URL || DEFAULT_QWEN_BASE_URL);
   const configs = {
     qwen: {
       name: "qwen",
-      apiKey: env.DASHSCOPE_API_KEY || env.QWEN_API_KEY || "",
-      baseUrl: trimTrailingSlash(env.DASHSCOPE_BASE_URL || env.QWEN_BASE_URL || DEFAULT_QWEN_BASE_URL),
+      apiKey: isApprovedQwenBaseUrl(qwenBaseUrl) ? env.DASHSCOPE_API_KEY || env.QWEN_API_KEY || "" : "",
+      baseUrl: qwenBaseUrl,
       model: env.QWEN_VISION_MODEL || "qwen3.6-flash"
     },
     openai: {

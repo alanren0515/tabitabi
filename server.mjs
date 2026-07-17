@@ -175,7 +175,8 @@ const server = createServer(async (request, response) => {
       sendJson(response, 405, { error: "Method not allowed" });
       return;
     }
-    await serveStatic(request, response, ["/privacy", "/terms"].includes(requestPath) ? "/index.html" : "");
+    const standaloneDocument = ["/privacy", "/terms"].includes(requestPath) ? requestPath.slice(1) : "";
+    await serveStatic(request, response, standaloneDocument ? "/index.html" : "", standaloneDocument ? { "X-TabiTabi-Document": standaloneDocument } : {});
   } catch (error) {
     console.error(error);
     if (!response.headersSent && error?.statusCode === 413) sendJson(response, 413, { code: "BODY_TOO_LARGE", error: "Request body is too large" });
