@@ -16,7 +16,7 @@ const valid = {
   releaseEvidence: { generatedAt, revision, repositoryClean: true, gatePassed: true },
   pilotEvidence: { schemaVersion: 1, source: "fly-volume", app: "tabitabi-jp", volume: "tabitabi_data", generatedAt, auditRevision: revision, releaseRevision: revision, imageRef: `registry.fly.io/tabitabi-jp:${imageTag}`, repositoryClean: true, gatePassed: true, gates: { inputSample: true, feedbackSample: true, analysisCompletion: true, actionRate: true, helpfulRate: true }, blockedBy: [], metrics: pilotMetrics },
   preflightEvidence: { generatedAt, revision, repositoryClean: true, passed: true },
-  flyEvidence: { generatedAt, revision, repositoryClean: true, app: "tabitabi-jp", passed: true, deployment: { machineUpdatedAt: "2026-07-18T10:00:00.000Z", imageDigest, imageTag } },
+  flyEvidence: { generatedAt, revision, repositoryClean: true, app: "tabitabi-jp", passed: true, deployment: { releaseCreatedAt: "2026-07-18T10:00:00.000Z", imageDigest, imageTag } },
   smokeEvidence: { generatedAt, revision, releaseRevision: revision, repositoryClean: true, baseUrl: "https://tabitabi-jp.fly.dev", passed: true, live: false }
 };
 

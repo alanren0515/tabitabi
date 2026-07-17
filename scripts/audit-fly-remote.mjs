@@ -10,13 +10,14 @@ const run = promisify(execFile);
 try {
   const app = flyApplicationName(await readFile("fly.toml", "utf8"));
   if (!app) throw new Error("fly.toml must contain a valid committed app name");
-  const [machineResult, volumeResult, checkResult, secretResult] = await Promise.all([
+  const [machineResult, volumeResult, checkResult, secretResult, releaseResult] = await Promise.all([
     flyJson(["machine", "list", "-a", app, "--json"]),
     flyJson(["volumes", "list", "-a", app, "--json"]),
     flyChecksJson(["checks", "list", "-a", app, "--json"]),
-    flyJson(["secrets", "list", "-a", app, "--json"])
+    flyJson(["secrets", "list", "-a", app, "--json"]),
+    flyJson(["releases", "-a", app, "--json"])
   ]);
-  const result = evaluateFlyRemoteState({ machines: machineResult, volumes: volumeResult, checks: checkResult, secrets: secretResult });
+  const result = evaluateFlyRemoteState({ machines: machineResult, volumes: volumeResult, checks: checkResult, secrets: secretResult, releases: releaseResult });
   const git = await currentGitState();
   const report = { generatedAt: new Date().toISOString(), app, revision: git.revision, repositoryClean: git.clean, ...result };
   await mkdir("data/release-evidence", { recursive: true });

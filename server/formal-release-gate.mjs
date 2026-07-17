@@ -27,7 +27,7 @@ export function evaluateFormalReleaseGate({
   const imageTag = String(flyEvidence?.deployment?.imageTag || "");
   const sameImage = /^sha256:[a-f0-9]{64}$/.test(imageDigest) && /^deployment-[A-Z0-9]+$/.test(imageTag)
     && String(pilotEvidence?.imageRef || "").endsWith(`:${imageTag}`);
-  const deployedAt = Date.parse(String(flyEvidence?.deployment?.machineUpdatedAt || ""));
+  const deployedAt = Date.parse(String(flyEvidence?.deployment?.releaseCreatedAt || ""));
   const evidenceAfterDeployment = Number.isFinite(deployedAt) && [releaseEvidence, pilotEvidence, preflightEvidence, flyEvidence, smokeEvidence]
     .every((report) => Date.parse(String(report?.generatedAt || "")) >= deployedAt);
   const gates = {

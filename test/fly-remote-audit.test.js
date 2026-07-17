@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { evaluateFlyRemoteState, parseFlyChecksJson, parseFlyJson, REQUIRED_FLY_SECRETS } from "../server/fly-remote-audit.mjs";
 
 const valid = {
-  machines: [{ id: "machine-1", state: "started", region: "nrt", config: { guest: { cpu_kind: "shared", cpus: 1, memory_mb: 512 }, mounts: [{ volume: "volume-1", path: "/app/data" }], services: [{ internal_port: 4173, checks: [{ path: "/healthz" }], autostart: true, autostop: true, min_machines_running: 0 }] } }],
+  machines: [{ id: "machine-1", state: "started", region: "nrt", image_ref: { tag: "deployment-TEST", digest: `sha256:${"b".repeat(64)}` }, config: { guest: { cpu_kind: "shared", cpus: 1, memory_mb: 512 }, mounts: [{ volume: "volume-1", path: "/app/data" }], services: [{ internal_port: 4173, checks: [{ path: "/healthz" }], autostart: true, autostop: true, min_machines_running: 0 }] } }],
   volumes: [{ id: "volume-1", state: "created", attached_machine_id: "machine-1", name: "tabitabi_data", region: "nrt", size_gb: 1, encrypted: true, snapshot_retention: 7, auto_backup_enabled: true }],
   checks: [{ machineId: "machine-1", name: "http_service", status: "passing" }],
-  secrets: REQUIRED_FLY_SECRETS.map((name) => ({ name, status: "Deployed" }))
+  secrets: REQUIRED_FLY_SECRETS.map((name) => ({ name, status: "Deployed" })),
+  releases: [{ Status: "complete", Version: 5, CreatedAt: "2026-07-18T10:00:00.000Z", ImageRef: "registry.fly.io/tabitabi-jp:deployment-TEST" }]
 };
 
 test("accepts exactly one healthy Tokyo machine and one 1 GB Tokyo volume", () => {

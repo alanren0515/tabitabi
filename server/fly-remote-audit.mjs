@@ -4,7 +4,7 @@ export const REQUIRED_FLY_SECRETS = Object.freeze([
   "VISION_MAX_OUTPUT_TOKENS", "VISION_PROVIDER_ORDER", "VISION_TIMEOUT_MS"
 ]);
 
-export function evaluateFlyRemoteState({ machines = [], volumes = [], checks = [], secrets = [] } = {}) {
+export function evaluateFlyRemoteState({ machines = [], volumes = [], checks = [], secrets = [], releases = [] } = {}) {
   const machine = machines[0] || {};
   const guest = machine.config?.guest || machine.guest || {};
   const volume = volumes[0] || {};
@@ -20,6 +20,9 @@ export function evaluateFlyRemoteState({ machines = [], volumes = [], checks = [
   const deployedSecrets = new Set(secrets
     .filter((item) => String(item.status || "").toLowerCase() === "deployed")
     .map((item) => String(item.name || "")));
+  const machineImageTag = String(machine.image_ref?.tag ?? machine.imageRef?.tag ?? "");
+  const release = releases.find((item) => String(item.Status ?? item.status ?? "").toLowerCase() === "complete"
+    && String(item.ImageRef ?? item.imageRef ?? "").endsWith(`:${machineImageTag}`)) || {};
   const results = {
     exactlyOneMachine: machines.length === 1,
     machineStarted: String(machine.state || "").toLowerCase() === "started",
@@ -69,7 +72,9 @@ export function evaluateFlyRemoteState({ machines = [], volumes = [], checks = [
     deployment: {
       machineUpdatedAt: machine.updated_at ?? machine.updatedAt ?? null,
       imageDigest: machine.image_ref?.digest ?? machine.imageRef?.digest ?? null,
-      imageTag: machine.image_ref?.tag ?? machine.imageRef?.tag ?? null
+      imageTag: machineImageTag || null,
+      releaseCreatedAt: release.CreatedAt ?? release.createdAt ?? null,
+      releaseVersion: release.Version ?? release.version ?? null
     }
   };
 }
