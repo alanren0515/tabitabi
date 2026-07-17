@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-17T15:28:25.798Z",
+  "generatedAt": "2026-07-17T17:10:11.936Z",
   "gatePassed": false,
   "gates": {
     "inputSample": false,
@@ -41,12 +41,12 @@
     "actionRate": 0,
     "saveRate": 0,
     "helpfulRate": null,
-    "firstOpens": 9,
-    "returnsWithin7Days": 3,
+    "firstOpens": 12,
+    "returnsWithin7Days": 4,
     "sevenDayReturnLowerBound": 0.3333333333333333,
     "excludedAuditEvents": 192,
     "excludedLegacyEvents": 39,
-    "excludedDemoRuns": 2
+    "excludedDemoRuns": 3
   },
   "note": "只计算 trafficType=product、sourceMode=live 且带一次性 analysisRunId 的流程；审计和旧版事件不进入试用门槛。7 日回访与付费意愿分布只报告，不作为当前通过条件。"
 }
