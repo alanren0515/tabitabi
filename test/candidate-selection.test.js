@@ -64,7 +64,7 @@ test("describes one uncertain result as a single candidate instead of several re
     candidateCount: 1,
     input: "つるとんたん 六本木"
   }), {
-    heading: "目前只找到一个可能候选",
-    summary: "这个结果与“つるとんたん 六本木”有部分线索一致，但证据还不够强。请核对店名、分店和地址后再确认。"
+    heading: "候補は1件ですが、確定できません",
+    summary: "「つるとんたん 六本木」と一部一致しますが、根拠が十分ではありません。店名・支店・住所を確認してください。"
   });
 });

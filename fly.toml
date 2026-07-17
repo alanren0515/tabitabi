@@ -1,0 +1,36 @@
+app = "tabitabi-jp"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  HOST = "0.0.0.0"
+  PORT = "4173"
+  TRUST_PROXY = "true"
+  NODE_ENV = "production"
+
+[mounts]
+  source = "tabitabi_data"
+  destination = "/app/data"
+
+[http_service]
+  internal_port = 4173
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/readyz"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  cpus = 1
+  cpu_kind = "shared"

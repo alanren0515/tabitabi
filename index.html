@@ -1,36 +1,34 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f7f4ed" />
-    <meta name="description" content="把餐厅线索变成清晰的预约与到店行动。" />
+    <meta name="description" content="SNSで見つけた飲食店を確認し、予約・電話・来店までの次の一歩を整理します。" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><circle cx=%2232%22 cy=%2232%22 r=%2232%22 fill=%22%2318231f%22/><text x=%2232%22 y=%2243%22 text-anchor=%22middle%22 font-size=%2236%22 fill=%22white%22>た</text></svg>" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/assets/icon-192.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/styles.css" />
-    <title>TabiTabi — 日本餐厅行动助手</title>
+    <title>TabiTabi | SNSで見つけた店を、次の行動へ</title>
   </head>
   <body>
     <div class="page-shell">
       <header class="topbar">
-        <button class="brand" data-action="home" aria-label="返回首页">
+        <button class="brand" data-action="home" aria-label="ホームに戻る">
           <span class="brand-mark">た</span>
           <span>TabiTabi</span>
         </button>
-        <nav class="top-actions" aria-label="个人内容">
-          <button class="saved-link" data-action="history"><span>最近分析</span><span class="saved-count" id="history-count">0</span></button>
-          <button class="saved-link" data-action="saved"><span>想去清单</span><span class="saved-count" id="saved-count">0</span></button>
+        <nav class="top-actions" aria-label="保存した内容">
+          <button class="saved-link" data-action="history" aria-label="最近の確認 0件"><span>最近の確認</span><span class="saved-count" id="history-count">0</span></button>
+          <button class="saved-link" data-action="saved" aria-label="行きたいリスト 0件"><span>行きたい</span><span class="saved-count" id="saved-count">0</span></button>
         </nav>
       </header>
-      <main id="app" aria-live="polite"></main>
+      <main id="app" tabindex="-1"></main>
+      <div id="route-status" class="sr-only" role="status" aria-live="polite"></div>
       <footer>
-        <span>Prototype v0.1</span>
-        <span>信息不足时，我们会诚实地告诉你。</span>
-        <div class="footer-links"><button data-action="queue">待分析 <span id="pending-count">0</span></button><button data-action="settings">设置</button><button data-action="privacy">隐私与数据</button><button data-action="terms">服务条款</button></div>
+        <span>TabiTabi</span>
+        <span>確認できない情報は、推測せずにお伝えします。</span>
+        <div class="footer-links"><button data-action="queue">あとで確認 <span id="pending-count">0</span></button><button data-action="settings">設定</button><button data-action="privacy">プライバシー</button><button data-action="terms">利用条件</button></div>
       </footer>
     </div>
     <div id="toast" class="toast" role="status"></div>

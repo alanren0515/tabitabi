@@ -1,9 +1,9 @@
 export const PLAN_STATUSES = [
-  { value: "needs_reservation", label: "需预约" },
-  { value: "reserved", label: "已预约" },
-  { value: "walk_in", label: "可现场去" },
-  { value: "information_needed", label: "信息不足" },
-  { value: "not_recommended", label: "暂不推荐" }
+  { value: "needs_reservation", label: "予約が必要" },
+  { value: "reserved", label: "予約済み" },
+  { value: "walk_in", label: "直接来店" },
+  { value: "information_needed", label: "要確認" },
+  { value: "not_recommended", label: "今回は見送る" }
 ];
 
 export function defaultPlanStatus(recommendation) {
@@ -20,10 +20,10 @@ export function createSavedPlan({ restaurant, userClues = {}, userLabel = "", pl
   return {
     id: restaurant.id,
     placeId: restaurant.placeId || null,
-    name: live ? userLabel || restaurant.userLabel || restaurant.name || "已保存餐厅" : restaurant.name,
-    area: live ? "实时信息需刷新" : restaurant.area || "",
+    name: live ? userLabel || restaurant.userLabel || restaurant.name || "保存した店舗" : restaurant.name,
+    area: live ? "最新情報を再確認してください" : restaurant.area || "",
     recommendation: live ? "unknown" : restaurant.recommendation,
-    nextAction: live ? "重新核对餐厅信息" : restaurant.nextAction,
+    nextAction: live ? "店舗情報をもう一度確認する" : restaurant.nextAction,
     requiresRefresh: live,
     userClues,
     planDate: cleanDate(plan.planDate),
@@ -61,7 +61,7 @@ export function normalizeSavedPlans(value) {
 }
 
 export function planStatusLabel(value) {
-  return PLAN_STATUSES.find((item) => item.value === value)?.label || "信息不足";
+  return PLAN_STATUSES.find((item) => item.value === value)?.label || "要確認";
 }
 
 export function sortSavedPlansByUrgency(value, today = localDateString()) {

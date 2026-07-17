@@ -63,11 +63,11 @@ const server = createServer(async (request, response) => {
   try {
     const requestPath = new URL(request.url || "/", "http://tabitabi.invalid").pathname;
     if (lanAudit && requestPath.startsWith("/api/") && !auditRequestAuthorized(request, process.env)) {
-      sendJson(response, 401, { code: "AUDIT_AUTH_REQUIRED", error: "手机审计会话已过期或无效，请在 Mac 终端重新运行 npm run audit:mobile 并打开新地址。" });
+      sendJson(response, 401, { code: "AUDIT_AUTH_REQUIRED", error: "モバイル監査セッションが期限切れまたは無効です。Mac のターミナルで npm run audit:mobile を再実行し、新しいURLを開いてください。" });
       return;
     }
     if (protectedPilotApiPath(request.method, requestPath) && !pilotAccessAuthorized(request, process.env)) {
-      sendJson(response, 401, { code: "PILOT_ACCESS_REQUIRED", error: "需要有效的试点访问码。请在设置页保存后重试。" });
+      sendJson(response, 401, { code: "PILOT_ACCESS_REQUIRED", error: "有効な試験用アクセスコードが必要です。設定画面に保存してから再試行してください。" });
       return;
     }
     if (request.method === "GET" && request.url === "/healthz") {
@@ -124,7 +124,7 @@ const server = createServer(async (request, response) => {
     }
     if (auditWorkbench && ["GET", "HEAD"].includes(request.method) && requestPath === "/audit") {
       if (!auditRequestAuthorized(request, process.env)) {
-        sendJson(response, 401, { code: "AUDIT_AUTH_REQUIRED", error: "手机审计会话已过期或无效，请重新打开 Mac 终端当前显示的地址。" });
+        sendJson(response, 401, { code: "AUDIT_AUTH_REQUIRED", error: "モバイル監査セッションが期限切れまたは無効です。Mac のターミナルに表示されている現在のURLを開き直してください。" });
         return;
       }
       const cookie = auditSessionCookie(process.env);
@@ -357,7 +357,7 @@ function sendSourceError(response, error, fallbackMessage) {
 
 function sendDailyBudgetError(response, error) {
   response.setHeader("Retry-After", "86400");
-  sendJson(response, 429, { code: error.code, error: "今日应用调用预算已用完，请明天再试。", bucket: error.bucket, date: error.date });
+  sendJson(response, 429, { code: error.code, error: "本日の利用上限に達しました。明日もう一度お試しください。", bucket: error.bucket, date: error.date });
 }
 
 function allowExpensiveRequest(request, response, limiter) {
@@ -524,7 +524,7 @@ function localLanAddresses() {
       if (entry.family === "IPv4" && !entry.internal) addresses.push(entry.address);
     }
   }
-  return addresses.length ? [...new Set(addresses)] : ["<这台 Mac 的局域网 IP>"];
+  return addresses.length ? [...new Set(addresses)] : ["<この Mac のローカルネットワーク IP>"];
 }
 
 function withAuditAccess(bundle) {

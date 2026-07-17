@@ -17,12 +17,12 @@ export const sampleTikTokExtraction = Object.freeze({
   },
   claims: [
     {
-      text: "1986年在涩谷创立的意面店首次进入上野",
+      text: "1986年に渋谷で創業したパスタ店が上野に初出店",
       kind: "post_claim",
       confidence: "medium"
     },
     {
-      text: "帖子称该上野店于 6 月 9 日开业",
+      text: "投稿では上野店が6月9日に開店したと説明",
       kind: "post_claim",
       confidence: "medium"
     }
@@ -40,8 +40,8 @@ export const sampleTikTokExtraction = Object.freeze({
   ],
   search_query: "ホームズパスタ 上野店 東京都台東区上野4-8-9",
   warnings: [
-    "营业时间、预约方式和开业状态未在截图中得到官方确认",
-    "点赞与收藏属于帖子互动，不能作为餐厅拥挤程度或预约必要性的直接证据"
+    "営業時間、予約方法、営業状況は画像内の公式情報では確認できません",
+    "いいね・保存数は投稿への反応であり、店舗の混雑や予約の必要性を直接示しません"
   ],
   overall_confidence: "high"
 });
@@ -99,7 +99,7 @@ export function mergeScreenshotSupplemental(extraction, supplemental = null) {
     area: normalized.restaurant.area || clues.area || "",
     nearest_station: normalized.restaurant.nearest_station || clues.nearest_station || ""
   };
-  const hintedPlatform = ["tiktok", "instagram", "xiaohongshu", "x"].includes(supplemental.platform) ? supplemental.platform : "";
+  const hintedPlatform = ["tiktok", "instagram", "youtube", "x", "threads", "lemon8", "line", "facebook", "xiaohongshu"].includes(supplemental.platform) ? supplemental.platform : "";
   return {
     ...normalized,
     platform: hintedPlatform || normalized.platform,
@@ -109,7 +109,7 @@ export function mergeScreenshotSupplemental(extraction, supplemental = null) {
     warnings: [
       ...normalized.warnings,
       ...((clues.area || clues.address || clues.nearest_station || hintedPlatform)
-        ? ["地区、地址、车站或平台中的补充项来自用户文字，仍需在候选页核对。"]
+        ? ["エリア、住所、駅、プラットフォームの補足は入力された文章に基づくため、候補画面で確認してください。"]
         : [])
     ]
   };
@@ -134,10 +134,10 @@ export function extractionReviewState(extraction, meta = {}) {
     canContinue: hasName,
     requiresAcknowledgement: hasName && lowConfidence,
     message: !hasName
-      ? "没有可靠识别到餐厅名，请先根据截图补充店名。"
+      ? "店舗名を確実に読み取れませんでした。画像を見て店名を補足してください。"
       : lowConfidence
-        ? "模型对店名或位置不够确定，请人工核对后确认。"
-        : "店名与位置线索置信度较高，仍需在候选页确认具体分店。"
+        ? "店名または場所の確度が低いため、画像と見比べて確認してください。"
+        : "店名と場所の確度は高めですが、候補画面で支店まで確認してください。"
   };
 }
 
@@ -160,7 +160,7 @@ function restaurantKey(restaurant) {
 }
 
 export function formatBudget(restaurant) {
-  if (!Number.isFinite(restaurant?.budget_min) && !Number.isFinite(restaurant?.budget_max)) return "未识别";
+  if (!Number.isFinite(restaurant?.budget_min) && !Number.isFinite(restaurant?.budget_max)) return "読み取れませんでした";
   const formatter = new Intl.NumberFormat("ja-JP");
   const min = Number.isFinite(restaurant.budget_min) ? formatter.format(restaurant.budget_min) : "?";
   const max = Number.isFinite(restaurant.budget_max) ? formatter.format(restaurant.budget_max) : "?";

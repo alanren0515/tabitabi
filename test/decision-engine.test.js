@@ -8,8 +8,8 @@ test("recommends opening a verified direct reservation flow without claiming ava
     reservationOptions: [{ id: "tablecheck", label: "TableCheck", officiality: "linked_from_restaurant_website", capability: { kind: "online_reservation_flow", certainty: "high" } }]
   });
   assert.equal(decision.recommendation, "recommended");
-  assert.match(decision.summary, /预约流程/);
-  assert.match(decision.evidence[0].limitation, /不代表目标日期有空位/);
+  assert.match(decision.summary, /予約ページ/);
+  assert.match(decision.evidence[0].limitation, /希望日の空席/);
 });
 
 test("describes a verified same-origin official booking flow without duplicated wording", () => {
@@ -24,9 +24,9 @@ test("describes a verified same-origin official booking flow without duplicated 
     }]
   });
   assert.equal(result.recommendation, "recommended");
-  assert.match(result.summary, /餐厅官网中的预约流程/);
-  assert.doesNotMatch(result.summary, /预约预约流程/);
-  assert.match(result.nextAction, /餐厅官网预约页/);
+  assert.match(result.summary, /店舗公式サイトの予約ページ/);
+  assert.doesNotMatch(result.summary, /予約予約/);
+  assert.match(result.nextAction, /店舗公式の予約ページ/);
 });
 
 test("blocks a booking flow when a high-risk store identity conflict is unresolved", () => {
@@ -37,7 +37,7 @@ test("blocks a booking flow when a high-risk store identity conflict is unresolv
     facts: [{ id: "google:address:1", field: "address" }, { id: "user:address:2", field: "address" }]
   });
   assert.equal(decision.recommendation, "unknown");
-  assert.match(decision.nextAction, /确认是同一家店/);
+  assert.match(decision.nextAction, /同じ店舗と確認/);
   assert.deepEqual(decision.evidence[0].factIds, ["google:address:1", "user:address:2"]);
 });
 
@@ -49,8 +49,8 @@ test("allows a verified current booking flow while warning that the input addres
   });
   assert.equal(decision.recommendation, "recommended");
   assert.equal(decision.confidence, "high");
-  assert.match(decision.summary, /旧址/);
-  assert.match(decision.nextAction, /官网现址/);
+  assert.match(decision.summary, /旧住所/);
+  assert.match(decision.nextAction, /公式サイトの現住所/);
 });
 
 test("does not infer reservation rules from ratings or a platform listing", () => {
@@ -59,7 +59,7 @@ test("does not infer reservation rules from ratings or a platform listing", () =
     reservationOptions: [{ id: "hotpepper", label: "Hot Pepper", capability: { kind: "platform_listing", primaryLabel: "核对" } }]
   });
   assert.equal(decision.recommendation, "unknown");
-  assert.match(decision.evidence[0].limitation, /不会根据评分/);
+  assert.match(decision.evidence[0].limitation, /評価点.*予約ルールを推測しません/);
 });
 
 test("closed status overrides remaining third-party links", () => {
@@ -79,8 +79,8 @@ test("temporary closure also blocks booking actions without claiming a reopen da
     facts: [{ id: "google_places:business_status:temporary", field: "business_status" }]
   });
   assert.equal(decision.recommendation, "temporarily_unavailable");
-  assert.match(decision.summary, /恢复时间仍需再次核对/);
-  assert.match(decision.nextAction, /最新营业状态/);
+  assert.match(decision.summary, /営業再開日は改めて確認/);
+  assert.match(decision.nextAction, /最新の営業状況/);
 });
 
 test("uses an explicit official no-reservations rule for a conservative walk-in decision", () => {
@@ -90,9 +90,9 @@ test("uses an explicit official no-reservations rule for a conservative walk-in 
     facts: [{ id: "official:policy:1", field: "reservation_policy" }]
   });
   assert.equal(decision.recommendation, "walk_in_ok");
-  assert.match(decision.queue, /排队时间未知/);
+  assert.match(decision.queue, /待ち時間不明/);
   assert.deepEqual(decision.evidence[0].factIds, ["official:policy:1"]);
-  assert.match(decision.evidence[0].limitation, /不代表目标时间一定营业/);
+  assert.match(decision.evidence[0].limitation, /希望時間の営業や空席は保証しません/);
 });
 
 test("uses an explicit official queue mode while keeping availability and wait time unknown", () => {
@@ -104,10 +104,10 @@ test("uses an explicit official queue mode while keeping availability and wait t
   });
   assert.equal(decision.recommendation, "walk_in_ok");
   assert.equal(decision.queue, "整理券取号");
-  assert.match(decision.summary, /不代表到店时一定有位/);
-  assert.match(decision.nextAction, /整理券.*领取时间和地点/);
+  assert.match(decision.summary, /来店時の空席/);
+  assert.match(decision.nextAction, /整理券配布時間と場所/);
   assert.deepEqual(decision.evidence[1].factIds, ["official:queue:1"]);
-  assert.match(decision.evidence[1].limitation, /不能据此估算实时等待时间/);
+  assert.match(decision.evidence[1].limitation, /現在の待ち時間は推定できません/);
 });
 
 test("shows a verified queue rule without inferring whether reservations are open", () => {
@@ -118,8 +118,8 @@ test("shows a verified queue rule without inferring whether reservations are ope
   });
   assert.equal(decision.recommendation, "unknown");
   assert.equal(decision.queue, "到店登记姓名");
-  assert.match(decision.summary, /尚无明确证据证明预约是否开放/);
-  assert.match(decision.nextAction, /登记姓名/);
+  assert.match(decision.summary, /予約受付の有無は確認できません/);
+  assert.match(decision.nextAction, /名前を記入/);
   assert.deepEqual(decision.evidence[0].factIds, ["official:queue:2"]);
 });
 
@@ -130,8 +130,8 @@ test("returns unknown when an official no-reservations rule conflicts with a dir
     reservationOptions: [{ id: "tablecheck", label: "TableCheck", capability: { kind: "online_reservation_flow", certainty: "high" } }]
   });
   assert.equal(decision.recommendation, "unknown");
-  assert.match(decision.summary, /无法安全判断/);
-  assert.match(decision.evidence[0].limitation, /特定分店/);
+  assert.match(decision.summary, /安全に判断できません/);
+  assert.match(decision.evidence[0].limitation, /特定店舗/);
 });
 
 test("keeps a limited official reservation rule unknown when no direct flow is verified", () => {
@@ -141,9 +141,9 @@ test("keeps a limited official reservation rule unknown when no direct flow is v
     facts: [{ id: "official:policy:limited", field: "reservation_policy" }]
   });
   assert.equal(decision.recommendation, "unknown");
-  assert.equal(decision.queue, "预约有条件");
+  assert.equal(decision.queue, "予約条件あり");
   assert.match(decision.summary, /仅平日接受预约/);
-  assert.match(decision.nextAction, /适用日期、时段和人数/);
+  assert.match(decision.nextAction, /対象日、時間帯、人数/);
   assert.deepEqual(decision.evidence[0].factIds, ["official:policy:limited"]);
 });
 
@@ -156,7 +156,7 @@ test("preserves an official reservation restriction beside a verified booking fl
   });
   assert.equal(decision.recommendation, "recommended");
   assert.match(decision.summary, /午餐时段不接受预约/);
-  assert.match(decision.nextAction, /官网限制/);
+  assert.match(decision.nextAction, /条件を確認/);
   assert.deepEqual(decision.evidence[1].factIds, ["official:policy:lunch"]);
 });
 
@@ -166,8 +166,8 @@ test("distinguishes a provider-managed request from an already confirmed reserva
     reservationOptions: [{ id: "autoreserve", label: "AutoReserve", capability: { kind: "provider_booking_flow", certainty: "medium" } }]
   });
   assert.equal(result.recommendation, "recommended");
-  assert.match(result.summary, /提交本身不代表预约成立/);
-  assert.match(result.nextAction, /明确的预约确认/);
+  assert.match(result.summary, /送信だけでは予約成立になりません/);
+  assert.match(result.nextAction, /明確な予約確認/);
 });
 
 test("does not recommend an unverified provider flow that the option layer marked unsafe", () => {
@@ -189,16 +189,16 @@ test("does not turn an EPARK waitlist into a seat reservation claim", () => {
     reservationOptions: [{ id: "epark", label: "EPARK", capability: { kind: "waitlist_flow", certainty: "medium", primaryLabel: "打开 EPARK 查看排队取号" } }]
   });
   assert.equal(result.recommendation, "unknown");
-  assert.match(result.summary, /不是订座/);
+  assert.match(result.summary, /座席予約ではなく/);
   assert.match(result.nextAction, /排队取号/);
 });
 
 test("uses date, dinner time, and party size only for conservative plan reminders", () => {
   const advisory = buildPlanAdvisory({ planDate: "2026-07-18", planTime: "19:30", partySize: 6 });
-  assert.match(advisory, /周末/);
-  assert.match(advisory, /不能证明餐厅拥挤/);
-  assert.match(advisory, /不会仅因晚餐时段推断热门或有位/);
-  assert.match(advisory, /6 人.*桌型.*套餐.*押金/);
+  assert.match(advisory, /週末/);
+  assert.match(advisory, /混雑の根拠にはなりません/);
+  assert.match(advisory, /ディナー時間.*混雑や空席を推測せず/);
+  assert.match(advisory, /6 名.*席種.*コース.*デポジット/);
 
   const decision = buildEvidenceGatedDecision({
     place: { businessStatus: "OPERATIONAL" },
@@ -206,5 +206,5 @@ test("uses date, dinner time, and party size only for conservative plan reminder
     planIntent: { planDate: "2026-07-18", planTime: "19:30", partySize: 6 }
   });
   assert.equal(decision.recommendation, "recommended");
-  assert.match(decision.planAdvisory, /不能证明餐厅拥挤/);
+  assert.match(decision.planAdvisory, /混雑の根拠にはなりません/);
 });

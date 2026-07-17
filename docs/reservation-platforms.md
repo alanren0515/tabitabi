@@ -21,7 +21,8 @@ TabiTabi 不把“存在店铺页面”当作“可以预约”，也不把“�
 
 - P0 核心覆盖：餐厅官网/电话、Hot Pepper、Tabelog、TableCheck、Rakuten Gurunavi、Reserve with Google。
 - P1 重要场景：一休、OMAKASE、Pocket Concierge、TABLEALL、OpenTable，以及餐厅官网常见的 Toreta、ebica 预约表单。
-- P2 补充覆盖：EPARK、PayPay Gourmet、OZmall、ヒトサラ、SAVOR JAPAN、Retty、byFood，以及访日游客使用的 Foodies Reserve、JPNEAZY、My Concierge Japan、JapanFoodTravel。
+- P2 日本国内补充覆盖：EPARK、PayPay Gourmet、OZmall、ヒトサラ、Retty。
+- P3 兼容覆盖：SAVOR JAPAN、byFood、Foodies Reserve、JPNEAZY、My Concierge Japan、JapanFoodTravel。它们不决定日本用户默认入口的排序。
 - 谨慎入口：AutoReserve 只有在已核验餐厅官网明确链接时才可成为建议动作；Google Maps 所列或用户粘贴的链接只展示为未独立核验入口。
 
 | 平台 | 当前识别 | 保守处理 |

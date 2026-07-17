@@ -9,8 +9,8 @@ test("builds verified links separately from platform discovery links", () => {
   assert.equal(options.find((item) => item.provider === "phone").bookingMode, "phone");
   assert.equal(options.find((item) => item.id === "tabelog_discovery").status, "discovery_only");
   assert.equal(options.find((item) => item.id === "tabelog_discovery").capability.kind, "discovery");
-  assert.match(options.find((item) => item.id === "tabelog_discovery").feeNote, /不代表/);
-  assert.match(options.find((item) => item.id === "tabelog_discovery").feeNote, /系统使用费/);
+  assert.match(options.find((item) => item.id === "tabelog_discovery").feeNote, /示すものではなく/);
+  assert.match(options.find((item) => item.id === "tabelog_discovery").feeNote, /システム利用料/);
 });
 
 test("recognizes known reservation platforms and avoids duplicate discovery", () => {
@@ -33,7 +33,7 @@ test("never promotes a Google-listed third-party platform link without independe
   assert.equal(autoReserve.capability.kind, "provider_booking_flow");
   assert.equal(autoReserve.capability.recommended, false);
   assert.equal(autoReserve.capability.certainty, "low");
-  assert.match(autoReserve.feeNote, /餐厅官网|未.*确认/);
+  assert.match(autoReserve.feeNote, /店舗公式サイト|未確認/);
   assert.equal(primaryReservationAction(options).provider, "phone");
   assert.equal(options[0].provider, "phone");
 });
@@ -124,33 +124,33 @@ test("keeps discovery pages separate from booking, proxy, and waitlist flows", (
   for (const [url, provider] of samples) {
     const option = buildReservationOptions({ place: { name: "Demo", websiteUri: url } }).find((item) => item.provider === provider);
     assert.equal(option?.capability.kind, "platform_listing", `${provider} listing`);
-    assert.match(option?.capability.confirmation || "", /不代表|尚未/);
+    assert.match(option?.capability.confirmation || "", /限りません|未確認/);
   }
 });
 
 test("shows provider-specific fee and confirmation boundaries", () => {
   const omakase = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://omakase.in/r/demo" } })[0];
-  assert.match(omakase.feeNote, /信用卡|预付|候补/);
-  assert.match(omakase.capability.confirmation, /确认/);
+  assert.match(omakase.feeNote, /カード|事前決済|キャンセル待ち/);
+  assert.match(omakase.capability.confirmation, /確認通知/);
 
   const autoReserve = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://autoreserve.com/en/restaurants/demo/reserve" } })[0];
-  assert.match(autoReserve.feeNote, /代订费|取消费用/);
-  assert.match(autoReserve.capability.confirmation, /尚未确认/);
+  assert.match(autoReserve.feeNote, /代行料|キャンセル料/);
+  assert.match(autoReserve.capability.confirmation, /未確定/);
 
   const epark = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://epark.jp/gourmet/detail/waitlist/123" } })[0];
-  assert.match(epark.feeNote, /不等于保留座位/);
+  assert.match(epark.feeNote, /座席予約ではなく/);
   assert.equal(epark.bookingMode, "waitlist");
-  assert.match(epark.capability.confirmation, /不等于订座/);
+  assert.match(epark.capability.confirmation, /座席予約ではありません/);
 
   const tableall = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://www.tableall.com/restaurant/49" } })[0];
-  assert.match(tableall.feeNote, /预约费|总价/);
+  assert.match(tableall.feeNote, /予約手数料|総額/);
   assert.equal(tableall.bookingMode, "provider_determined");
-  assert.match(tableall.capability.confirmation, /预购席位|代为请求/);
+  assert.match(tableall.capability.confirmation, /確保済み席|予約リクエスト/);
 
   const googleReserve = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://www.google.com/maps/reserve/v/dine/c/demo" } })[0];
   assert.equal(googleReserve.provider, "google_reserve");
   assert.equal(googleReserve.bookingMode, "provider_determined");
-  assert.match(googleReserve.capability.confirmation, /确认邮件/);
+  assert.match(googleReserve.capability.confirmation, /確認通知/);
 });
 
 test("keeps ordinary Google pages out of Reserve with Google classification", () => {
@@ -164,7 +164,7 @@ test("distinguishes Tabelog request booking from its regular network booking for
   assert.equal(request.provider, "tabelog");
   assert.equal(request.capability.kind, "provider_booking_flow");
   assert.equal(request.bookingMode, "request");
-  assert.match(request.capability.confirmation, /成立通知前/);
+  assert.match(request.capability.confirmation, /成立通知.*予約成立ではありません/);
 
   const network = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://yoyaku.tabelog.com/yoyaku/net_booking_form/index?rcd=13000000" } })[0];
   assert.equal(network.capability.kind, "online_reservation_flow");
@@ -173,7 +173,7 @@ test("distinguishes Tabelog request booking from its regular network booking for
   const currentNetwork = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://tabelog.com/booking/form/new?member=2&rcd=13299475&visit_date=20260716&visit_time=1900" } })[0];
   assert.equal(currentNetwork.capability.kind, "online_reservation_flow");
   assert.equal(currentNetwork.bookingMode, "instant_or_request");
-  assert.match(currentNetwork.capability.confirmation, /确认/);
+  assert.match(currentNetwork.capability.confirmation, /確認/);
 });
 
 test("recognizes additional Japanese and inbound reservation platforms without calling listings direct booking", () => {
@@ -194,25 +194,25 @@ test("keeps inbound concierge requests separate from confirmed reservations", ()
   const foodies = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://www.foodies-reserve.com/en/restaurants/RS54ELV7QJP0Y8OK" } })[0];
   assert.equal(foodies.provider, "foodies_reserve");
   assert.equal(foodies.bookingMode, "provider_determined");
-  assert.match(foodies.capability.confirmation, /确认邮件/);
-  assert.match(foodies.feeNote, /手续费|预付款/);
+  assert.match(foodies.capability.confirmation, /確認メール/);
+  assert.match(foodies.feeNote, /手数料|事前決済/);
 
   const jpneazy = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://jpneazy.com/jp/restaurants/35495" } })[0];
   assert.equal(jpneazy.provider, "jpneazy");
   assert.equal(jpneazy.bookingMode, "request");
-  assert.match(jpneazy.capability.confirmation, /联系|安排/);
-  assert.match(jpneazy.feeNote, /手续费/);
+  assert.match(jpneazy.capability.confirmation, /連絡|手配/);
+  assert.match(jpneazy.feeNote, /有料|料金/);
 
   const myConciergeListing = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://myconciergejapan.com/restaurants/sushi-ryoma/" } })[0];
   assert.equal(myConciergeListing.capability.kind, "platform_listing");
   const myConciergeBooking = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://mycon-jp.net/reservation/sushi-ryoma/en" } })[0];
   assert.equal(myConciergeBooking.capability.kind, "provider_booking_flow");
-  assert.match(myConciergeBooking.feeNote, /服务费|预付/);
+  assert.match(myConciergeBooking.feeNote, /サービス料|事前決済/);
 
   const support = buildReservationOptions({ place: { name: "Demo", websiteUri: "https://www.japanfood.travel/" } })[0];
   assert.equal(support.provider, "japan_food_travel");
   assert.equal(support.capability.kind, "platform_listing");
-  assert.match(support.feeNote, /人工代订|服务费/);
+  assert.match(support.feeNote, /予約代行|サービス/);
 });
 
 test("prefers a direct official-site platform link over an earlier generic platform listing", () => {
@@ -240,7 +240,7 @@ test("shows but does not recommend a direct platform link discovered on an unver
   assert.equal(tablecheck.capability.kind, "online_reservation_flow");
   assert.equal(tablecheck.capability.certainty, "low");
   assert.equal(tablecheck.capability.recommended, false);
-  assert.match(tablecheck.capability.confirmation, /关联尚未独立核验/);
+  assert.match(tablecheck.capability.confirmation, /対応は未確認/);
   assert.equal(primaryReservationAction(options).provider, "phone");
 });
 
@@ -272,7 +272,7 @@ test("sanitizes user-provided platform links and never trusts a spoofed provider
   ]);
   assert.deepEqual(links, [{
     provider: "hotpepper",
-    label: "Hot Pepper",
+    label: "ホットペッパーグルメ",
     url: "https://www.hotpepper.jp/strJ000000000/yoyaku/",
     sourceVerified: false,
     source: "user_provided"
@@ -290,7 +290,7 @@ test("shows a user-provided booking path at low confidence without making it pri
   assert.equal(tablecheck.capability.kind, "online_reservation_flow");
   assert.equal(tablecheck.capability.certainty, "low");
   assert.equal(tablecheck.capability.recommended, false);
-  assert.match(tablecheck.feeNote, /你输入时提供/);
+  assert.match(tablecheck.feeNote, /入力時に追加/);
   assert.equal(primaryReservationAction(options).provider, "phone");
 });
 

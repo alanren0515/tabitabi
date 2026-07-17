@@ -2,10 +2,15 @@ import { expandRestaurantAlias } from "./restaurant-aliases.mjs";
 import { platformForUrl, reservationLinkPriority } from "./reservation-options.mjs";
 
 const SOCIAL_HOSTS = [
-  { platform: "tiktok", hosts: ["tiktok.com", "vm.tiktok.com"] },
-  { platform: "instagram", hosts: ["instagram.com"] },
-  { platform: "xiaohongshu", hosts: ["xiaohongshu.com", "xhslink.com"] },
-  { platform: "x", hosts: ["x.com", "twitter.com"] }
+  { platform: "tiktok", label: "TikTok", hosts: ["tiktok.com", "vm.tiktok.com"] },
+  { platform: "instagram", label: "Instagram", hosts: ["instagram.com"] },
+  { platform: "youtube", label: "YouTube", hosts: ["youtube.com", "youtu.be"] },
+  { platform: "threads", label: "Threads", hosts: ["threads.net"] },
+  { platform: "lemon8", label: "Lemon8", hosts: ["lemon8-app.com", "lemon8.com"] },
+  { platform: "line", label: "LINE", hosts: ["line.me"] },
+  { platform: "facebook", label: "Facebook", hosts: ["facebook.com", "fb.watch"] },
+  { platform: "xiaohongshu", label: "RED（小紅書）", hosts: ["xiaohongshu.com", "xhslink.com"] },
+  { platform: "x", label: "X", hosts: ["x.com", "twitter.com"] }
 ];
 
 const DATE_PATTERN_SOURCE = String.raw`(?:(?<yearA>\d{4})[年\/-](?<monthA>\d{1,2})[月\/-](?<dayA>\d{1,2})日?|(?<monthB>\d{1,2})月(?<dayB>\d{1,2})日?|(?<![\p{L}\p{N}\/-])(?<monthC>\d{1,2})\/(?<dayC>\d{1,2})(?![\d\/-]))`;
@@ -13,15 +18,15 @@ const AREA_NAMES = new Set(["東京", "東京都", "大阪", "京都", "福岡",
 
 export function parseTextInput(value) {
   const text = String(value || "").normalize("NFKC").trim();
-  if (!text) throw new TextInputError("EMPTY_INPUT", "Text input is required", 400);
-  if (text.length > 4000) throw new TextInputError("INPUT_TOO_LONG", "Text input is too long", 413);
+  if (!text) throw new TextInputError("EMPTY_INPUT", "入力内容がありません", 400);
+  if (text.length > 4000) throw new TextInputError("INPUT_TOO_LONG", "入力内容が長すぎます", 413);
 
   const urls = [...text.matchAll(/https?:\/\/[^\s<>"']+/gi)].map((match) => safeUrl(match[0])).filter(Boolean);
   const socialLinks = urls.map(classifySocialUrl).filter(Boolean);
   const reservationLinks = urls.map(classifyReservationPlatformUrl).filter(Boolean);
   const webpageLinks = urls
     .filter((item) => !classifySocialUrl(item) && !classifyReservationPlatformUrl(item))
-    .map((item) => ({ platform: "web", label: "公开网页", url: item.url.href }));
+    .map((item) => ({ platform: "web", label: "公開ウェブページ", url: item.url.href }));
   const textWithoutUrls = urls.reduce((current, url) => current.replace(url.original, " "), text);
   const plan = extractPlan(textWithoutUrls);
   const clues = extractRestaurantClues(textWithoutUrls, plan);
@@ -43,14 +48,14 @@ export function parseTextInput(value) {
     requiresContent: linkOnly || reservationLinkOnly,
     requiresWebpage: webpageOnly,
     warnings: linkOnly
-      ? ["系统只识别了链接所属平台，未读取登录后或动态加载的帖子正文", "请补充截图、帖子正文或餐厅名后再匹配店铺"]
+      ? ["リンク元のサービスだけを判別しました。ログイン後や動的に表示される投稿本文は読み取っていません", "スクリーンショット、投稿文、または店名を追加してから店舗を確認してください"]
       : reservationLinkOnly
         ? [
-            `系统识别出 ${primaryLink.label} ${primaryLink.linkType === "booking_flow" ? "预约路径" : "店铺/平台链接"}，但不会抓取该第三方平台页面正文`,
-            "链接本身不能证明对应哪家分店或预约已经成立；请补充截图、餐厅名或地址后再核对"
+            `${primaryLink.label} の${primaryLink.linkType === "booking_flow" ? "予約画面" : "店舗・サービスページ"}を判別しましたが、第三者サービスのページ本文は取得しません`,
+            "リンクだけでは対象店舗・支店や予約成立を確認できません。スクリーンショット、店名、住所を追加してください"
           ]
       : webpageOnly
-        ? ["系统尚未读取这个公开网页；继续后只提取标题和餐厅结构化数据", "网页内容只作为线索，仍需通过 Google Maps 和用户确认核对餐厅身份"]
+        ? ["この公開ページはまだ読み取っていません。続行後もタイトルと店舗の構造化データだけを抽出します", "ページ内容は手掛かりとして扱い、Google Maps とユーザー確認で店舗を照合します"]
         : []
   };
 }
@@ -80,7 +85,8 @@ function extractRestaurantClues(text, plan) {
     .replace(/\d{1,2}\s*(?:个)?(?:人|位|名)/g, " ")
     .replace(/(?:想去|想吃|预订|预约|订位|帮我查|帮我找|查一下|请问|计划|餐厅|饭店)/g, " ")
     .replace(/(?:来自|来源(?:是)?|平台(?:是)?|from)\s*x\b(?:\s*(?:截图|帖子|reels?))?/gi, " ")
-    .replace(/(?:来自|来源(?:是)?|平台(?:是)?|from)?\s*(?:instagram|insta|ins|ig|tiktok|抖音|小红书|xiaohongshu|twitter)(?:\s*(?:截图|帖子|reels?))?/gi, " ")
+    .replace(/(?:来自|来源(?:是)?|平台(?:是)?|from)?\s*(?:instagram|insta|ins|ig|tiktok|youtube(?:\s*shorts?)?|threads|lemon8|line|facebook|fb|抖音|小红书|xiaohongshu|twitter)(?:\s*(?:截图|帖子|reels?|shorts?))?/gi, " ")
+    .replace(/(?:で見た|で見つけた|から共有(?:された)?|の投稿|のショート)/g, " ")
     .replace(/[，,。；;！!？?]/g, " ")
     .replace(/\s+/g, " ").trim();
   const stationToken = cleaned.split(/\s+/).find((token) => /駅(?:附近|周辺|近く)?$/u.test(token));
@@ -115,7 +121,12 @@ function detectMentionedSocialPlatform(text) {
   const normalized = String(text || "").toLowerCase();
   if (/\b(?:instagram|insta)\b|(?:来自|来源(?:是)?|平台(?:是)?)\s*(?:ins|ig)\b/i.test(normalized)) return { platform: "instagram", label: "Instagram" };
   if (/\btiktok\b|抖音/i.test(normalized)) return { platform: "tiktok", label: "TikTok" };
-  if (/小红书|xiaohongshu/i.test(normalized)) return { platform: "xiaohongshu", label: "小红书" };
+  if (/\byoutube\b|\byoutu\.be\b|ユーチューブ/i.test(normalized)) return { platform: "youtube", label: "YouTube" };
+  if (/\bthreads\b/i.test(normalized)) return { platform: "threads", label: "Threads" };
+  if (/\blemon8\b/i.test(normalized)) return { platform: "lemon8", label: "Lemon8" };
+  if (/\bline\b|ライン/i.test(normalized)) return { platform: "line", label: "LINE" };
+  if (/\bfacebook\b|\bfb\b/i.test(normalized)) return { platform: "facebook", label: "Facebook" };
+  if (/小红书|小紅書|xiaohongshu/i.test(normalized)) return { platform: "xiaohongshu", label: "RED（小紅書）" };
   if (/\btwitter\b|(?:来自|来源(?:是)?|平台(?:是)?|from)\s*x\b/i.test(normalized)) return { platform: "x", label: "X" };
   return null;
 }
@@ -123,7 +134,7 @@ function detectMentionedSocialPlatform(text) {
 function classifySocialUrl(item) {
   const hostname = item.url.hostname.toLowerCase().replace(/^www\./, "");
   const match = SOCIAL_HOSTS.find((entry) => entry.hosts.some((host) => hostname === host || hostname.endsWith(`.${host}`)));
-  return match ? { platform: match.platform, url: item.url.href } : null;
+  return match ? { platform: match.platform, label: match.label, url: item.url.href } : null;
 }
 
 function classifyReservationPlatformUrl(item) {

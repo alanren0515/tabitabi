@@ -24,7 +24,7 @@ export const screenshotSchema = {
   additionalProperties: false,
   required: ["platform", "languages", "restaurant", "creator", "claims", "engagement", "visible_text_excerpt", "search_query", "warnings", "overall_confidence"],
   properties: {
-    platform: { type: "string", enum: ["tiktok", "instagram", "xiaohongshu", "x", "other", "unknown"] },
+    platform: { type: "string", enum: ["tiktok", "instagram", "youtube", "x", "threads", "lemon8", "line", "facebook", "xiaohongshu", "other", "unknown"] },
     languages: { type: "array", maxItems: 8, items: { type: "string", maxLength: 40 } },
     restaurant: restaurantSchema,
     restaurants: { type: "array", maxItems: 6, items: restaurantSchema },
@@ -68,7 +68,7 @@ export const screenshotSchema = {
 
 export const extractionPrompt = `你是日本餐厅截图信息抽取器。读取用户主动上传的完整社交媒体截图，包括日文、中文和英文文字。
 
-识别平台时依据界面结构，不要只看文字语言：TikTok 常见右侧竖排头像、点赞、评论、收藏、分享按钮，以及底部评论输入栏；Instagram Reels 常见右侧空心爱心、评论气泡、双箭头转发、纸飞机分享和三点菜单，左下方显示头像、账号、关注按钮与说明文字；小红书常见标题/正文卡片、点赞收藏评论栏和笔记式布局。Instagram Reels 与 TikTok 都可能右侧竖排按钮，必须结合图标形状、账号区和底部布局判断；无法确定时返回 unknown，不要猜测。
+识别平台时依据界面结构，不要只看文字语言：TikTok 常见右侧竖排头像、点赞、评论、收藏、分享按钮，以及底部评论输入栏；Instagram Reels 常见右侧空心爱心、评论气泡、双箭头转发、纸飞机分享和三点菜单，左下方显示头像、账号、关注按钮与说明文字；YouTube Shorts 常见右侧点赞、评论、分享、混剪按钮和底部频道/订阅区；X 常见账号、正文、回复、转发、点赞和浏览量；Threads 常见账号、正文及回复/转发/点赞/分享操作；Lemon8 常见生活方式图文卡片、标题正文与收藏互动；LINE 通常是朋友转发的链接或聊天截图，不要把聊天对象当成餐厅；Facebook 常见账号/主页、正文与赞/评论/分享栏；小红书常见标题/正文卡片、点赞收藏评论栏和笔记式布局。短视频平台的按钮布局可能相似，必须结合图标形状、账号区和底部布局判断；无法确定时返回 unknown，不要猜测。
 
 严格区分：
 1. 可用于餐厅匹配的可见事实：店名、分店、地址、区域、车站、料理类型、预算。如果截图明确出现多家餐厅，把最多 6 家按画面顺序放进 restaurants；restaurant 同时放第一家或最主要的一家。不要把作者账号、菜名或附近地标当成餐厅。

@@ -143,7 +143,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
     ...detectUserClueConflicts(place, userClues, verifiedOfficialSource),
     ...detectSourceConflicts(place, hp),
     ...detectOfficialContactConflicts(place, officialContact),
-    ...(officialOperationalStatus && place.businessStatus === "OPERATIONAL" ? [{ field: "business_status", severity: "high", googleValue: place.businessStatus, officialValue: officialOperationalStatus.businessStatus, message: "Google Maps 显示营业，但已核验的餐厅官网明确写明当前临时休业；优先采用官网状态。" }] : [])
+    ...(officialOperationalStatus && place.businessStatus === "OPERATIONAL" ? [{ field: "business_status", severity: "high", googleValue: place.businessStatus, officialValue: officialOperationalStatus.businessStatus, message: "Google Maps では営業中ですが、確認済みの公式サイトには一時休業と明記されています。公式サイトの情報を優先します。" }] : [])
   ];
   const confirmedPhone = officialContact?.phone || place.phone;
   const facts = [];
@@ -181,9 +181,9 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
   const sources = [
     {
       name: "Google Maps",
-      note: "店名、地址、营业状态、电话与营业时间",
+      note: "店名、住所、営業状況、電話、営業時間",
       official: false,
-      confidence: "中",
+      confidence: "medium",
       url: place.googleMapsUri,
       retrievedAt,
       attribution: "Google Maps"
@@ -193,9 +193,9 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
     if (!attribution?.provider) continue;
     sources.push({
       name: attribution.provider,
-      note: "Google Maps 标注的数据提供方",
+      note: "Google Maps に表示された情報提供元",
       official: false,
-      confidence: "中",
+      confidence: "medium",
       url: attribution.providerUri || place.googleMapsUri,
       retrievedAt
     });
@@ -203,69 +203,69 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
   if (hp) {
     sources.push({
       name: "Hot Pepper",
-      note: "店铺页面、最近车站、预算、营业时间与定休日",
+      note: "店舗ページ、最寄り駅、予算、営業時間、定休日",
       official: false,
-      confidence: "中",
+      confidence: "medium",
       url: hp.url,
       retrievedAt: hotPepperResult.retrievedAt
     });
   }
   if (reservationPolicy) {
     sources.push({
-      name: "餐厅官网",
-      note: `预约规则：${reservationPolicy.excerpt}`,
+      name: "店舗公式サイト",
+      note: `予約ルール：${reservationPolicy.excerpt}`,
       official: true,
-      confidence: "高",
+      confidence: "high",
       url: reservationPolicy.sourceUrl || place.websiteUri,
       retrievedAt
     });
   }
   if (officialContact?.phone && !reservationPolicy) {
     sources.push({
-      name: "餐厅官网",
-      note: `官方联系电话：${officialContact.phone}`,
+      name: "店舗公式サイト",
+      note: `公式電話番号：${officialContact.phone}`,
       official: true,
-      confidence: "高",
+      confidence: "high",
       url: officialContact.sourceUrl || verifiedOfficialSource?.url,
       retrievedAt
     });
   }
   if (officialOperationalStatus) {
     sources.push({
-      name: "餐厅官网",
-      note: `营业状态：${officialOperationalStatus.excerpt}`,
+      name: "店舗公式サイト",
+      note: `営業状況：${officialOperationalStatus.excerpt}`,
       official: true,
-      confidence: "高",
+      confidence: "high",
       url: officialOperationalStatus.sourceUrl || verifiedOfficialSource?.url,
       retrievedAt
     });
   }
   if (officialDiningNotices.length) {
     sources.push({
-      name: "餐厅官网",
-      note: `到店规则：${officialDiningNotices.map((item) => item.label).join("、")}`,
+      name: "店舗公式サイト",
+      note: `来店時の注意：${officialDiningNotices.map((item) => item.label).join("、")}`,
       official: true,
-      confidence: "高",
+      confidence: "high",
       url: officialDiningNotices[0].sourceUrl || verifiedOfficialSource?.url,
       retrievedAt
     });
   }
   if (officialQueuePolicy) {
     sources.push({
-      name: "餐厅官网",
-      note: `排队规则：${officialQueuePolicy.excerpt}`,
+      name: "店舗公式サイト",
+      note: `順番待ちルール：${officialQueuePolicy.excerpt}`,
       official: true,
-      confidence: "高",
+      confidence: "high",
       url: officialQueuePolicy.sourceUrl || verifiedOfficialSource?.url,
       retrievedAt
     });
   }
   for (const social of officialSocialLinks) {
     sources.push({
-      name: `官方 ${social.label}`,
-      note: `由已核验餐厅官网直接链接${social.handle ? ` · ${social.handle}` : ""}；未读取社交平台帖子内容`,
+      name: `公式 ${social.label}`,
+      note: `確認済みの店舗公式サイトから直接リンク${social.handle ? ` · ${social.handle}` : ""}。SNS投稿の本文は読み取っていません`,
       official: true,
-      confidence: "高",
+      confidence: "high",
       url: social.url,
       retrievedAt
     });
@@ -279,20 +279,20 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
   const decision = buildEvidenceGatedDecision({ place: effectivePlace, reservationOptions, reservationPolicy, queuePolicy: officialQueuePolicy, conflicts: sourceConflicts, facts, planIntent });
   const unresolvedIdentityConflict = sourceConflicts.some((item) => item.severity === "high" && !item.resolvedByOfficial && ["address", "name", "branch"].includes(item.field));
   const primaryAction = closed
-    ? { label: officialOperationalStatus ? "在餐厅官网核对状态" : "在 Google Maps 核对状态", url: officialOperationalStatus?.sourceUrl || place.googleMapsUri, type: officialOperationalStatus ? "official_website" : "map" }
+    ? { label: officialOperationalStatus ? "公式サイトで営業状況を確認" : "Google Maps で営業状況を確認", url: officialOperationalStatus?.sourceUrl || place.googleMapsUri, type: officialOperationalStatus ? "official_website" : "map" }
     : unresolvedIdentityConflict
-      ? { label: "先在 Google Maps 核对门店", url: place.googleMapsUri, type: "map" }
+      ? { label: "まず Google Maps で店舗を確認", url: place.googleMapsUri, type: "map" }
     : primaryReservationAction(reservationOptions)
-      || { label: "在 Google Maps 核对", url: place.googleMapsUri, type: "map" };
+      || { label: "Google Maps で確認", url: place.googleMapsUri, type: "map" };
 
   const reasons = hotPepperResult?.error && !closed
-    ? [...decision.reasons, "Hot Pepper 核对暂时不可用"]
+    ? [...decision.reasons, "Hot Pepper との照合を一時的に利用できません"]
     : decision.reasons;
 
   const conflictMessages = [
     ...(closed ? [officialOperationalStatus
-      ? "已核验餐厅官网的临时休业状态需要优先采用，第三方仍有页面并不代表店铺当前营业。"
-      : "Google Maps 的营业状态需要优先核对，第三方仍有页面并不代表店铺当前营业。"] : []),
+      ? "確認済み公式サイトの一時休業情報を優先します。第三者サービスにページが残っていても、現在営業中とは限りません。"
+      : "Google Maps の営業状況を優先して確認してください。第三者サービスにページが残っていても、現在営業中とは限りません。"] : []),
     ...sourceConflicts.map((item) => item.message)
   ];
 
@@ -303,12 +303,12 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
     name: place.name,
     reading: userClues.reading || "",
     area: shortArea(place.address),
-    category: place.category || userClues.category || "餐厅",
+    category: place.category || userClues.category || "飲食店",
     price: hp?.budget || "",
     address: place.address,
-    station: hp?.station || hp?.access || "待地图确认",
-    hours: place.hours.length ? place.hours.join(" / ") : hp?.open || "信息不足",
-    closed: hp?.close || "信息不足",
+    station: hp?.station || hp?.access || "地図で要確認",
+    hours: place.hours.length ? place.hours.join(" / ") : hp?.open || "要確認",
+    closed: hp?.close || "要確認",
     phone: confirmedPhone || "",
     rating: place.rating,
     userRatingCount: place.userRatingCount,
@@ -327,13 +327,13 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
     websiteUrl: place.websiteUri,
     officialSocialLinks,
     officialInstagramUrl: officialSocialLinks.find((item) => item.provider === "instagram")?.url || "",
-    dataLabel: "实时核对",
-    sourceContext: `查询于 ${formatRetrievedAt(retrievedAt)}`,
+    dataLabel: "最新情報",
+    sourceContext: `${formatRetrievedAt(retrievedAt)} に確認`,
     confidence: decision.confidence,
     reasons,
     decisionEvidence: decision.evidence,
     conflict: conflictMessages.length ? conflictMessages.join(" ") : null,
-    conflictTitle: closed ? "营业状态风险" : sourceConflicts.length ? "来源冲突" : null,
+    conflictTitle: closed ? "営業状況に注意" : sourceConflicts.length ? "情報源が一致しません" : null,
     sources,
     evidenceFacts: facts,
     risks: sourceConflicts,
@@ -352,7 +352,7 @@ export function detectSourceConflicts(place, hotPepper) {
       severity: "high",
       googleValue: place.address,
       hotPepperValue: hotPepper.address,
-      message: "Google Maps 与 Hot Pepper 的地址不一致，可能匹配到了同名分店。"
+      message: "Google Maps と Hot Pepper の住所が一致しません。同名の別支店を照合した可能性があります。"
     });
   }
 
@@ -365,7 +365,7 @@ export function detectSourceConflicts(place, hotPepper) {
         severity: "medium",
         googleValue: googleLine,
         hotPepperValue: hotPepper.close,
-        message: `${weekday}曜日的营业信息在 Google Maps 与 Hot Pepper 之间不一致。`
+        message: `${weekday}曜日の営業情報が Google Maps と Hot Pepper で一致しません。`
       });
     }
   }
@@ -381,7 +381,7 @@ export function detectOfficialContactConflicts(place, officialContact) {
     severity: "medium",
     googleValue: place.phone,
     officialValue: officialContact.phone,
-    message: `Google Maps 的电话（${place.phone}）与已核验官网（${officialContact.phone}）不同，页面优先显示官网号码。`
+    message: `Google Maps の電話番号（${place.phone}）と確認済み公式サイト（${officialContact.phone}）が異なります。公式サイトの番号を優先表示します。`
   }];
 }
 
@@ -400,8 +400,8 @@ export function detectUserClueConflicts(place, userClues = {}, verifiedOfficialS
       resolvedByOfficial,
       resolution: resolvedByOfficial ? "verified_current_official" : "unresolved",
       message: resolvedByOfficial
-        ? `输入或截图中的地址（${clueAddress}）与当前地址（${currentAddress}）不同；已用餐厅官方门店页核验现址，原内容可能发布于迁址前。`
-        : `输入或截图中的地址（${clueAddress}）与当前 Google Maps 地址（${currentAddress}）不同，可能是旧帖、迁址前地址或同名分店。`
+        ? `入力または画像の住所（${clueAddress}）と現在の住所（${currentAddress}）が異なります。店舗公式ページで現住所を確認済みのため、元の投稿は移転前の可能性があります。`
+        : `入力または画像の住所（${clueAddress}）と現在の Google Maps 住所（${currentAddress}）が異なります。古い投稿、移転前の住所、同名支店の可能性があります。`
     });
   }
 
@@ -414,15 +414,15 @@ export function detectUserClueConflicts(place, userClues = {}, verifiedOfficialS
       googleValue: currentAddress,
       resolvedByOfficial: false,
       resolution: "needs_map_check",
-      message: `补充的地区线索（${clueArea}）未出现在当前 Google Maps 地址（${currentAddress}）中；可能是邻近区域的宽泛叫法，也可能是定位偏差，请按地图地址和最近车站确认。`
+      message: `補足されたエリア（${clueArea}）が現在の Google Maps 住所（${currentAddress}）に含まれません。近隣エリアの広い呼び方または位置のずれの可能性があるため、地図の住所と最寄り駅で確認してください。`
     });
   }
   return conflicts;
 }
 
 export function normalizePlaceCandidate(place, index = 0, clues = {}) {
-  const name = place?.displayName?.text || "未命名餐厅";
-  const address = place?.formattedAddress || "地址信息不足";
+  const name = place?.displayName?.text || "店舗名不明";
+  const address = place?.formattedAddress || "住所情報が不足";
   const reasons = [];
   let score = Math.max(1, 10 - index * 2);
   const clueName = normalizeText([clues.name, clues.branch].filter(Boolean).join(" "));
@@ -431,25 +431,25 @@ export function normalizePlaceCandidate(place, index = 0, clues = {}) {
   const normalizedName = normalizeText(name);
   const normalizedAddress = normalizeText(address);
   if (clueName && (normalizedName.includes(clueName) || clueName.includes(normalizedName))) {
-    reasons.push("店名高度一致");
+    reasons.push("店名がほぼ完全に一致");
     score += 8;
   } else if (clues.name && normalizedName.includes(normalizeText(clues.name))) {
-    reasons.push("店名一致");
+    reasons.push("店名が一致");
     score += 5;
   }
   if (clues.branch && normalizedName.includes(normalizeText(clues.branch))) {
-    reasons.push("分店名一致");
+    reasons.push("支店名が一致");
     score += 4;
   }
   if (clueStation.length >= 2 && normalizedName.includes(clueStation)) {
-    reasons.push("车站线索与分店名一致");
+    reasons.push("駅の手掛かりと支店名が一致");
     score += 3;
   }
   if (clueAddress && addressOverlap(clueAddress, normalizedAddress)) {
-    reasons.push("地址线索一致");
+    reasons.push("住所の手掛かりが一致");
     score += 5;
   }
-  if (!reasons.length) reasons.push("Google Maps 搜索相关度排序");
+  if (!reasons.length) reasons.push("Google Maps の検索関連度順");
 
   return {
     id: place.id,
@@ -457,7 +457,7 @@ export function normalizePlaceCandidate(place, index = 0, clues = {}) {
     name,
     address,
     area: shortArea(address),
-    category: place?.primaryTypeDisplayName?.text || "餐厅",
+    category: place?.primaryTypeDisplayName?.text || "飲食店",
     rating: Number.isFinite(place.rating) ? place.rating : null,
     userRatingCount: Number.isInteger(place.userRatingCount) ? place.userRatingCount : null,
     businessStatus: place.businessStatus || "BUSINESS_STATUS_UNSPECIFIED",
@@ -473,14 +473,14 @@ export function normalizePlaceCandidate(place, index = 0, clues = {}) {
 export function normalizePlaceDetails(place, retrievedAt) {
   return {
     placeId: place.id,
-    name: place?.displayName?.text || "未命名餐厅",
+    name: place?.displayName?.text || "店舗名不明",
     address: place.formattedAddress || "",
     businessStatus: place.businessStatus || "BUSINESS_STATUS_UNSPECIFIED",
     googleMapsUri: place.googleMapsUri || "",
     websiteUri: place.websiteUri || "",
     phone: place.nationalPhoneNumber || "",
     hours: place?.regularOpeningHours?.weekdayDescriptions || [],
-    category: place?.primaryTypeDisplayName?.text || "餐厅",
+    category: place?.primaryTypeDisplayName?.text || "飲食店",
     rating: Number.isFinite(place.rating) ? place.rating : null,
     userRatingCount: Number.isInteger(place.userRatingCount) ? place.userRatingCount : null,
     attributions: Array.isArray(place.attributions) ? place.attributions : [],

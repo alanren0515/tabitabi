@@ -6,15 +6,20 @@ const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf
 
 test("shows whether screenshot fallback is actually configured", () => {
   assert.match(appSource, /capabilities\?\.fallbackAvailable/);
-  assert.match(appSource, /备用识别尚未配置/);
-  assert.match(appSource, /截图备用识别/);
-  assert.match(appSource, /低置信度结果必须人工确认/);
+  assert.match(appSource, /予備モデルは未設定/);
+  assert.match(appSource, /予備モデルを使用します/);
+  assert.match(appSource, /確度が低い場合は手動確認が必要/);
 });
 
 test("confirms capability state before recording a new analysis mode", () => {
   assert.match(appSource, /const capabilities = await getCapabilities\(\);[^]*capabilities\.capabilitiesUnavailable[^]*postEvent\("input_submitted"/);
-  assert.match(appSource, /state\.analysisSourceMode = capabilities\.placesSearch \? "live" : "demo"/);
+  assert.match(appSource, /state\.analysisSourceMode = state\.exampleInput \? "demo" : capabilities\.placesSearch \? "live" : "demo"/);
   assert.match(appSource, /if \(result\.mode === "sample"\) state\.analysisSourceMode = "demo"/);
+});
+
+test("keeps homepage examples out of live pilot metrics", () => {
+  assert.match(appSource, /state\.exampleInput = true/);
+  assert.match(appSource, /addEventListener\("input", \(\) => \{ state\.exampleInput = false; \}\)/);
 });
 
 test("creates a fresh attributed run for queued restaurants and clears attribution for history refreshes", () => {

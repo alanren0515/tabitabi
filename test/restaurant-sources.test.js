@@ -40,7 +40,7 @@ test("keeps an area-only clue as a search hint without overriding the current ma
   });
   assert.equal(result.area, "東京都千代田区");
   assert.equal(result.risks.find((item) => item.field === "area")?.severity, "medium");
-  assert.match(result.conflict, /宽泛叫法|定位偏差/);
+  assert.match(result.conflict, /広い呼び方|位置のずれ/);
   assert.doesNotMatch(result.address, /神保町/);
 });
 
@@ -52,7 +52,7 @@ test("flags a specific old address that differs from the current address", () =>
   assert.equal(conflicts.length, 1);
   assert.equal(conflicts[0].severity, "high");
   assert.equal(conflicts[0].resolvedByOfficial, false);
-  assert.match(conflicts[0].message, /旧帖|迁址/);
+  assert.match(conflicts[0].message, /古い投稿|移転/);
 });
 
 test("marks an old-address conflict resolved when the current store has a verified official page", () => {
@@ -62,7 +62,7 @@ test("marks an old-address conflict resolved when the current store has a verifi
     { url: "https://www.tsurutontan.co.jp/shop/roppongi/" }
   );
   assert.equal(conflicts[0].resolvedByOfficial, true);
-  assert.match(conflicts[0].message, /官方门店页核验现址/);
+  assert.match(conflicts[0].message, /店舗公式ページで現住所を確認済み/);
 });
 
 test("keeps a current official booking link but clearly resolves a relocation-era input address", () => {
@@ -93,8 +93,8 @@ test("keeps a current official booking link but clearly resolves a relocation-er
   assert.equal(result.recommendation, "recommended");
   assert.equal(result.primaryAction.provider, "tablecheck");
   assert.equal(result.address, place.address);
-  assert.match(result.summary, /旧址/);
-  assert.match(result.conflict, /迁址前/);
+  assert.match(result.summary, /旧住所/);
+  assert.match(result.conflict, /移転前/);
   assert.equal(result.risks.find((item) => item.field === "address")?.resolvedByOfficial, true);
 });
 
@@ -119,7 +119,7 @@ test("does not make a booking link primary while an address identity conflict is
   });
   assert.equal(result.recommendation, "unknown");
   assert.equal(result.primaryAction.type, "map");
-  assert.match(result.nextAction, /同一家店/);
+  assert.match(result.nextAction, /同じ店舗/);
 });
 
 test("shows explicit dining notices only when they came from a verified official store page", () => {
@@ -145,7 +145,7 @@ test("shows explicit dining notices only when they came from a verified official
   });
   assert.equal(verified.attentionNotices[0].type, "cash_only");
   assert.ok(verified.evidenceFacts.some((fact) => fact.field === "dining_notice:cash_only" && fact.isOfficial));
-  assert.ok(verified.sources.some((source) => /到店规则/.test(source.note)));
+  assert.ok(verified.sources.some((source) => /来店時の注意/.test(source.note)));
 
   const unverified = buildRestaurantResult({
     place,
@@ -180,7 +180,7 @@ test("exposes an official queue rule only after the store page source is verifie
   assert.equal(verified.queueGuidance.mode, "numbered_ticket");
   assert.equal(verified.queue, "整理券取号");
   assert.ok(verified.evidenceFacts.some((fact) => fact.field === "queue_policy" && fact.isOfficial));
-  assert.ok(verified.sources.some((source) => /排队规则/.test(source.note)));
+  assert.ok(verified.sources.some((source) => /順番待ちルール/.test(source.note)));
 
   const unverified = buildRestaurantResult({
     place,
@@ -249,7 +249,7 @@ test("Places search requests only candidate fields and returns explainable match
   assert.equal(result.candidates[0].placeId, "ChIJ-demo-ueno");
   assert.equal(result.candidates[0].rank, 1);
   assert.equal(result.candidates[0].candidateCount, 1);
-  assert.ok(result.candidates[0].matchReasons.includes("分店名一致"));
+  assert.ok(result.candidates[0].matchReasons.includes("支店名が一致"));
   assert.equal(result.candidates[0].attributions[0].provider, "Example Data");
   assert.match(captured.options.headers["X-Goog-FieldMask"], /places\.id/);
   assert.doesNotMatch(captured.options.headers["X-Goog-FieldMask"], /rating|reviews|regularOpeningHours/);
@@ -305,7 +305,7 @@ test("ranks an exact restaurant above a generic dining area at the same address"
     ] })
   });
   assert.equal(result.candidates[0].placeId, "rokurinsha");
-  assert.ok(result.candidates[0].matchReasons.includes("店名高度一致"));
+  assert.ok(result.candidates[0].matchReasons.includes("店名がほぼ完全に一致"));
 });
 
 test("matches a Japanese restaurant and branch from only a partial street address", async () => {
@@ -325,8 +325,8 @@ test("matches a Japanese restaurant and branch from only a partial street addres
     })
   });
   assert.equal(result.candidates[0].name, "牛かつもと村 新宿本店");
-  assert.ok(result.candidates[0].matchReasons.includes("分店名一致"));
-  assert.ok(result.candidates[0].matchReasons.includes("地址线索一致"));
+  assert.ok(result.candidates[0].matchReasons.includes("支店名が一致"));
+  assert.ok(result.candidates[0].matchReasons.includes("住所の手掛かりが一致"));
 });
 
 test("uses a concrete station clue to explain a matching branch candidate", async () => {
@@ -343,7 +343,7 @@ test("uses a concrete station clue to explain a matching branch candidate", asyn
       }]
     })
   });
-  assert.ok(result.candidates[0].matchReasons.includes("车站线索与分店名一致"));
+  assert.ok(result.candidates[0].matchReasons.includes("駅の手掛かりと支店名が一致"));
 });
 
 test("reranks same-brand candidates using the canonical branch instead of Google order alone", async () => {
@@ -361,7 +361,7 @@ test("reranks same-brand candidates using the canonical branch instead of Google
   assert.equal(result.candidates[0].placeId, "ichiran-namba");
   assert.deepEqual(result.candidates.map((item) => item.rank), [1, 2]);
   assert.ok(result.candidates.every((item) => item.candidateCount === 2));
-  assert.ok(result.candidates[0].matchReasons.includes("分店名一致"));
+  assert.ok(result.candidates[0].matchReasons.includes("支店名が一致"));
   assert.ok(result.candidates[0].matchScore > result.candidates[1].matchScore);
 });
 
@@ -580,7 +580,7 @@ test("decision result remains usable when optional Hot Pepper enrichment fails",
   });
   assert.equal(result.name, "Google Only Restaurant");
   assert.equal(result.sources.length, 1);
-  assert.ok(result.reasons.includes("Hot Pepper 核对暂时不可用"));
+  assert.ok(result.reasons.includes("Hot Pepper との照合を一時的に利用できません"));
 });
 
 test("permanent closure overrides a still-live third-party listing in the full result", () => {
@@ -607,7 +607,7 @@ test("permanent closure overrides a still-live third-party listing in the full r
   });
   assert.equal(result.recommendation, "temporarily_unavailable");
   assert.equal(result.primaryAction.type, "map");
-  assert.match(result.conflict, /第三方仍有页面并不代表/);
+  assert.match(result.conflict, /第三者サービスにページが残っていても/);
   assert.ok(result.reservationOptions.some((item) => item.provider === "hotpepper"));
   assert.ok(result.evidenceFacts.some((fact) => fact.field === "business_status" && fact.value === "CLOSED_PERMANENTLY"));
 });
@@ -641,9 +641,9 @@ test("verified official temporary closure overrides Google and a live booking li
   assert.equal(result.recommendation, "temporarily_unavailable");
   assert.equal(result.primaryAction.type, "official_website");
   assert.equal(result.confidence, "high");
-  assert.match(result.summary, /餐厅官网显示.*暂停营业/);
-  assert.match(result.conflict, /官网.*临时休业/);
-  assert.ok(result.sources.some((source) => source.official && /营业状态/.test(source.note)));
+  assert.match(result.summary, /公式サイト.*一時休業/);
+  assert.match(result.conflict, /公式サイト.*一時休業/);
+  assert.ok(result.sources.some((source) => source.official && /営業状況/.test(source.note)));
   assert.ok(result.evidenceFacts.some((fact) => fact.sourceType === "official_website" && fact.value === "CLOSED_TEMPORARILY" && fact.confidence === "high" && fact.isOfficial));
 });
 
@@ -672,9 +672,9 @@ test("carries an official no-reservations policy into sources, evidence, and the
     }
   });
   assert.equal(result.recommendation, "walk_in_ok");
-  assert.ok(result.sources.some((source) => source.official && /预约规则/.test(source.note)));
+  assert.ok(result.sources.some((source) => source.official && /予約ルール/.test(source.note)));
   assert.ok(result.evidenceFacts.some((fact) => fact.field === "reservation_policy"));
-  assert.match(result.decisionEvidence[0].limitation, /不代表目标时间一定营业/);
+  assert.match(result.decisionEvidence[0].limitation, /希望時間の営業や空席は保証しません/);
 });
 
 test("does not promote reservation rules or links from an unverified Google-listed website", () => {
@@ -702,7 +702,7 @@ test("does not promote reservation rules or links from an unverified Google-list
   });
   const tablecheck = result.reservationOptions.find((item) => item.provider === "tablecheck");
   assert.ok(!result.evidenceFacts.some((fact) => fact.field === "reservation_policy"));
-  assert.ok(!result.sources.some((source) => source.official && /预约规则/.test(source.note)));
+  assert.ok(!result.sources.some((source) => source.official && /予約ルール/.test(source.note)));
   assert.equal(tablecheck.status, "unverified_link");
   assert.equal(tablecheck.capability.certainty, "low");
   assert.equal(tablecheck.capability.recommended, false);
@@ -762,7 +762,7 @@ test("shows an Instagram profile only when it is linked by a verified official s
     officialWebsiteDiscovery: { sourceVerified: true, links: [], socialLinks }
   });
   assert.equal(verified.officialInstagramUrl, socialLinks[0].url);
-  assert.ok(verified.sources.some((source) => source.name === "官方 Instagram" && source.official));
+  assert.ok(verified.sources.some((source) => source.name === "公式 Instagram" && source.official));
   assert.ok(verified.evidenceFacts.some((fact) => fact.field === "official_social:instagram" && fact.isOfficial));
 
   const unverified = buildRestaurantResult({
@@ -771,7 +771,7 @@ test("shows an Instagram profile only when it is linked by a verified official s
     officialWebsiteDiscovery: { sourceVerified: false, links: [], socialLinks }
   });
   assert.equal(unverified.officialInstagramUrl, "");
-  assert.ok(!unverified.sources.some((source) => source.name === "官方 Instagram"));
+  assert.ok(!unverified.sources.some((source) => source.name === "公式 Instagram"));
 });
 
 test("prefers a verified official phone and exposes a conflict with a platform forwarding number", () => {

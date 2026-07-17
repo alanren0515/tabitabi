@@ -9,10 +9,9 @@ test("escapes user-visible result and phone-script strings before inserting HTML
     "${esc(reason)}",
     "${esc(r.nextAction)}",
     "${esc(r.queue)}",
-    "${esc(r.conflictTitle || \"信息有冲突\")}",
+    "${esc(r.conflictTitle || \"情報が一致していません\")}",
     "${esc(r.conflict)}",
-    "${esc(visibleScript.ja)}",
-    "${esc(visibleScript.zh)}"
+    "${esc(visibleScript.ja)}"
   ]) assert.ok(source.includes(expression), expression);
   assert.ok(!source.includes("<blockquote lang=\"ja\">${visibleScript.ja}</blockquote>"));
 });

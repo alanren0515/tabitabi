@@ -29,5 +29,5 @@ test("the client registers the service worker and blocks new analysis while offl
   const source = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
   assert.match(source, /navigator\.serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(source, /navigator\.onLine === false/);
-  assert.match(source, /联网后才能开始新的分析/);
+  assert.match(source, /オフラインです。接続後にもう一度お試しください/);
 });

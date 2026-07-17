@@ -69,8 +69,8 @@ test("uses an arrival and wait-time script when official evidence says reservati
 });
 
 test("maps recommendation enum to user-facing copy", () => {
-  assert.equal(recommendationLabel("walk_in_ok"), "适合现场去");
-  assert.equal(recommendationLabel("unexpected"), "信息不足");
+  assert.equal(recommendationLabel("walk_in_ok"), "直接来店を検討");
+  assert.equal(recommendationLabel("unexpected"), "情報を確認中");
 });
 
 test("matches the restaurant extracted from the supplied TikTok screenshot", () => {
@@ -111,7 +111,7 @@ test("fills missing screenshot location and platform from supplemental text with
   assert.equal(merged.restaurant.name, "カリー屋 ジンコック");
   assert.equal(merged.restaurant.area, "神保町");
   assert.equal(merged.search_query, "カリー屋 ジンコック 神保町");
-  assert.match(merged.warnings.at(-1), /来自用户文字/);
+  assert.match(merged.warnings.at(-1), /入力された文章/);
 });
 
 test("keeps multiple screenshot restaurants distinct and lets the user choose one", () => {
@@ -133,10 +133,10 @@ test("blocks a missing restaurant name and requires acknowledgement for low conf
   const missing = extractionReviewState({ restaurant: { name: "", area: "新宿" }, overall_confidence: "low" }, { requiresUserConfirmation: true });
   assert.equal(missing.canContinue, false);
   assert.equal(missing.requiresAcknowledgement, false);
-  assert.match(missing.message, /补充店名/);
+  assert.match(missing.message, /店名を補足/);
 
   const low = extractionReviewState({ restaurant: { name: "候选店", area: "新宿" }, overall_confidence: "low" }, { requiresUserConfirmation: true });
   assert.equal(low.canContinue, true);
   assert.equal(low.requiresAcknowledgement, true);
-  assert.match(low.message, /人工核对/);
+  assert.match(low.message, /確認してください/);
 });

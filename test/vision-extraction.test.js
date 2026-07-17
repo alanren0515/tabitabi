@@ -267,7 +267,7 @@ test("strictly validates required fields, enums, additional fields, and negative
   assert.equal(validateExtraction(sampleTikTokExtraction).valid, true);
 
   const invalid = structuredClone(sampleTikTokExtraction);
-  invalid.platform = "youtube";
+  invalid.platform = "snapchat";
   invalid.engagement.likes = -1;
   invalid.unexpected = true;
   delete invalid.restaurant.address;

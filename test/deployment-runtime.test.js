@@ -25,8 +25,9 @@ test("browser security policy allows only the app's required external assets", (
   assert.match(csp, /default-src 'self'/);
   assert.match(csp, /script-src 'self'/);
   assert.match(csp, /connect-src 'self'/);
-  assert.match(csp, /style-src 'self' https:\/\/fonts\.googleapis\.com/);
-  assert.match(csp, /font-src 'self' https:\/\/fonts\.gstatic\.com/);
+  assert.match(csp, /style-src 'self'/);
+  assert.match(csp, /font-src 'self'/);
+  assert.doesNotMatch(csp, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
   assert.match(csp, /img-src 'self' data: blob: https:\/\/webservice\.recruit\.co\.jp/);
   assert.match(csp, /frame-ancestors 'none'/);
   assert.doesNotMatch(csp, /unsafe-inline|unsafe-eval|https:\s|\*/);

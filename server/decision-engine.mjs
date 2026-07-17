@@ -3,19 +3,19 @@ export function buildEvidenceGatedDecision({ place, reservationOptions = [], res
   const closed = ["CLOSED_PERMANENTLY", "CLOSED_TEMPORARILY"].includes(place?.businessStatus);
   if (closed) {
     const permanent = place.businessStatus === "CLOSED_PERMANENTLY";
-    const statusSource = place.businessStatusSource === "official_website" ? "餐厅官网" : "Google Maps";
+    const statusSource = place.businessStatusSource === "official_website" ? "店舗の公式サイト" : "Google Maps";
     const statusCertainty = permanent || place.businessStatusSource === "official_website" ? "high" : "medium";
     return {
       recommendation: "temporarily_unavailable",
-      queue: "不要直接前往",
+      queue: "そのまま向かわないでください",
       confidence: statusCertainty,
       summary: permanent
-        ? `${statusSource}显示该店已永久停业，不建议按原地址前往。`
-        : `${statusSource}显示该店目前暂停营业，恢复时间仍需再次核对。`,
-      nextAction: "先在餐厅官网或 Google Maps 核对最新营业状态。",
+        ? `${statusSource}では閉業と表示されています。元の住所へ向かうことはおすすめしません。`
+        : `${statusSource}では一時休業と表示されています。営業再開日は改めて確認が必要です。`,
+      nextAction: "店舗の公式サイトまたは Google Maps で最新の営業状況を確認してください。",
       planAdvisory,
-      reasons: [permanent ? `${statusSource}标记为永久停业` : `${statusSource}标记为暂停营业`, "第三方仍有店铺页面不代表当前正常营业"],
-      evidence: [{ claim: "当前营业状态", factIds: factIdsFor(facts, "business_status"), certainty: statusCertainty, limitation: "营业状态可能在来源更新后发生变化" }]
+      reasons: [permanent ? `${statusSource}で閉業と表示` : `${statusSource}で一時休業と表示`, "第三者サービスに店舗ページが残っていても、現在営業中とは限りません"],
+      evidence: [{ claim: "現在の営業状況", factIds: factIdsFor(facts, "business_status"), certainty: statusCertainty, limitation: "情報源の更新後に営業状況が変わる場合があります" }]
     };
   }
 
@@ -31,87 +31,87 @@ export function buildEvidenceGatedDecision({ place, reservationOptions = [], res
   if (reservationFlow && officialDoesNotAcceptReservations) {
     return {
       recommendation: "unknown",
-      queue: "官网信息冲突",
+      queue: "公式サイト内の情報が矛盾",
       confidence: "low",
-      summary: "餐厅官网正文写明不接受预约，但同一官网又链接了线上预约入口；当前无法安全判断哪条规则适用于这家店或目标日期。",
-      nextAction: "先打开官网核对适用分店和日期；仍不明确时电话确认。",
+      summary: "公式サイト本文には予約不可とありますが、同じサイトからオンライン予約にも進めます。どちらがこの店舗や希望日に適用されるか、現時点では安全に判断できません。",
+      nextAction: "公式サイトで対象店舗と適用日を確認し、不明な場合は電話で問い合わせてください。",
       planAdvisory,
-      reasons: ["官网出现明确的不可预约说明", "官网同时存在明确线上预约入口", "冲突解决前不建议直接假定可预约或仅限现场"],
-      evidence: [{ claim: "官网预约规则存在冲突", factIds: factIdsFor(facts, "reservation_policy"), optionId: reservationFlow.id, certainty: "low", limitation: "规则可能只适用于特定分店、日期、时段或席位" }]
+      reasons: ["公式サイトに予約不可の明記があります", "同じ公式サイトにオンライン予約入口があります", "矛盾が解消するまでは予約可・来店のみのどちらとも断定しません"],
+      evidence: [{ claim: "公式サイトの予約ルールが矛盾", factIds: factIdsFor(facts, "reservation_policy"), optionId: reservationFlow.id, certainty: "low", limitation: "特定店舗、日付、時間帯、席種だけに適用される可能性があります" }]
     };
   }
   if (officialDoesNotAcceptReservations) {
     const queueKnown = Boolean(queuePolicy?.mode);
     return {
       recommendation: "walk_in_ok",
-      queue: queueKnown ? queuePolicy.label : "仅建议现场尝试，排队时间未知",
+      queue: queueKnown ? queuePolicy.label : "来店受付のみ・待ち時間不明",
       confidence: reservationPolicy.certainty || "high",
       summary: queueKnown
-        ? `餐厅官网明确写明不接受预约，并说明采用“${queuePolicy.label}”；该规则仍不代表到店时一定有位或能估算实时等待时间。`
-        : "餐厅官网明确写明不接受预约；如要到店，应按现场接待方式准备，但官网证据并未说明是否一定有位或需要排多久。",
-      nextAction: queueKnown ? queueNextAction(queuePolicy.mode) : "出发前核对当天营业时间；现场可能满位，建议预留候位或备选餐厅。",
+        ? `公式サイトには予約不可と明記され、「${queuePolicy.label}」で案内されています。ただし、来店時の空席や待ち時間までは分かりません。`
+        : "公式サイトには予約不可と明記されています。来店する場合は店頭受付を想定してください。ただし、空席や待ち時間までは確認できません。",
+      nextAction: queueKnown ? queueNextAction(queuePolicy.mode) : "出発前に当日の営業時間を確認し、満席に備えて待ち時間や別の候補も見込んでください。",
       planAdvisory,
-      reasons: ["官网明确写明不接受预约", queueKnown ? `官网明确说明${queuePolicy.label}` : "未发现明确的现场接待方式", "没有可靠证据可估算实时排队时间"],
+      reasons: ["公式サイトに予約不可と明記", queueKnown ? `公式サイトに「${queuePolicy.label}」と明記` : "店頭受付の方法は未確認", "現在の待ち時間を推定できる根拠はありません"],
       evidence: [
-        { claim: "餐厅官网明确不接受预约", factIds: factIdsFor(facts, "reservation_policy"), certainty: reservationPolicy.certainty || "high", limitation: "只证明官网所述预约政策，不代表目标时间一定营业或有位" },
-        ...(queueKnown ? [{ claim: `官网说明${queuePolicy.label}`, factIds: factIdsFor(facts, "queue_policy"), certainty: queuePolicy.certainty || "high", limitation: "排队方式可能临时变化，且不能据此估算实时等待时间" }] : [])
+        { claim: "公式サイトに予約不可と明記", factIds: factIdsFor(facts, "reservation_policy"), certainty: reservationPolicy.certainty || "high", limitation: "公式サイト記載の予約方針だけを示し、希望時間の営業や空席は保証しません" },
+        ...(queueKnown ? [{ claim: `公式サイトの案内：${queuePolicy.label}`, factIds: factIdsFor(facts, "queue_policy"), certainty: queuePolicy.certainty || "high", limitation: "受付方法は変更される場合があり、現在の待ち時間は推定できません" }] : [])
       ]
     };
   }
   if (officialReservationIsLimited && !reservationFlow) {
     return {
       recommendation: "unknown",
-      queue: "预约有条件",
+      queue: "予約条件あり",
       confidence: reservationPolicy.certainty || "high",
-      summary: `餐厅官网明确写有预约限制：${reservationPolicy.label}。当前没有已核验的直接预约流程，不能确认你的目标日期、时段或人数是否符合条件。`,
-      nextAction: "打开官网核对限制的适用日期、时段和人数；仍不明确时使用官方电话确认。",
+      summary: `公式サイトに予約条件「${reservationPolicy.label}」が明記されています。確認済みの直接予約入口がないため、希望日・時間・人数が条件に合うかは判断できません。`,
+      nextAction: "公式サイトで対象日、時間帯、人数を確認し、不明な場合は公式電話番号へ問い合わせてください。",
       planAdvisory,
-      reasons: [`官网明确说明${reservationPolicy.label}`, "尚未发现已核验的直接预约流程", "不会根据计划信息自行假设限制条件已满足"],
-      evidence: [{ claim: `官网预约限制：${reservationPolicy.label}`, factIds: factIdsFor(facts, "reservation_policy"), certainty: reservationPolicy.certainty || "high", limitation: "规则可能变更，且不证明目标日期有位" }]
+      reasons: [`公式サイトに「${reservationPolicy.label}」と明記`, "確認済みの直接予約入口は見つかっていません", "入力された予定だけで条件を満たすとは判断しません"],
+      evidence: [{ claim: `公式サイトの予約条件：${reservationPolicy.label}`, factIds: factIdsFor(facts, "reservation_policy"), certainty: reservationPolicy.certainty || "high", limitation: "ルールは変更される場合があり、希望日の空席は示しません" }]
     };
   }
   if (reservationFlow && unresolvedIdentityConflict) {
     return {
       recommendation: "unknown",
-      queue: "先确认门店身份",
+      queue: "まず店舗を再確認",
       confidence: "low",
-      summary: "虽然找到了预约入口，但输入内容与当前门店的地址或分店信息存在未解决冲突，暂不能安全推荐直接预约。",
-      nextAction: "先在 Google Maps 或餐厅官网核对当前地址和分店；确认是同一家店后再进入预约页。",
+      summary: "予約入口は見つかりましたが、入力内容と現在の店舗の住所または支店情報が一致していません。誤予約を避けるため、直接予約はまだおすすめできません。",
+      nextAction: "Google Maps または店舗公式サイトで現在の住所と支店を確認し、同じ店舗と確認できてから予約ページへ進んでください。",
       planAdvisory,
-      reasons: [unresolvedIdentityConflict.message, "预约入口存在不代表它对应截图中的同一家分店", "门店身份冲突解决前不推荐提交预约"],
-      evidence: [{ claim: "预约入口与目标门店的对应关系尚未确认", factIds: factIdsFor(facts, "address"), optionId: reservationFlow.id, certainty: "low", limitation: "旧帖、迁址和同名分店都可能导致错误预约" }]
+      reasons: [unresolvedIdentityConflict.message, "予約入口があっても、画像と同じ支店とは限りません", "店舗情報の矛盾が解消するまで予約送信はおすすめしません"],
+      evidence: [{ claim: "予約入口と対象店舗の対応は未確認", factIds: factIdsFor(facts, "address"), optionId: reservationFlow.id, certainty: "low", limitation: "古い投稿、移転、同名支店により誤予約が起きる可能性があります" }]
     };
   }
   if (directOnline) {
-    const restrictionPrefix = officialReservationIsLimited ? `餐厅官网写明“${reservationPolicy.label}”。` : "";
+    const restrictionPrefix = officialReservationIsLimited ? `公式サイトには「${reservationPolicy.label}」とあります。` : "";
     const isOfficialBooking = directOnline.provider === "official_booking";
     return {
       recommendation: "recommended",
-      queue: "先在线核对空位",
+      queue: "オンラインで空席を確認",
       confidence: hasUnresolvedHighConflict ? "low" : directOnline.capability.certainty,
-      summary: `${resolvedRelocation ? "输入地址疑似为旧址；已用当前 Google Maps 与核验官网确认现址。" : ""}${restrictionPrefix}已发现${isOfficialBooking ? "餐厅官网中的预约流程" : `${directOnline.officiality === "linked_from_restaurant_website" ? "餐厅官网直接链接的" : "明确的"}${directOnline.label}预约流程`}，可以先在线查看目标条件是否适用以及是否有空位。`,
-      nextAction: `${resolvedRelocation ? "先按官网现址核对目标分店，再" : ""}打开${isOfficialBooking ? "餐厅官网预约页" : ` ${directOnline.label}`}核对日期、时间、人数及官网限制；看到确认页面或邮件后才算预约成功。`,
+      summary: `${resolvedRelocation ? "入力住所は旧住所の可能性がありますが、現在の Google Maps と確認済み公式サイトで現住所を確認しました。" : ""}${restrictionPrefix}${isOfficialBooking ? "店舗公式サイトの予約ページ" : `${directOnline.officiality === "linked_from_restaurant_website" ? "店舗公式サイトから直接リンクされた" : "明確な"}${directOnline.label} の予約ページ`}が見つかりました。希望条件と空席をオンラインで確認できます。`,
+      nextAction: `${resolvedRelocation ? "公式サイトの現住所で対象店舗を確認してから、" : ""}${isOfficialBooking ? "店舗公式の予約ページ" : directOnline.label}を開き、日付・時間・人数・条件を確認してください。確認画面または確認通知を受け取って初めて予約成立です。`,
       planAdvisory,
-      reasons: ["已核对到明确的线上预约路径", officialReservationIsLimited ? `官网同时说明${reservationPolicy.label}` : "入口真实性与实际空位分开判断", resolvedRelocation ? "旧地址冲突已由当前官方门店页消解" : conflicts.length ? `仍有 ${conflicts.length} 项来源信息需要核对` : "未发现高风险来源冲突"],
+      reasons: ["明確なオンライン予約経路を確認済み", officialReservationIsLimited ? `公式サイトに「${reservationPolicy.label}」と明記` : "入口の実在と実際の空席は分けて判断します", resolvedRelocation ? "現在の公式店舗ページで旧住所との矛盾を解消" : conflicts.length ? `確認が必要な情報源の差異が ${conflicts.length} 件あります` : "重大な情報源の矛盾は見つかりませんでした"],
       evidence: [
-        { claim: "存在可进入的线上预约流程", optionId: directOnline.id, certainty: directOnline.capability.certainty, limitation: "不代表目标日期有空位，也不代表预约已经成立" },
-        ...(officialReservationIsLimited ? [{ claim: `官网预约限制：${reservationPolicy.label}`, factIds: factIdsFor(facts, "reservation_policy"), certainty: reservationPolicy.certainty || "high", limitation: "必须在提交前核对目标日期、时段和人数是否适用" }] : [])
+        { claim: "利用可能なオンライン予約経路があります", optionId: directOnline.id, certainty: directOnline.capability.certainty, limitation: "希望日の空席や予約成立を示すものではありません" },
+        ...(officialReservationIsLimited ? [{ claim: `公式サイトの予約条件：${reservationPolicy.label}`, factIds: factIdsFor(facts, "reservation_policy"), certainty: reservationPolicy.certainty || "high", limitation: "送信前に希望日、時間帯、人数が対象か確認してください" }] : [])
       ]
     };
   }
   if (providerBooking) {
-    const restrictionPrefix = officialReservationIsLimited ? `餐厅官网写明“${reservationPolicy.label}”。` : "";
+    const restrictionPrefix = officialReservationIsLimited ? `公式サイトには「${reservationPolicy.label}」とあります。` : "";
     return {
       recommendation: "recommended",
-      queue: "提交后等待确认",
+      queue: "送信後に確認待ち",
       confidence: hasUnresolvedHighConflict ? "low" : providerBooking.capability.certainty,
-      summary: `${restrictionPrefix}已发现 ${providerBooking.label} 的预约入口，但平台可能采用即时确认、请求确认或代为联系餐厅，提交本身不代表预约成立。`,
-      nextAction: `打开 ${providerBooking.label} 核对官网限制、费用和确认方式；只有收到明确的预约确认后才按已预约安排行程。`,
+      summary: `${restrictionPrefix}${providerBooking.label} の予約入口が見つかりました。ただし、即時確定・リクエスト・店舗への代行連絡のいずれかはサービス側で決まるため、送信だけでは予約成立になりません。`,
+      nextAction: `${providerBooking.label} を開き、条件・料金・確定方法を確認してください。明確な予約確認を受け取ってから予約済みとして予定を組んでください。`,
       planAdvisory,
-      reasons: ["已核对到平台预约入口", officialReservationIsLimited ? `官网同时说明${reservationPolicy.label}` : "平台提交与餐厅最终确认分开处理", conflicts.length ? `仍有 ${conflicts.length} 项来源信息需要核对` : "未发现高风险来源冲突"],
+      reasons: ["予約サービスの入口を確認済み", officialReservationIsLimited ? `公式サイトに「${reservationPolicy.label}」と明記` : "サービスへの送信と店舗の最終確定は分けて扱います", conflicts.length ? `確認が必要な情報源の差異が ${conflicts.length} 件あります` : "重大な情報源の矛盾は見つかりませんでした"],
       evidence: [
-        { claim: "存在平台管理的预约流程", optionId: providerBooking.id, certainty: providerBooking.capability.certainty, limitation: "可能需要平台代联络餐厅、支付费用或等待确认" },
-        ...(officialReservationIsLimited ? [{ claim: `官网预约限制：${reservationPolicy.label}`, factIds: factIdsFor(facts, "reservation_policy"), certainty: reservationPolicy.certainty || "high", limitation: "必须在提交前核对目标日期、时段和人数是否适用" }] : [])
+        { claim: "予約サービスが管理する予約経路があります", optionId: providerBooking.id, certainty: providerBooking.capability.certainty, limitation: "店舗への代行連絡、料金の支払い、確定待ちが必要な場合があります" },
+        ...(officialReservationIsLimited ? [{ claim: `公式サイトの予約条件：${reservationPolicy.label}`, factIds: factIdsFor(facts, "reservation_policy"), certainty: reservationPolicy.certainty || "high", limitation: "送信前に希望日、時間帯、人数が対象か確認してください" }] : [])
       ]
     };
   }
@@ -122,27 +122,27 @@ export function buildEvidenceGatedDecision({ place, reservationOptions = [], res
   const next = waitlist || official || phone || listing;
   return {
     recommendation: "unknown",
-    queue: queuePolicy?.label || "信息不足",
+    queue: queuePolicy?.label || "要確認",
     confidence: hasUnresolvedHighConflict ? "low" : listing || queuePolicy ? "medium" : "low",
     summary: queuePolicy
-      ? `餐厅官网明确说明采用“${queuePolicy.label}”，但尚无明确证据证明预约是否开放；排队规则也不能证明到店时一定有位。`
-      : waitlist ? "已找到排队取号入口，但排队取号不是订座，也不能证明到店时一定有位。" : "已确认店铺身份和基础信息，但尚无明确证据证明是否接受预约或需要现场排队。",
-    nextAction: queuePolicy ? queueNextAction(queuePolicy.mode) : next?.capability?.primaryLabel || "先核对官方页面；没有明确说明时再电话确认。",
+      ? `公式サイトには「${queuePolicy.label}」とありますが、予約受付の有無は確認できません。順番待ちの案内だけでは来店時の空席も判断できません。`
+      : waitlist ? "順番待ちの受付ページは見つかりましたが、座席予約ではなく、来店時の入店を保証するものでもありません。" : "店舗の同一性と基本情報は確認できましたが、予約受付や店頭での順番待ちについて明確な根拠がありません。",
+    nextAction: queuePolicy ? queueNextAction(queuePolicy.mode) : next?.capability?.primaryLabel || "まず公式ページを確認し、記載がなければ電話で問い合わせてください。",
     planAdvisory,
-    reasons: ["已通过 Google Maps 确认店名与地址", queuePolicy ? `官网明确说明${queuePolicy.label}` : waitlist ? "排队取号不等于保留座位" : listing ? `找到了对应的 ${listing.label} 店铺页面，但页面存在不等于可预约` : "尚未找到已核对的预约平台店铺页", phone ? "可通过已核对的电话号码直接询问预约是否开放" : "尚未取得可用电话号码"],
+    reasons: ["Google Maps で店名と住所を確認済み", queuePolicy ? `公式サイトに「${queuePolicy.label}」と明記` : waitlist ? "順番待ち受付は座席予約ではありません" : listing ? `${listing.label} の店舗ページはありますが、ページの存在だけでは予約可能と判断できません` : "確認済みの予約サービス店舗ページは見つかりませんでした", phone ? "確認済みの電話番号で予約受付を直接問い合わせられます" : "利用できる電話番号を確認できませんでした"],
     evidence: queuePolicy
-      ? [{ claim: `官网说明${queuePolicy.label}`, factIds: factIdsFor(facts, "queue_policy"), certainty: queuePolicy.certainty || "high", limitation: "仍不能据此判断预约状态、实时有位或等待时长" }]
-      : [{ claim: "预约与排队规则仍未知", factIds: [], certainty: "low", limitation: "不会根据评分、评价数或平台店铺页推断预约规则" }]
+      ? [{ claim: `公式サイトの案内：${queuePolicy.label}`, factIds: factIdsFor(facts, "queue_policy"), certainty: queuePolicy.certainty || "high", limitation: "予約受付、現在の空席、待ち時間までは判断できません" }]
+      : [{ claim: "予約・順番待ちルールは未確認", factIds: [], certainty: "low", limitation: "評価点、クチコミ数、店舗ページの存在から予約ルールを推測しません" }]
   };
 }
 
 function queueNextAction(mode) {
   return {
-    numbered_ticket: "出发前打开官网核对当天整理券的领取时间和地点；领券不代表立即入店。",
-    app_waitlist: "按官网指定的 App 或网页完成排队取号，并持续核对叫号与过号规则。",
-    name_list: "到店后先按官网说明登记姓名，并向店员确认预计叫号方式。",
-    onsite_queue: "按官网说明到店排队；实时等待时间未知，出发前仍需核对营业状态。"
-  }[mode] || "打开官网核对当天排队方式；实时等待时间未知。";
+    numbered_ticket: "出発前に公式サイトで当日の整理券配布時間と場所を確認してください。整理券を受け取っても、すぐ入店できるとは限りません。",
+    app_waitlist: "公式サイト指定のアプリまたはWebページで順番待ち受付を行い、呼び出しとキャンセル扱いの条件を確認してください。",
+    name_list: "来店後、公式案内に従って名前を記入し、呼び出し方法を店舗スタッフへ確認してください。",
+    onsite_queue: "公式案内に従って店頭に並んでください。現在の待ち時間は不明なため、出発前に営業状況も確認してください。"
+  }[mode] || "公式サイトで当日の受付方法を確認してください。現在の待ち時間は不明です。";
 }
 
 export function buildPlanAdvisory(plan = {}) {
@@ -153,11 +153,11 @@ export function buildPlanAdvisory(plan = {}) {
   if (date) {
     const day = new Date(`${date}T12:00:00Z`).getUTCDay();
     notes.push(day === 0 || day === 6
-      ? `${date} 是周末；这本身不能证明餐厅拥挤，但预约规则、套餐和可选时段可能不同，请提前核对。`
-      : `计划日期为 ${date}；请按这个具体日期核对营业状态和可选时段。`);
+      ? `${date} は週末です。混雑の根拠にはなりませんが、予約条件・コース・選べる時間が異なる場合があるため、事前に確認してください。`
+      : `予定日は ${date} です。この日付で営業状況と選べる時間を確認してください。`);
   }
-  if (time && Number(time.slice(0, 2)) >= 18) notes.push(`计划时间为 ${time}；系统不会仅因晚餐时段推断热门或有位，请以预约页或餐厅答复为准。`);
-  if (party && party >= 6) notes.push(`计划人数为 ${party} 人；多人可能受桌型、套餐或押金限制，提交前应确认全部条件。`);
+  if (time && Number(time.slice(0, 2)) >= 18) notes.push(`予定時刻は ${time} です。ディナー時間という理由だけで混雑や空席を推測せず、予約ページまたは店舗の回答を確認してください。`);
+  if (party && party >= 6) notes.push(`予定人数は ${party} 名です。席種、コース、デポジットの条件がある場合があるため、送信前に確認してください。`);
   return notes.length ? notes.join(" ") : null;
 }
 

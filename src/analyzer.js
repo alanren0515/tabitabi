@@ -26,16 +26,16 @@ export function findCandidates(input, limit = 3) {
 
 export function recommendationLabel(value) {
   return {
-    strongly_recommended: "强烈建议预约",
-    recommended: "建议预约",
-    walk_in_ok: "适合现场去",
-    temporarily_unavailable: "暂不推荐前往",
-    unknown: "信息不足"
-  }[value] || "信息不足";
+    strongly_recommended: "予約を強く推奨",
+    recommended: "予約がおすすめ",
+    walk_in_ok: "直接来店を検討",
+    temporarily_unavailable: "来店は一旦見送り",
+    unknown: "情報を確認中"
+  }[value] || "情報を確認中";
 }
 
 export function confidenceLabel(value) {
-  return { high: "高置信度", medium: "中置信度", low: "低置信度" }[value] || "低置信度";
+  return { high: "確度：高", medium: "確度：中", low: "確度：低" }[value] || "確度：低";
 }
 
 export function buildPhoneScript({ date, time, party = 2, name, mode = "reservation", now = new Date() } = {}) {

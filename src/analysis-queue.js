@@ -53,7 +53,7 @@ export function pendingAnalysisToTextExtraction(item, defaultPartySize = 2) {
     searchQuery: [pending.clues.name, pending.clues.branch, pending.clues.area, pending.clues.address, pending.clues.nearest_station].filter(Boolean).join(" "),
     plan: { planDate: "", planTime: "", partySize: clampParty(defaultPartySize) },
     links: [],
-    warnings: ["这是保存在当前浏览器的待分析线索，仍需确认具体分店。"]
+    warnings: ["このブラウザに保存された未分析の手がかりです。店舗・支店はまだ確認が必要です。"]
   };
 }
 

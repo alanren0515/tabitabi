@@ -13,9 +13,9 @@ test("builds a bounded share message with the booking confirmation boundary", ()
     mapSearchUrl: "https://maps.google.com/?cid=demo",
     phone: "03-0000-0000"
   });
-  assert.match(payload.text, /建议预约/);
-  assert.match(payload.text, /不代表.*|预约是否成立/);
-  assert.match(payload.text, /确认通知为准/);
+  assert.match(payload.text, /予約をおすすめ/);
+  assert.match(payload.text, /予約成立/);
+  assert.match(payload.text, /確認通知/);
   assert.equal(payload.url, "https://maps.google.com/?cid=demo");
   assert.doesNotMatch(payload.text, /03-0000-0000/);
 });

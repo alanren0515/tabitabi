@@ -87,7 +87,7 @@ test("labels a standalone social URL without claiming to read post content", () 
   assert.equal(result.platform, "tiktok");
   assert.equal(result.contentRead, false);
   assert.equal(result.requiresContent, true);
-  assert.match(result.warnings[0], /未读取/);
+  assert.match(result.warnings[0], /読み取っていません/);
 });
 
 test("applies the same link-only boundary to Instagram", () => {
@@ -97,6 +97,31 @@ test("applies the same link-only boundary to Instagram", () => {
   assert.equal(result.contentRead, false);
   assert.equal(result.requiresContent, true);
   assert.ok(result.warnings.every((warning) => !/已读取帖子正文/.test(warning)));
+});
+
+test("recognizes Japan-focused secondary social sources without claiming to read them", () => {
+  const examples = [
+    ["https://www.youtube.com/shorts/ABC123", "youtube", "YouTube"],
+    ["https://www.threads.net/@tokyofood/post/ABC123", "threads", "Threads"],
+    ["https://www.lemon8-app.com/@tokyofood/123", "lemon8", "Lemon8"],
+    ["https://line.me/R/msg/text/?restaurant", "line", "LINE"],
+    ["https://www.facebook.com/reel/123", "facebook", "Facebook"]
+  ];
+  for (const [url, platform, label] of examples) {
+    const result = parseTextInput(url);
+    assert.equal(result.kind, "social_link");
+    assert.equal(result.platform, platform);
+    assert.equal(result.platformLabel, label);
+    assert.equal(result.contentRead, false);
+    assert.equal(result.requiresContent, true);
+  }
+});
+
+test("removes a named Japanese social source from restaurant clues", () => {
+  const result = parseTextInput("YouTube Shortsで見た 六歌仙 新宿本店");
+  assert.equal(result.platform, "youtube");
+  assert.equal(result.platformLabel, "YouTube");
+  assert.equal(result.searchQuery, "六歌仙 新宿本店");
 });
 
 test("uses caption text beside a social URL as user-provided clues", () => {
@@ -132,12 +157,12 @@ test("recognizes a standalone reservation-platform URL without sending it to web
   const result = parseTextInput("https://yoyaku.tabelog.com/yoyaku/net_booking_form/index?rcd=13000000");
   assert.equal(result.kind, "reservation_link");
   assert.equal(result.platform, "tabelog");
-  assert.equal(result.platformLabel, "Tabelog");
+  assert.equal(result.platformLabel, "食べログ");
   assert.equal(result.requiresContent, true);
   assert.equal(result.requiresWebpage, false);
   assert.equal(result.links[0].linkType, "booking_flow");
-  assert.match(result.warnings.join(" "), /不会抓取.*页面正文/);
-  assert.match(result.warnings.join(" "), /预约已经成立/);
+  assert.match(result.warnings.join(" "), /ページ本文は取得しません/);
+  assert.match(result.warnings.join(" "), /予約成立/);
 
   const currentTabelog = parseTextInput("https://tabelog.com/booking/form/new?member=2&rcd=13299475&visit_date=20260716&visit_time=1900");
   assert.equal(currentTabelog.kind, "reservation_link");
@@ -172,7 +197,7 @@ test("routes inbound concierge links away from the ordinary webpage extractor", 
     assert.equal(result.platform, platform);
     assert.equal(result.links[0].linkType, linkType);
     assert.equal(result.requiresWebpage, false);
-    assert.match(result.warnings.join(" "), /不会抓取.*页面正文/);
+    assert.match(result.warnings.join(" "), /ページ本文は取得しません/);
   }
 });
 

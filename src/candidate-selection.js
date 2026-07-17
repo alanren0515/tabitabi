@@ -39,31 +39,31 @@ export function candidateDecision(candidates = []) {
 export function candidateDecisionCopy({ fallback = false, decision, candidateCount = 0, input = "" } = {}) {
   if (fallback) {
     return {
-      heading: "我们还不能确定是哪家",
-      summary: "当前没有实时数据源，请选择演示候选体验后续流程。"
+      heading: "店舗をまだ特定できません",
+      summary: "現在は実データを取得できないため、デモ候補で後続の流れを確認できます。"
     };
   }
   if (decision?.kind === "likely_single") {
     return {
-      heading: "系统判断最可能是这家",
-      summary: `根据“${input}”的店名和位置线索，目前只有一个强匹配结果。仍请你确认。`
+      heading: "最も可能性が高い店舗です",
+      summary: `「${input}」の店名と場所に強く一致する候補は現在1件です。内容をご確認ください。`
     };
   }
   if (decision?.kind === "likely_with_alternatives") {
     return {
-      heading: "系统已有首选，也保留其他可能",
-      summary: `第一家与“${input}”的线索明显更接近；如果不对，请从其他候选中选择。`
+      heading: "第一候補があります。ほかの可能性も残しています",
+      summary: `最初の店舗が「${input}」の手掛かりに最も近い候補です。違う場合は別の候補を選んでください。`
     };
   }
   if (candidateCount === 1) {
     return {
-      heading: "目前只找到一个可能候选",
-      summary: `这个结果与“${input}”有部分线索一致，但证据还不够强。请核对店名、分店和地址后再确认。`
+      heading: "候補は1件ですが、確定できません",
+      summary: `「${input}」と一部一致しますが、根拠が十分ではありません。店名・支店・住所を確認してください。`
     };
   }
   return {
-    heading: "目前不能唯一确定是哪家",
-    summary: `根据“${input}”找到了几个接近的结果，请用店名、分店或地址来判断。`
+    heading: "候補を1つに絞れません",
+    summary: `「${input}」に近い結果が複数あります。店名・支店・住所を見比べて選んでください。`
   };
 }
 
