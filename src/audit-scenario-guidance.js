@@ -17,7 +17,7 @@ const RISK_REQUIREMENTS = {
   old_post: "使用发布日期较早、可能与当前状态不同的公开帖子，并记录大致发布日期。",
   relocation: "素材应包含旧址或迁址前线索；必须用当前官方门店页核对现址后才能进入预约入口。",
   phone_only: "选择没有已核验在线预约流程、只能电话确认的真实餐厅结果。",
-  japanese_script: "打开电话助手并核对标准版、简短版和日语不熟练版，不实际拨号也可以完成界面审计。",
+  verified_phone_entry: "确认结果页显示已核验电话号码和直接拨号入口；不需要实际拨号。",
   multiple_restaurants: "一张截图中至少清楚出现两家餐厅，验证先选择餐厅，再选择具体 Places 候选。",
   user_confirmation: "不要接受系统默认猜测；必须由你主动点击确认具体餐厅与分店。",
   candidate_rejection: "至少排除一个错误候选，再确认正确候选；排除阶段不应提前加载详情。",
@@ -33,4 +33,3 @@ export function scenarioAuditGuidance(scenario = {}) {
   items.push("完成后只保存本产品的候选页或结果页证据；不要把原始 SNS 截图、用户名、评论或私信写入评估文件。");
   return [...new Set(items)];
 }
-

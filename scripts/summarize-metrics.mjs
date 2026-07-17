@@ -68,7 +68,6 @@ console.log(JSON.stringify({
     actionRate: pilot.actionRate,
     bookingLinksClicked: eventCounts.booking_link_clicked || 0,
     phoneButtonsClicked: eventCounts.phone_button_clicked || 0,
-    phoneScriptsCopied: eventCounts.phone_script_copied || 0,
     resultsShared: eventCounts.share_result_clicked || 0,
     sourceConflictsSeen: eventCounts.source_conflict_seen || 0,
     savedToList: pilot.savedRuns,

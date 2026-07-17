@@ -8,7 +8,6 @@ export const ALLOWED_EVENTS = new Set([
   "analysis_completed",
   "primary_action_clicked",
   "booking_link_clicked",
-  "phone_script_copied",
   "phone_button_clicked",
   "share_result_clicked",
   "source_conflict_seen",

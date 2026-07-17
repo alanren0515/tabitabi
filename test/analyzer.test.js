@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildPhoneScript, findCandidates, normalizeInput, recommendationLabel } from "../src/analyzer.js";
+import { findCandidates, normalizeInput, recommendationLabel } from "../src/analyzer.js";
 import { buildRestaurantQuery, extractionReviewState, formatBudget, mergeScreenshotSupplemental, normalizeExtraction, sampleTikTokExtraction, selectExtractedRestaurant } from "../src/screenshot-extraction.js";
 
 test("normalizes mixed-width and whitespace input", () => {
@@ -17,55 +17,6 @@ test("returns explicitly marked fallback candidates for unknown input", () => {
   const candidates = findCandidates("完全未知的餐厅 XYZ");
   assert.equal(candidates.length, 3);
   assert.ok(candidates.every((candidate) => candidate.isFallback));
-});
-
-test("builds a personalized bilingual phone script", () => {
-  const script = buildPhoneScript({ date: "7月18日", time: "19時", party: 3, name: "Guo" });
-  assert.match(script.ja, /7月18日.*19時.*3名.*Guo/);
-  assert.match(script.zh, /3 位/);
-  assert.match(script.jaShort, /7月18日.*3名.*Guo/);
-  assert.ok(script.jaShort.length < script.ja.length);
-  assert.match(script.jaEasy, /日本語があまり話せません/);
-  assert.match(script.jaEasy, /ゆっくり/);
-  assert.match(script.zhEasy, /不太会说日语/);
-});
-
-test("renders saved ISO plans as natural Japanese phone dates and times", () => {
-  const sameYear = buildPhoneScript({ date: "2026-08-01", time: "19:30", party: 4, now: new Date("2026-07-13T00:00:00+09:00") });
-  assert.match(sameYear.ja, /8月1日.*19時30分.*4名/);
-  assert.doesNotMatch(sameYear.ja, /2026-08-01|19:30/);
-  assert.match(sameYear.zh, /8月1日19:30.*4 位/);
-
-  const wholeHour = buildPhoneScript({ date: "2026-08-02", time: "18:00", mode: "walk_in", now: new Date("2026-07-13T00:00:00+09:00") });
-  assert.match(wholeHour.ja, /8月2日.*18時ごろ/);
-  assert.doesNotMatch(wholeHour.ja, /18時0分/);
-  assert.match(wholeHour.jaEasy, /8月2日、18時ごろ/);
-
-  const nextYear = buildPhoneScript({ date: "2027-01-05", time: "12:15", now: new Date("2026-07-13T00:00:00+09:00") });
-  assert.match(nextYear.ja, /2027年1月5日.*12時15分/);
-  assert.match(nextYear.zh, /2027年1月5日12:15/);
-});
-
-test("naturally omits the reservation-name sentence when no local name is configured", () => {
-  const script = buildPhoneScript({ date: "7月18日", time: "19時", party: 2 });
-  assert.doesNotMatch(script.ja, /お名前|名前は/);
-  assert.doesNotMatch(script.jaShort, /お名前|名前は/);
-  assert.doesNotMatch(script.jaEasy, /お名前|名前は/);
-  assert.doesNotMatch(script.zh, /您的名字|我的名字/);
-  assert.match(script.ja, /2名で予約できますでしょうか。$/);
-});
-
-test("uses an arrival and wait-time script when official evidence says reservations are unavailable", () => {
-  const script = buildPhoneScript({ date: "7月18日", time: "19時", party: 3, mode: "walk_in" });
-  assert.match(script.ja, /営業していますか/);
-  assert.match(script.ja, /予約なし.*待ち時間/);
-  assert.doesNotMatch(script.ja, /予約できますでしょうか/);
-  assert.match(script.zh, /不预约直接到店/);
-  assert.match(script.jaShort, /待ち時間/);
-  assert.doesNotMatch(script.jaShort, /予約できますか/);
-  assert.ok(script.jaShort.length < script.ja.length);
-  assert.match(script.jaEasy, /予約なしでも大丈夫ですか/);
-  assert.match(script.zhEasy, /不预约也可以吗/);
 });
 
 test("maps recommendation enum to user-facing copy", () => {

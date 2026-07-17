@@ -4,16 +4,14 @@ import { DEFAULT_SETTINGS, loadSettingsFromStorage, normalizeSettings, persisten
 
 test("normalizes local preferences to bounded supported values", () => {
   assert.deepEqual(normalizeSettings({}), DEFAULT_SETTINGS);
-  assert.deepEqual(normalizeSettings({ defaultPartySize: 99, defaultPhoneScript: "easy", saveRecentAnalyses: false }), {
+  assert.deepEqual(normalizeSettings({ defaultPartySize: 99, defaultPhoneScript: "easy", reservationName: "legacy", saveRecentAnalyses: false }), {
     defaultPartySize: 20,
-    reservationName: "",
-    defaultPhoneScript: "easy",
     saveRecentAnalyses: false,
     pilotAccessCode: ""
   });
   assert.equal(normalizeSettings({ defaultPartySize: "bad", defaultPhoneScript: "unknown" }).defaultPartySize, 2);
-  assert.equal(normalizeSettings({ reservationName: "  Guo\nQuan\u0000  " }).reservationName, "Guo Quan");
-  assert.equal(normalizeSettings({ reservationName: "x".repeat(80) }).reservationName.length, 60);
+  assert.equal("reservationName" in normalizeSettings({ reservationName: "legacy" }), false);
+  assert.equal("defaultPhoneScript" in normalizeSettings({ defaultPhoneScript: "easy" }), false);
   assert.equal(normalizeSettings({ pilotAccessCode: `  code\n${"x".repeat(300)}  ` }).pilotAccessCode.length, 256);
   assert.deepEqual(pilotAccessHeaders({ pilotAccessCode: " pilot-code " }), { "X-Pilot-Access": "pilot-code" });
   assert.deepEqual(pilotAccessHeaders({}), {});
@@ -31,8 +29,6 @@ test("recognizes a rejected access code and clears only that session value", () 
   assert.equal(pilotAccessRejected({ code: "VISION_RATE_LIMITED" }), false);
   assert.deepEqual(settingsWithoutPilotAccess({ defaultPartySize: 4, pilotAccessCode: "wrong-code" }), {
     defaultPartySize: 4,
-    reservationName: "",
-    defaultPhoneScript: "standard",
     saveRecentAnalyses: true,
     pilotAccessCode: ""
   });
@@ -55,9 +51,8 @@ test("keeps the pilot access code out of persistent settings and only in session
 });
 
 test("requires the recent-history checkbox to be present in submitted form values", () => {
-  assert.equal(settingsFromForm({ defaultPartySize: "4", defaultPhoneScript: "short", saveRecentAnalyses: "on" }).saveRecentAnalyses, true);
-  assert.equal(settingsFromForm({ defaultPartySize: "4", defaultPhoneScript: "short" }).saveRecentAnalyses, false);
-  assert.equal(settingsFromForm({ reservationName: "  郭 泉  " }).reservationName, "郭 泉");
+  assert.equal(settingsFromForm({ defaultPartySize: "4", saveRecentAnalyses: "on" }).saveRecentAnalyses, true);
+  assert.equal(settingsFromForm({ defaultPartySize: "4" }).saveRecentAnalyses, false);
   assert.equal(settingsFromForm({ pilotAccessCode: "test-code" }).pilotAccessCode, "test-code");
 });
 

@@ -1,4 +1,4 @@
-import { buildPhoneScript, confidenceLabel, findCandidates, recommendationLabel } from "./analyzer.js";
+import { confidenceLabel, findCandidates, recommendationLabel } from "./analyzer.js";
 import { buildRestaurantQuery, extractionReviewState, formatBudget, isKnownSampleScreenshot, mergeScreenshotSupplemental, normalizeExtraction, sampleTikTokExtraction, selectExtractedRestaurant } from "./screenshot-extraction.js";
 import { createSavedPlan, normalizeSavedPlans, PLAN_STATUSES, planStatusLabel, sortSavedPlansByUrgency, updateSavedPlan } from "./saved-plans.js";
 import { deleteLocalData, LOCAL_STORAGE_KEY, summarizeLocalData, VISIT_STORAGE_KEY } from "./privacy-data.js";
@@ -58,7 +58,6 @@ const state = {
   confirmedCandidate: null,
   resultFocus: "",
   restaurant: null,
-  phoneScriptVersion: initialSettings.defaultPhoneScript,
   planEditorOpen: false,
   deleteConfirmOpen: false,
   saved: normalizeSavedPlans(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]")),
@@ -666,14 +665,6 @@ async function openConfirmedCandidate(focus) {
 function renderResult() {
   const r = state.restaurant;
   const saved = state.saved.some((item) => item.id === r.id);
-  const scriptMode = r.recommendation === "walk_in_ok" ? "walk_in" : "reservation";
-  const script = buildPhoneScript({ date: state.currentPlanIntent.planDate, time: state.currentPlanIntent.planTime, party: state.currentPlanIntent.partySize || state.settings.defaultPartySize, name: state.settings.reservationName, mode: scriptMode });
-  const scriptVersion = ["standard", "short", "easy"].includes(state.phoneScriptVersion) ? state.phoneScriptVersion : "standard";
-  const visibleScript = scriptVersion === "short"
-    ? { ja: script.jaShort, zh: script.zhShort }
-    : scriptVersion === "easy"
-      ? { ja: script.jaEasy, zh: script.zhEasy }
-      : { ja: script.ja, zh: script.zh };
   const primaryAction = r.primaryAction || (r.booking ? { label: r.booking.label, url: r.booking.url } : null);
   const reservationOptions = Array.isArray(r.reservationOptions) ? r.reservationOptions : [];
   const savedPlan = state.saved.find((item) => item.id === r.id);
@@ -702,11 +693,10 @@ function renderResult() {
     ${reservationOptions.length ? `<section class="panel reservation-options"><div class="panel-heading"><div><p class="overline">予約・確認先</p><h2>信頼できる入口から確認</h2></div><span>予約、予約リクエスト、順番待ち、店舗ページを区別しています</span></div><div class="reservation-option-grid">${reservationOptions.map((option) => `<a class="reservation-option ${reservationOptionClass(option)}" href="${esc(option.url)}" ${option.actionType === "phone" ? "" : 'target="_blank" rel="noreferrer"'} data-reservation-provider="${esc(option.provider)}" data-action-type="${esc(option.actionType)}"><span>${reservationOptionBadge(option)}</span><strong>${esc(option.label)}</strong><small>${esc(option.capability?.label || reservationModeLabel(option.bookingMode))}</small>${option.capability?.confirmation ? `<em>${esc(option.capability.confirmation)}</em>` : ""}${option.feeNote ? `<p>${esc(option.feeNote)}</p>` : ""}</a>`).join("")}</div></section>` : ""}
     ${r.queueGuidance ? `<section class="panel queue-guidance"><div><p class="overline">公式サイトの順番待ちルール</p><h2>${esc(r.queueGuidance.label)}</h2><p>${esc(r.queueGuidance.excerpt)}</p><small>公式サイトで公開された方法だけを示します。現在の空席や待ち時間を示すものではありません。</small></div><a href="${esc(safeExternalUrl(r.queueGuidance.sourceUrl))}" target="_blank" rel="noreferrer">公式サイトの原文を開く ${icons.arrow}</a></section>` : ""}
     ${r.attentionNotices?.length ? `<section class="panel attention-panel"><div class="panel-heading"><div><p class="overline">来店時の注意</p><h2>公式サイトに明記されたルール</h2></div><span>予約送信前にもう一度確認</span></div><div class="attention-grid">${r.attentionNotices.map((notice) => `<article><strong>${esc(notice.label)}</strong><p>${esc(notice.excerpt)}</p><a href="${esc(safeExternalUrl(notice.sourceUrl))}" target="_blank" rel="noreferrer">公式サイトの原文を開く</a></article>`).join("")}</div></section>` : ""}
-    <div class="detail-grid">
+    <div class="detail-grid single-panel">
       <section class="panel"><div class="panel-heading"><div><p class="overline">店舗情報</p><h2>行く前に確認</h2></div><span class="queue-chip">${esc(r.queue)}</span></div>
         <dl class="facts">${Number.isFinite(r.rating) ? `<div><dt>Google の評価</dt><dd>${esc(r.rating)} / 5${Number.isInteger(r.userRatingCount) ? ` · クチコミ ${esc(r.userRatingCount.toLocaleString("ja-JP"))}件` : ""}</dd></div>` : ""}<div><dt>住所</dt><dd>${esc(r.address)}</dd></div>${r.phone ? `<div><dt>電話</dt><dd><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a></dd></div>` : ""}${r.officialInstagramUrl ? `<div><dt>公式 Instagram</dt><dd><a href="${esc(safeExternalUrl(r.officialInstagramUrl))}" target="_blank" rel="noreferrer">公式アカウントを開く</a></dd></div>` : ""}<div><dt>最寄り駅</dt><dd>${esc(r.station)}</dd></div><div><dt>営業時間</dt><dd>${esc(r.hours)}</dd></div><div><dt>定休日</dt><dd>${esc(r.closed)}</dd></div></dl>
       </section>
-      <section class="panel script-panel"><p class="overline">${scriptMode === "walk_in" ? "電話で営業・待ち時間を確認" : "電話予約のサポート"}</p><h2>このまま読めます</h2><div class="script-tabs" role="group" aria-label="電話用の文例"><button class="${scriptVersion === "standard" ? "active" : ""}" data-script-version="standard" aria-pressed="${scriptVersion === "standard"}">標準</button><button class="${scriptVersion === "short" ? "active" : ""}" data-script-version="short" aria-pressed="${scriptVersion === "short"}">短め</button><button class="${scriptVersion === "easy" ? "active" : ""}" data-script-version="easy" aria-pressed="${scriptVersion === "easy"}">やさしい日本語</button></div><blockquote lang="ja">${esc(visibleScript.ja)}</blockquote><button class="copy-button" data-copy="${esc(visibleScript.ja)}">文例をコピー</button></section>
     </div>
     <section class="panel sources"><div class="panel-heading"><div><p class="overline">情報の根拠</p><h2>この案内の出典</h2></div><span>${r.sourceContext || "確認直後 · デモ"}</span></div>
       ${r.sources.map((source) => `<div class="source-row"><div>${source.url ? `<a href="${esc(safeExternalUrl(source.url))}" target="_blank" rel="noreferrer"><strong>${esc(source.name)}</strong></a>` : `<strong>${esc(source.name)}</strong>`}${source.official ? '<span class="official">公式</span>' : ""}<p>${esc(source.note)}${source.retrievedAt ? ` · ${formatClientTime(source.retrievedAt)}` : ""}</p>${source.attribution ? `<small class="source-attribution" translate="no">${esc(source.attribution)}</small>` : ""}</div><span class="confidence-${["高", "high"].includes(source.confidence) ? "high" : ["中", "medium"].includes(source.confidence) ? "medium" : "low"}">確度${esc(source.confidence === "high" ? "高" : source.confidence === "medium" ? "中" : source.confidence === "low" ? "低" : source.confidence)}</span></div>`).join("")}
@@ -765,15 +755,6 @@ function renderResult() {
     }
     form.replaceWith(Object.assign(document.createElement("p"), { className: "feedback-thanks", textContent: "ありがとうございます。回答を受け付けました。" }));
     showToast("ご回答ありがとうございます。案内の改善に活用します");
-  });
-  document.querySelectorAll("[data-script-version]").forEach((button) => button.addEventListener("click", () => {
-    state.phoneScriptVersion = button.dataset.scriptVersion;
-    render();
-  }));
-  document.querySelector("[data-copy]").addEventListener("click", async (event) => {
-    await navigator.clipboard.writeText(event.currentTarget.dataset.copy);
-    postEvent("phone_script_copied", { actionType: state.phoneScriptVersion });
-    showToast("電話用の文例をコピーしました");
   });
 }
 
@@ -1295,7 +1276,7 @@ function renderPrivacy() {
     <section class="panel privacy-section"><p class="overline">この端末に保存</p><h2>行きたいリスト、確認待ち、履歴、設定</h2><ul>${local.fields.map((field) => `<li>${esc(field)}</li>`).join("")}${(local.sessionFields || []).map((field) => `<li>${esc(field)}</li>`).join("")}</ul><p>オフラインでも画面を開けるよう、HTML、フロントエンドモジュール、スタイル、アイコンをブラウザにキャッシュする場合があります。API 応答、店舗結果、外部ページはキャッシュしません。確認待ちリストに元画像、反応数、投稿本文は保存しません。共有されたタイトル・文章・リンクは現在の画面にだけ入力し、アドレス欄からすぐ削除します。「確認をはじめる」を押すまで送信しません。実在店舗の Google Maps 住所・評価・営業時間、ホットペッパーグルメ詳細、入力された予約 URL は長期保存せず、再表示時に Place ID から更新します。</p></section>
     <section class="panel privacy-section"><p class="overline">リクエスト時に外部へ送信</p><h2>画像解析と店舗確認</h2><div class="data-flow-list"><p><strong>Qwen / OpenAI fallback</strong><span>画像を追加した場合だけ受け取ります。本サービスは画像をサーバーファイルへ保存しません。提供会社側の処理とログ期間は各社の規約に従います。</span></p><p><strong>Google Places</strong><span>店舗の検索語と、店舗確認または評価表示時の Place ID を受け取り、候補・住所・電話・評価・営業時間を返します。端末の位置情報は要求しません。</span></p><p><strong>ホットペッパーグルメ</strong><span>確認した店舗の店名・住所・電話を受け取り、店舗ページを照合します。</span></p><p><strong>店舗の公式サイト</strong><span>店舗確認後、検証済み公式サイトの公開 HTML をサーバーが取得し、予約入口、公式 Instagram、明示された予約ルールを探す場合があります。Instagram の投稿本文は自動取得しません。</span></p></div></section>
     <section class="panel privacy-section"><p class="overline">サービス運用記録</p><h2>匿名イベント、回答、技術指標</h2><p>入力の種類、候補確認、評価表示、行動ボタン、保存状況、API の成功状態、店舗確認から結果表示までの時間、token 使用量を記録します。表示した評価点そのものは記録しません。回答を送信した場合は、役立ち度、予約結果、正確性、最大500文字の改善コメントも記録します。画像、元の検索文、具体的な来店日、API Key は記録しません。現在はアカウントがないため、端末データの削除から集計済み運用記録を特定・削除することはできません。</p></section>
-    <section class="danger-zone"><div><p class="overline">この端末のデータを削除</p><h2>予定、確認待ち、履歴、設定を消去</h2><p>行きたい予定 ${local.savedPlanCount} 件、確認待ち ${local.pendingAnalysisCount} 件、最近の確認 ${local.recentAnalysisCount} 件、予約名などの端末設定を削除します。Google、ホットペッパーグルメ、Qwen、OpenAI、予約サービス側のデータには影響しません。</p></div>${state.deleteConfirmOpen ? `<div class="delete-confirm"><strong>この端末のデータをすべて完全に削除しますか？</strong><button id="cancel-delete">キャンセル</button><button id="confirm-delete">すべて削除</button></div>` : '<button id="start-delete" class="danger-button">この端末のデータを削除</button>'}</section>
+    <section class="danger-zone"><div><p class="overline">この端末のデータを削除</p><h2>予定、確認待ち、履歴、設定を消去</h2><p>行きたい予定 ${local.savedPlanCount} 件、確認待ち ${local.pendingAnalysisCount} 件、最近の確認 ${local.recentAnalysisCount} 件、人数などの端末設定を削除します。Google、ホットペッパーグルメ、Qwen、OpenAI、予約サービス側のデータには影響しません。</p></div>${state.deleteConfirmOpen ? `<div class="delete-confirm"><strong>この端末のデータをすべて完全に削除しますか？</strong><button id="cancel-delete">キャンセル</button><button id="confirm-delete">すべて削除</button></div>` : '<button id="start-delete" class="danger-button">この端末のデータを削除</button>'}</section>
   </section>`;
   document.querySelector("#start-delete")?.addEventListener("click", () => { state.deleteConfirmOpen = true; renderPrivacy(); });
   document.querySelector("#cancel-delete")?.addEventListener("click", () => { state.deleteConfirmOpen = false; renderPrivacy(); });
@@ -1306,7 +1287,6 @@ function renderPrivacy() {
     state.pending = [];
     state.activePendingId = null;
     state.settings = { ...DEFAULT_SETTINGS };
-    state.phoneScriptVersion = state.settings.defaultPhoneScript;
     state.deleteConfirmOpen = false;
     document.querySelector("#saved-count").textContent = "0";
     postEvent("local_data_deleted", { analysisRunId: null });
@@ -1367,8 +1347,6 @@ function renderSettings() {
     <div class="section-heading"><span class="step-chip">設定</span><h2>この端末の設定</h2><p>通常の設定値は現在のブラウザに保存します。招待アクセスコードだけは現在のタブ内に一時保持し、保護されたリクエストの認証ヘッダーとして本サービスへ送信します。</p></div>
     <section class="panel"><p class="overline">来店時の既定値</p><h2>毎回の入力を減らす</h2><form id="settings-form" class="settings-form">
       <label>既定の人数<input type="number" name="defaultPartySize" min="1" max="20" value="${esc(state.settings.defaultPartySize)}"></label>
-      <label>電話予約で使う名前（任意）<input type="text" name="reservationName" maxlength="60" autocomplete="name" value="${esc(state.settings.reservationName)}" placeholder="例：山田"><small>このブラウザだけに保存し、電話用の文例に使います。解析 API には送りません。</small></label>
-      <label>既定の電話文例<select name="defaultPhoneScript"><option value="standard" ${state.settings.defaultPhoneScript === "standard" ? "selected" : ""}>標準</option><option value="short" ${state.settings.defaultPhoneScript === "short" ? "selected" : ""}>短め</option><option value="easy" ${state.settings.defaultPhoneScript === "easy" ? "selected" : ""}>やさしい日本語</option></select></label>
       <label>招待アクセスコード${capabilities.pilotAccessRequired ? "（必須）" : "（任意）"}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="管理者から案内されたコード"><small>${capabilities.pilotAccessRequired ? "このタブを閉じるまでだけ保持し、保護されたリクエストに送信します。" : "現在は不要です。入力してもこのタブを閉じると消去されます。"}</small></label>
       ${state.settings.pilotAccessCode ? '<button type="button" class="text-button clear-access-code" id="clear-access-code">招待アクセスコードを消去</button>' : ""}
       <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>最近の確認を保存</strong><small>最大10件。実在店舗は Place ID、入力した手掛かり、予定だけを保存します。</small></span></label>
@@ -1381,7 +1359,6 @@ function renderSettings() {
   document.querySelector("#settings-form").addEventListener("submit", (event) => {
     event.preventDefault();
     state.settings = settingsFromForm(Object.fromEntries(new FormData(event.currentTarget)));
-    state.phoneScriptVersion = state.settings.defaultPhoneScript;
     syncSettings();
     showToast("設定を保存しました");
     renderSettings();

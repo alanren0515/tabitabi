@@ -395,24 +395,22 @@
     "sourceType": "text",
     "riskTags": [
       "phone_only",
-      "japanese_script",
-      "standard_and_short",
-      "walk_in_script"
+      "verified_phone_entry"
     ],
     "status": "confirmed",
     "implementationEvidence": [
       "output/manual/text-kushikatsu-daruma-shinsekai-014-result.jpeg",
-      "output/manual/text-kushikatsu-daruma-shinsekai-014-phone-script.jpeg",
-      "src/analyzer.js",
-      "test/analyzer.test.js"
+      "src/app.js",
+      "server/reservation-options.mjs",
+      "test/reservation-options.test.js"
     ],
-    "remainingVerification": "不可预约餐厅的现场话术、标准/简短/日语不熟练版、复制按钮和移动端视觉审计已完成；仍需一个真实电话确认型结果页完成同类复验。",
+    "remainingVerification": "已完成没有在线预约入口时的已核验电话号码、直接拨号入口和移动端视觉审计；不要求实际拨号。",
     "linkedCaseId": "text-toyoken-beppu-030",
     "evidence": [
       "output/manual/cv-25-phone-script-result.png",
       "output/manual/text-toyoken-beppu-030-result.png"
     ],
-    "notes": "在 390×844 手机视口完成真实电话确认型结果复验；标准版、简短版、日语不熟练版均可切换且内容不同，复制入口可见，未实际拨号。"
+    "notes": "在 390×844 手机视口完成真实电话确认型结果复验；结果页显示已核验号码和直接拨号入口，不展示面向日语学习者的电话话术，未实际拨号。"
   },
   {
     "id": "cv-26",

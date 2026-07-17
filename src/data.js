@@ -97,7 +97,7 @@ export const demoRestaurants = [
     recommendation: "unknown",
     queue: "情報不足",
     summary: "店舗の場所は確認できましたが、営業日と予約ルールについて一致する根拠が不足しています。",
-    nextAction: "出発前に公式の最新情報を確認するか、下の文例を使って電話で問い合わせてください。",
+    nextAction: "出発前に公式の最新情報を確認し、必要な場合は店舗へ直接問い合わせてください。",
     booking: null,
     confidence: "low",
     reasons: ["新しい情報源が1件だけです", "営業日の情報が一致しません", "確認済みの予約入口は見つかりませんでした"],

@@ -32,7 +32,7 @@ npm run audit:mobile
 
 当前 30 个风险场景均已完成。之后如补充新的 Instagram、TikTok、YouTube Shorts、X 或其他日本用户常见来源，应作为回归样本新增，不改写已完成证据。
 
-X 临时休业、Instagram 低清/无店名/仅车站、TikTok 同名分店/单图六餐厅和电话确认话术场景已经完成真实流程。风险场景页现在默认只显示未完成项目，并会按每个标签列出素材与操作要求；页签数量会跟随 `eval/cases.json` 和 `eval/coverage-matrix.json` 动态更新。
+X 临时休业、Instagram 低清/无店名/仅车站、TikTok 同名分店/单图六餐厅和电话确认入口场景已经完成真实流程。风险场景页现在默认只显示未完成项目，并会按每个标签列出素材与操作要求；页签数量会跟随 `eval/cases.json` 和 `eval/coverage-matrix.json` 动态更新。
 
 只使用公开页面。不要提交私信、通知、私人账号或包含无关个人信息的评论区。证据 JSON 只记录匿名案例 ID、公开官方 URL 或本地截图路径，不保存原帖正文、创作者账号或原始截图内容。
 
