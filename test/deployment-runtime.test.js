@@ -19,6 +19,18 @@ test("production image contains the complete PWA shell and a writable runtime di
   assert.doesNotMatch(dockerfile, /audit\.html/);
 });
 
+test("Fly pilot deployment stays single-region and stops idle compute", async () => {
+  const config = await readFile(resolve(ROOT, "fly.toml"), "utf8");
+  assert.match(config, /primary_region = "nrt"/);
+  assert.match(config, /source = "tabitabi_data"/);
+  assert.match(config, /destination = "\/app\/data"/);
+  assert.match(config, /auto_start_machines = true/);
+  assert.match(config, /auto_stop_machines = "stop"/);
+  assert.match(config, /min_machines_running = 0/);
+  assert.match(config, /size = "shared-cpu-1x"/);
+  assert.match(config, /memory = "512mb"/);
+});
+
 test("browser security policy allows only the app's required external assets", () => {
   const headers = browserSecurityHeaders();
   const csp = headers["Content-Security-Policy"];

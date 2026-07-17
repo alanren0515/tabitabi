@@ -4,11 +4,11 @@ The app is a single Node.js service that serves the frontend and keeps all provi
 
 ## Hosting decision for the first pilot
 
-**Selected host: Fly.io in Tokyo (`nrt`).** Deploy the existing Dockerfile as one continuously running `shared-cpu-1x` Machine with 512 MB RAM, attach a 1 GB Fly Volume at `/app/data`, and keep exactly one Machine. Current list pricing is about USD 3.19/month for the Machine plus USD 0.15/month for the volume when running for a full month. A shared IPv4 address is included and the first ten single-hostname managed certificates are free. This is cheaper than the previous Railway USD 5 minimum while preserving the single-instance and local-volume assumptions.
+**Selected host: Fly.io in Tokyo (`nrt`).** Deploy the existing Dockerfile as one `shared-cpu-1x` Machine with 512 MB RAM, attach a 1 GB Fly Volume at `/app/data`, and keep exactly one Machine. The Machine automatically stops when idle and starts on the next request. Fly.io does not charge CPU or RAM while it is stopped; a full month of continuously running compute would currently cost about USD 3.19, while the 1 GB volume costs USD 0.15/month regardless of Machine state. A shared IPv4 address is included and the first ten single-hostname managed certificates are free. This is cheaper than the previous Railway USD 5 minimum while preserving the single-instance and local-volume assumptions.
 
 **Domain decision: use `tabitabi-jp.fly.dev` for the closed pilot.** Fly automatically supplies the app-name-based `fly.dev` hostname and HTTPS. Do not buy a custom domain before the pilot proves value. After 20 live inputs and 10 valid feedback records pass the pilot gate, register a short branded domain and attach it with a Fly-managed certificate.
 
-The checked-in [`fly.toml`](../fly.toml) fixes the production region, one 512 MB Machine, HTTPS redirect, `/readyz` health check and `/app/data` volume mount. The provisional app name is globally scoped; if `tabitabi-jp` is unavailable at creation time, choose the nearest available name and update both `app` and the generated-domain reference in this document.
+The checked-in [`fly.toml`](../fly.toml) fixes the production region, one 512 MB Machine, idle autostop with request-driven autostart, HTTPS redirect, `/readyz` health check and `/app/data` volume mount. The first request after an idle period may experience a short cold start. The provisional app name is globally scoped; if `tabitabi-jp` is unavailable at creation time, choose the nearest available name and update both `app` and the generated-domain reference in this document.
 
 **Why not Railway or Render for this phase:** Railway's current Hobby minimum is USD 5/month. Render's free web service does not preserve pilot metrics, while a paid web service plus persistent disk costs more than this Fly configuration. Both remain viable fallbacks if Fly capacity or account setup becomes a problem.
 
@@ -21,6 +21,7 @@ This decision is for the first closed pilot, not a claim that Railway is the per
 - App config: deploy the checked-in `fly.toml` and `Dockerfile`.
 - Region: `nrt` (Tokyo).
 - Machines: exactly `1`, `shared-cpu-1x`, 512 MB RAM.
+- Idle policy: stop the Machine when idle, keep zero Machines permanently running, and automatically start it on the next request.
 - Persistent volume: create `tabitabi_data` as 1 GB in `nrt`; mount at `/app/data`.
 - Health check: `/readyz`.
 - Public URL: `https://tabitabi-jp.fly.dev` unless the globally unique app name changes.
