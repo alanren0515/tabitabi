@@ -96,7 +96,7 @@ export function buildReservationOptions({ place, hotPepperMatch = null, discover
   }
 
   if (hotPepperMatch?.url && !options.some((item) => item.provider === "hotpepper")) {
-    options.push(withCapability({ id: "hotpepper", provider: "hotpepper", label: "Hot Pepper", url: hotPepperMatch.url, actionType: "open_booking_source", bookingMode: "unknown", status: "verified_listing", officiality: "reservation_platform", confidence: "medium", feeNote: providerNote("hotpepper"), prepaymentRequired: null }));
+    options.push(withCapability({ id: "hotpepper", provider: "hotpepper", label: "ホットペッパーグルメ", url: hotPepperMatch.url, actionType: "open_booking_source", bookingMode: "unknown", status: "verified_listing", officiality: "reservation_platform", confidence: "medium", feeNote: providerNote("hotpepper"), prepaymentRequired: null }));
   }
 
   for (const link of discoveredLinks) {

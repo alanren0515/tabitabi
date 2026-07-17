@@ -101,7 +101,7 @@ test("applies the same link-only boundary to Instagram", () => {
 
 test("recognizes Japan-focused secondary social sources without claiming to read them", () => {
   const examples = [
-    ["https://www.youtube.com/shorts/ABC123", "youtube", "YouTube"],
+    ["https://www.youtube.com/shorts/ABC123", "youtube", "YouTube Shorts"],
     ["https://www.threads.net/@tokyofood/post/ABC123", "threads", "Threads"],
     ["https://www.lemon8-app.com/@tokyofood/123", "lemon8", "Lemon8"],
     ["https://line.me/R/msg/text/?restaurant", "line", "LINE"],
@@ -120,7 +120,7 @@ test("recognizes Japan-focused secondary social sources without claiming to read
 test("removes a named Japanese social source from restaurant clues", () => {
   const result = parseTextInput("YouTube Shortsで見た 六歌仙 新宿本店");
   assert.equal(result.platform, "youtube");
-  assert.equal(result.platformLabel, "YouTube");
+  assert.equal(result.platformLabel, "YouTube Shorts");
   assert.equal(result.searchQuery, "六歌仙 新宿本店");
 });
 

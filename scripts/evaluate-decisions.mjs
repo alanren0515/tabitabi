@@ -4,6 +4,7 @@ import { evaluateDecisionSafety } from "./decision-eval.mjs";
 import { classifyCandidateFailure, matchesExpected } from "./eval-matching.mjs";
 
 const baseUrl = process.env.TABITABI_BASE_URL || "http://localhost:4173";
+const pilotHeaders = process.env.PILOT_ACCESS_CODE ? { "X-Pilot-Access": process.env.PILOT_ACCESS_CODE } : {};
 const casesPath = resolve(process.argv[2] || "eval/cases.json");
 const reportPath = resolve(process.env.DECISION_EVAL_OUTPUT || "eval/latest-decision-results.json");
 const allCases = JSON.parse(await readFile(casesPath, "utf8"));
@@ -27,6 +28,7 @@ if (!capabilities?.placesSearch) {
 
 const results = [];
 for (const testCase of cases) {
+  process.stderr.write(`[decision-eval] ${results.length + 1}/${cases.length} ${testCase.id}\n`);
   try {
     const searchPayload = await requestJsonWithRateLimit("/api/restaurants/search", {
       query: testCase.query,
@@ -87,8 +89,9 @@ else if (!summary.gatePassed) process.exitCode = 1;
 async function requestJsonWithRateLimit(path, body) {
   const request = () => fetch(`${baseUrl}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
+    headers: { "Content-Type": "application/json", ...pilotHeaders },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(45_000)
   });
   let response = await request();
   if (response.status === 429) {

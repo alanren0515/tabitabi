@@ -4,7 +4,7 @@ The app is a single Node.js service that serves the frontend and keeps all provi
 
 ## Hosting decision for the first pilot
 
-**Selected host: Fly.io in Tokyo (`nrt`).** Deploy the existing Dockerfile as one `shared-cpu-1x` Machine with 512 MB RAM, attach a 1 GB Fly Volume at `/app/data`, and keep exactly one Machine. The Machine automatically stops when idle and starts on the next request. Fly.io does not charge CPU or RAM while it is stopped; a full month of continuously running compute would currently cost about USD 3.19, while the 1 GB volume costs USD 0.15/month regardless of Machine state. A shared IPv4 address is included and the first ten single-hostname managed certificates are free. This is cheaper than the previous Railway USD 5 minimum while preserving the single-instance and local-volume assumptions.
+**Selected host: Fly.io in Tokyo (`nrt`).** Deploy the existing Dockerfile as one `shared-cpu-1x` Machine with 512 MB RAM, attach a 1 GB Fly Volume at `/app/data`, and keep exactly one Machine. The Machine automatically stops when idle and starts on the next request. Fly.io does not charge CPU or RAM while it is stopped; a full month of continuously running Tokyo compute is approximately USD 4.18. The 1 GB volume is USD 0.15/month, and a stopped Machine's root filesystem is also billed by provisioned GB, so the idle fixed cost is not only the volume charge. Snapshots and outbound traffic can add usage charges. This remains below Railway's USD 5 minimum only when actual running time is limited by autostop.
 
 **Domain decision: use `tabitabi-jp.fly.dev` for the closed pilot.** Fly automatically supplies the app-name-based `fly.dev` hostname and HTTPS. Do not buy a custom domain before the pilot proves value. After 20 live inputs and 10 valid feedback records pass the pilot gate, register a short branded domain and attach it with a Fly-managed certificate.
 
@@ -23,6 +23,7 @@ This decision is for the first closed pilot, not a claim that Railway is the per
 - Machines: exactly `1`, `shared-cpu-1x`, 512 MB RAM.
 - Idle policy: stop the Machine when idle, keep zero Machines permanently running, and automatically start it on the next request.
 - Persistent volume: create `tabitabi_data` as 1 GB in `nrt`; mount at `/app/data`.
+- Snapshots: daily automatic snapshots retained for 7 days; verify with `fly volumes snapshots list <volume-id>` after deployment.
 - Health check: `/readyz`.
 - Public URL: `https://tabitabi-jp.fly.dev` unless the globally unique app name changes.
 - Secrets: use `fly secrets set`; never upload `.env.local`.
@@ -34,13 +35,15 @@ This decision is for the first closed pilot, not a claim that Railway is the per
 - `DASHSCOPE_BASE_URL`
 - `QWEN_VISION_MODEL=qwen3.6-flash`
 - `GOOGLE_MAPS_API_KEY`
+- `PILOT_ACCESS_CODE`
+- `PUBLIC_OPERATOR_NAME`
+- `PUBLIC_CONTACT_EMAIL`
 - `PORT` when assigned by the host
 
 Optional:
 
 - `OPENAI_API_KEY` for the quality fallback
 - `HOTPEPPER_API_KEY` for listing enrichment
-- `PILOT_ACCESS_CODE` for a closed pilot; when set, participants enter the same value in Settings and the browser sends it only to protected same-origin APIs
 - `TRUST_PROXY=true` only when the service is behind a trusted reverse proxy that overwrites `X-Forwarded-For`
 
 Never copy `.env.local` into an image or commit it. The included `.dockerignore` excludes all local environment files, runtime metrics, screenshots, tests, and development artifacts.
@@ -55,22 +58,22 @@ docker run --rm -p 4173:4173 --env-file .env.local tabitabi
 Initial Fly deployment, after installing `flyctl` and signing in:
 
 ```bash
+openssl rand -base64 32
 fly apps create tabitabi-jp --org personal
 fly volumes create tabitabi_data --region nrt --size 1
-fly secrets set \
-  DASHSCOPE_API_KEY=... \
-  DASHSCOPE_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1 \
-  QWEN_VISION_MODEL=qwen3.6-flash \
-  GOOGLE_MAPS_API_KEY=... \
-  HOTPEPPER_API_KEY=... \
-  PILOT_ACCESS_CODE=...
-fly deploy
+fly secrets import --stage -a tabitabi-jp
+# Paste NAME=value lines for the required variables, then press Control-D.
+fly deploy --ha=false
+fly scale count 1 -a tabitabi-jp
+fly machine list -a tabitabi-jp
 fly checks list
 ```
 
-Enter secret values only in the terminal prompt or command invocation on the local machine. Never paste them into a task message, screenshot, committed shell script or deployment log.
+Use the random output as `PILOT_ACCESS_CODE`; production readiness rejects codes shorter than 24 characters. Do not reuse an account password. Before inviting users, restore the latest volume snapshot to a temporary replacement volume once and verify the JSONL files are readable; this is a recovery drill, not a second continuously billed Machine.
 
-The container runs as the unprivileged `node` user. `GET /healthz` is a liveness check. `GET /readyz` returns HTTP 200 only when live screenshot extraction and Google Places are configured; OpenAI fallback and Hot Pepper remain optional and are reported only as booleans. The Docker health check uses `/readyz`, and neither endpoint returns keys.
+Use `fly secrets import` through standard input so secret values do not become shell-history command arguments. Never paste them into a task message, screenshot, committed shell script or deployment log. The first deploy must use `--ha=false`; Fly can otherwise create two Machines by default. After every deploy, verify `fly machine list` still shows exactly one Machine.
+
+The container runs as the unprivileged `node` user. `GET /healthz` is a liveness check. In production, `GET /readyz` returns HTTP 200 only when live screenshot extraction, Google Places, the invite access code, public operator name, and public contact email are configured; OpenAI fallback and Hot Pepper remain optional and are reported only as booleans. The Docker health check uses `/readyz`, and neither endpoint returns keys.
 
 Unhandled promise rejections and uncaught exceptions are treated as fatal: the service logs only a bounded error type/name/code summary, closes the listener, and exits with status 1. Configure the container platform to restart failed instances and investigate repeated restarts; the process must not continue after an unknown fatal state.
 

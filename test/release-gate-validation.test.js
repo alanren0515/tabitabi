@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateDecisionEvalReport, validateReleaseInputs } from "../server/eval-validation.mjs";
+import { validateCandidateEvalReport, validateDecisionEvalReport, validateReleaseInputs } from "../server/eval-validation.mjs";
 
 const cases = [{ id: "case-1", verificationStatus: "confirmed", officialSources: ["https://restaurant.example/"] }];
 const matrix = [{ id: "cv-01", status: "confirmed", linkedCaseId: "case-1" }];
@@ -56,4 +56,14 @@ test("rejects stale, partial, mismatched, or failed decision evaluation evidence
   assert.ok(errors.some((item) => item.includes("decision failures")));
   assert.ok(errors.some((item) => item.includes("result failed")));
   assert.ok(errors.some((item) => item.includes("place id")));
+});
+
+test("accepts only a fresh candidate report covering every confirmed case", () => {
+  const report = { generatedAt: "2026-07-14T00:00:00Z", cases: 1, verifiedCases: 1, top3Recall: 1, gatePassed: true, results: [{ id: "case-1", passed: true, matchedRank: 1 }] };
+  assert.deepEqual(validateCandidateEvalReport({ report, cases, now: new Date("2026-07-14T01:00:00Z").valueOf() }), []);
+  const errors = validateCandidateEvalReport({ report: { ...report, generatedAt: "2026-06-01T00:00:00Z", results: [{ id: "other", passed: false, matchedRank: 4 }] }, cases, now: new Date("2026-07-14T01:00:00Z").valueOf() });
+  assert.ok(errors.some((item) => item.includes("stale")));
+  assert.ok(errors.some((item) => item.includes("do not match")));
+  assert.ok(errors.some((item) => item.includes("did not pass")));
+  assert.ok(validateCandidateEvalReport({ report: { ...report, results: [{ id: "case-1", passed: true, matchedRank: 0 }] }, cases, now: new Date("2026-07-14T01:00:00Z").valueOf() }).some((item) => item.includes("did not pass")));
 });

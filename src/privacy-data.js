@@ -11,7 +11,7 @@ export function summarizeLocalData(savedPlans = [], recentAnalyses = [], pending
     savedPlanCount: Array.isArray(savedPlans) ? savedPlans.length : 0,
     recentAnalysisCount: Array.isArray(recentAnalyses) ? recentAnalyses.length : 0,
     pendingAnalysisCount: Array.isArray(pendingAnalyses) ? pendingAnalyses.length : 0,
-    fields: ["店舗識別子と保存した名称", "予定日・時間・人数・状況", "入力した検索の手掛かりと確認待ちの店舗", "任意の予約名・試験用アクセスコード・既定人数・電話文例・履歴設定", "保存・確認・初回および最終アクセス時刻"],
+    fields: ["店舗識別子と保存した名称", "予定日・時間・人数・状況", "入力した検索の手掛かりと確認待ちの店舗", "任意の予約名・招待アクセスコード・既定人数・電話文例・履歴設定", "保存・確認・初回および最終アクセス時刻"],
     thirdPartyDetailsPersisted: false
   };
 }

@@ -4,10 +4,15 @@ export function pilotAccessRequired(env = process.env) {
   return Boolean(String(env.PILOT_ACCESS_CODE || ""));
 }
 
+export function pilotAccessCodeStrong(env = process.env) {
+  return String(env.PILOT_ACCESS_CODE || "").length >= 24;
+}
+
 export function protectedPilotApiPath(method, pathname) {
   if (String(method || "").toUpperCase() !== "POST") return false;
   return pathname === "/api/extract-screenshot"
     || pathname === "/api/extract-webpage"
+    || pathname === "/api/events"
     || pathname.startsWith("/api/restaurants/");
 }
 

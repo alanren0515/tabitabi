@@ -1,4 +1,4 @@
-const CACHE_NAME = "tabitabi-shell-v16";
+const CACHE_NAME = "tabitabi-shell-v19";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -11,6 +11,7 @@ const APP_SHELL = [
   "/src/analyzer.js",
   "/src/candidate-selection.js",
   "/src/capabilities.js",
+  "/src/client-routes.js",
   "/src/data.js",
   "/src/event-client.js",
   "/src/image-input.js",

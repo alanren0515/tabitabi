@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { classifyCandidateFailure, matchesExpected } from "./eval-matching.mjs";
 
 const baseUrl = process.env.TABITABI_BASE_URL || "http://localhost:4173";
+const pilotHeaders = process.env.PILOT_ACCESS_CODE ? { "X-Pilot-Access": process.env.PILOT_ACCESS_CODE } : {};
 const casesPath = resolve(process.argv[2] || "eval/cases.json");
 const cases = JSON.parse(await readFile(casesPath, "utf8"));
 
@@ -33,7 +34,7 @@ for (const testCase of cases) {
   try {
     const requestSearch = () => fetch(`${baseUrl}/api/restaurants/search`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...pilotHeaders },
       body: JSON.stringify({ query: testCase.query, clues: testCase.clues })
     });
     let response = await requestSearch();

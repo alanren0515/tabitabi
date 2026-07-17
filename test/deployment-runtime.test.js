@@ -9,6 +9,7 @@ const ROOT = resolve(process.cwd());
 
 test("production image contains the complete PWA shell and a writable runtime directory", async () => {
   const dockerfile = await readFile(resolve(ROOT, "Dockerfile"), "utf8");
+  assert.match(dockerfile, /^FROM node:22\.17\.0-alpine3\.22@sha256:[a-f0-9]{64}/m);
   assert.match(dockerfile, /COPY --chown=node:node index\.html manifest\.webmanifest server\.mjs sw\.js \.\//);
   assert.match(dockerfile, /COPY --chown=node:node assets \.\/assets/);
   assert.match(dockerfile, /COPY --chown=node:node src \.\/src/);
@@ -24,6 +25,8 @@ test("Fly pilot deployment stays single-region and stops idle compute", async ()
   assert.match(config, /primary_region = "nrt"/);
   assert.match(config, /source = "tabitabi_data"/);
   assert.match(config, /destination = "\/app\/data"/);
+  assert.match(config, /scheduled_snapshots = true/);
+  assert.match(config, /snapshot_retention = 7/);
   assert.match(config, /auto_start_machines = true/);
   assert.match(config, /auto_stop_machines = "stop"/);
   assert.match(config, /min_machines_running = 0/);
@@ -68,4 +71,9 @@ test("audit entry route supports GET and HEAD while remaining explicitly gated",
   assert.match(serverSource, /auditWorkbench && \["GET", "HEAD"\]\.includes\(request\.method\) && requestPath === "\/audit"/);
   assert.match(serverSource, /auditRequestAuthorized\(request, process\.env\)/);
   assert.match(serverSource, /"Referrer-Policy": "no-referrer"/);
+});
+
+test("public privacy and terms URLs serve the application shell", async () => {
+  const serverSource = await readFile(resolve(ROOT, "server.mjs"), "utf8");
+  assert.match(serverSource, /\["\/privacy", "\/terms"\]\.includes\(requestPath\) \? "\/index\.html"/);
 });

@@ -20,6 +20,7 @@ import { serviceReadiness } from "./server/readiness.mjs";
 import { createDailyBudgetStore, dailyBudgetSnapshot, DailyBudgetExceededError } from "./server/daily-budget.mjs";
 import { pilotAccessAuthorized, pilotAccessRequired, protectedPilotApiPath } from "./server/pilot-access.mjs";
 import { installFatalProcessHandlers } from "./server/process-failures.mjs";
+import { probeWritableDataStore } from "./server/data-store-readiness.mjs";
 
 const ROOT = resolve(process.cwd());
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
@@ -30,6 +31,8 @@ const screenshotLimiter = createFixedWindowRateLimiter({ limit: 10, windowMs: 60
 const placesSearchLimiter = createFixedWindowRateLimiter({ limit: 30, windowMs: 60_000 });
 const placesDetailsLimiter = createFixedWindowRateLimiter({ limit: 30, windowMs: 60_000 });
 const webpageLimiter = createFixedWindowRateLimiter({ limit: 10, windowMs: 60_000 });
+const eventLimiter = createFixedWindowRateLimiter({ limit: 120, windowMs: 60_000 });
+const pilotAuthFailureLimiter = createFixedWindowRateLimiter({ limit: 20, windowMs: 60_000 });
 
 await loadLocalEnv();
 
@@ -38,7 +41,8 @@ const HOST = process.env.HOST || "0.0.0.0";
 const auditWorkbench = auditWorkbenchEnabled(process.env);
 const lanAudit = auditLanMode(process.env);
 const visionCapabilities = getVisionCapabilities(process.env);
-const readiness = serviceReadiness({ visionCapabilities, env: process.env });
+const dataStoreWritable = await probeWritableDataStore(join(ROOT, "data"));
+const readiness = serviceReadiness({ visionCapabilities, env: process.env, dataStoreWritable });
 const retentionDays = boundedEnvInteger(process.env.LOG_RETENTION_DAYS, 1, 365, 30);
 const eventLog = createJsonlStore({
   path: join(ROOT, "data", "events.jsonl"),
@@ -67,7 +71,8 @@ const server = createServer(async (request, response) => {
       return;
     }
     if (protectedPilotApiPath(request.method, requestPath) && !pilotAccessAuthorized(request, process.env)) {
-      sendJson(response, 401, { code: "PILOT_ACCESS_REQUIRED", error: "有効な試験用アクセスコードが必要です。設定画面に保存してから再試行してください。" });
+      if (!allowExpensiveRequest(request, response, pilotAuthFailureLimiter)) return;
+      sendJson(response, 401, { code: "PILOT_ACCESS_REQUIRED", error: "有効な招待アクセスコードが必要です。設定画面に保存してから再試行してください。" });
       return;
     }
     if (request.method === "GET" && request.url === "/healthz") {
@@ -90,7 +95,8 @@ const server = createServer(async (request, response) => {
         hotPepper: Boolean(process.env.HOTPEPPER_API_KEY),
         webpageExtraction: true,
         pilotAccessRequired: pilotAccessRequired(process.env),
-        dailyBudget: dailyBudgetStatus
+        dailyBudget: dailyBudgetStatus,
+        publicInfo: publicOperatorInfo(process.env)
       });
       return;
     }
@@ -161,6 +167,7 @@ const server = createServer(async (request, response) => {
       return;
     }
     if (request.method === "POST" && request.url === "/api/events") {
+      if (!allowExpensiveRequest(request, response, eventLimiter)) return;
       await handleEvent(request, response);
       return;
     }
@@ -168,7 +175,7 @@ const server = createServer(async (request, response) => {
       sendJson(response, 405, { error: "Method not allowed" });
       return;
     }
-    await serveStatic(request, response);
+    await serveStatic(request, response, ["/privacy", "/terms"].includes(requestPath) ? "/index.html" : "");
   } catch (error) {
     console.error(error);
     if (!response.headersSent && error?.statusCode === 413) sendJson(response, 413, { code: "BODY_TOO_LARGE", error: "Request body is too large" });
@@ -552,6 +559,13 @@ function contentType(extension) {
     ".jpeg": "image/jpeg",
     ".svg": "image/svg+xml"
   }[extension] || "application/octet-stream";
+}
+
+function publicOperatorInfo(env = {}) {
+  const operatorName = String(env.PUBLIC_OPERATOR_NAME || "").replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, 120);
+  const candidateEmail = String(env.PUBLIC_CONTACT_EMAIL || "").trim();
+  const contactEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail) ? candidateEmail.slice(0, 254) : "";
+  return { operatorName, contactEmail };
 }
 
 async function loadLocalEnv() {

@@ -12,6 +12,7 @@ import { parseShareTarget, urlWithoutShareTarget } from "./shared-input.js";
 import { createCapabilitiesLoader } from "./capabilities.js";
 import { clipboardScreenshotFile, SCREENSHOT_ACCEPT, validateScreenshotFile } from "./image-input.js";
 import { sendEvent } from "./event-client.js";
+import { pathnameForView, viewFromPathname } from "./client-routes.js";
 
 const app = document.querySelector("#app");
 const toast = document.querySelector("#toast");
@@ -29,7 +30,7 @@ if (initialParams.get("share") === "1" || initialParams.get("audit") === "1") {
   history.replaceState(null, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
 }
 const state = {
-  view: "home",
+  view: viewFromPathname(window.location.pathname),
   input: initialSharedInput.value,
   sharedInputPending: initialSharedInput.accepted,
   uploadName: "",
@@ -147,6 +148,7 @@ function render() {
   syncRecent();
   syncSettings();
   syncPending();
+  document.title = state.view === "privacy" ? "プライバシーとデータ | TabiTabi" : state.view === "terms" ? "利用条件 | TabiTabi" : "TabiTabi | SNSで見つけた店を、次の行動へ";
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
   if (viewChanged) {
@@ -171,10 +173,11 @@ function renderHome() {
       ${offline ? `<aside class="offline-banner"><strong>オフラインです</strong><span>保存済みのリストは確認できます。新しい画像解析、店舗検索、公式サイト確認にはインターネット接続が必要です。</span></aside>` : ""}
       <form id="analyze-form" class="input-card">
         <label for="clue">お店の手がかり</label>
-        <textarea id="clue" name="clue" rows="4" placeholder="Instagram / TikTok / YouTube Shorts / X のリンク、または店名を入力…" ${state.analysisError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
+        <textarea id="clue" name="clue" rows="4" placeholder="Instagram / TikTok のリンク、または店名を入力…" ${state.analysisError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
+        <p class="supported-sources">Instagram・TikTok に最適化。YouTube Shorts・X、LINE で受け取ったリンクや文章にも対応します。</p>
         <div class="input-meta">
           <button type="button" class="upload-button" id="upload-trigger">${icons.upload}<span>${state.uploadName ? esc(state.uploadName) : "スクリーンショットを追加"}</span></button>
-          <input type="file" id="screenshot" class="sr-only" accept="${SCREENSHOT_ACCEPT}" aria-hidden="true" tabindex="-1" />
+          <input type="file" id="screenshot" hidden accept="${SCREENSHOT_ACCEPT}" />
           ${state.uploadName ? '<button type="button" class="remove-upload" id="remove-upload">画像を外す</button>' : '<span class="privacy-note" id="upload-help">画像は店舗確認のためだけに使用します</span>'}
         </div>
         ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="確認するスクリーンショット"><div><strong>画面全体を確認します</strong><span>店名、住所、価格、投稿者、本文、反応数を分けて扱います。</span></div></div>` : ""}
@@ -400,7 +403,7 @@ function renderLinkGuidance() {
 }
 
 function platformLabel(value) {
-  return { tiktok: "TikTok", instagram: "Instagram", youtube: "YouTube", x: "X", threads: "Threads", lemon8: "Lemon8", line: "LINE", facebook: "Facebook", xiaohongshu: "小紅書", web: "公開ページ", tablecheck: "TableCheck", tabelog: "食べログ", hotpepper: "ホットペッパーグルメ", gurunavi: "楽天ぐるなび", omakase: "OMAKASE", pocket_concierge: "Pocket Concierge", tableall: "TABLEALL", ikyu: "一休.comレストラン", opentable: "OpenTable", google_reserve: "Google で予約", epark: "EPARK", autoreserve: "AutoReserve", hitosara: "ヒトサラ", savor_japan: "SAVOR JAPAN", toreta: "Toreta", ebica: "ebica", paypay_gourmet: "PayPayグルメ", ozmall: "OZmall", retty: "Retty", byfood: "byFood", foodies_reserve: "Foodies Reserve", jpneazy: "JPNEAZY", my_concierge_japan: "My Concierge Japan", japan_food_travel: "JapanFoodTravel", unknown: "画像の手掛かり" }[value] || "予約サービス";
+  return { tiktok: "TikTok", instagram: "Instagram", youtube: "YouTube Shorts", x: "X", threads: "Threads", lemon8: "Lemon8", line: "LINE", facebook: "Facebook", xiaohongshu: "小紅書", web: "公開ページ", tablecheck: "TableCheck", tabelog: "食べログ", hotpepper: "ホットペッパーグルメ", gurunavi: "楽天ぐるなび", omakase: "OMAKASE", pocket_concierge: "Pocket Concierge", tableall: "TABLEALL", ikyu: "一休.comレストラン", opentable: "OpenTable", google_reserve: "Google で予約", epark: "EPARK", autoreserve: "AutoReserve", hitosara: "ヒトサラ", savor_japan: "SAVOR JAPAN", toreta: "Toreta", ebica: "ebica", paypay_gourmet: "PayPayグルメ", ozmall: "OZmall", retty: "Retty", byfood: "byFood", foodies_reserve: "Foodies Reserve", jpneazy: "JPNEAZY", my_concierge_japan: "My Concierge Japan", japan_food_travel: "JapanFoodTravel", unknown: "画像の手掛かり" }[value] || "予約サービス";
 }
 
 function renderLoading() {
@@ -535,7 +538,7 @@ function renderCandidates() {
         const candidateLabel = isSystemLead ? "第一候補" : visible.length === 1 ? "確認してください" : `候補 ${index + 1}/${visible.length}`;
         return `<article class="candidate-card${isSystemLead ? " system-lead" : ""}">
         <div class="restaurant-avatar">${(restaurant.category || "店").slice(0, 1)}</div>
-        <div class="candidate-copy"><span class="candidate-label${isSystemLead ? " lead-label" : ""}">${esc(candidateLabel)}</span><small class="candidate-meta">${esc(restaurant.category || "飲食店")}${restaurant.price ? ` · ${esc(restaurant.price)}` : ""}</small><h3>${esc(restaurant.name)}</h3><p>${esc(restaurant.address || [restaurant.area, restaurant.station].filter(Boolean).join(" · "))}</p><small class="business-status status-${esc(String(restaurant.businessStatus || "unknown").toLowerCase())}">${esc(businessStatusLabel(restaurant.businessStatus))}</small>${restaurant.matchReasons?.length ? `<div class="match-reasons">${restaurant.matchReasons.map((reason) => `<small>${esc(reason)}</small>`).join("")}</div>` : restaurant.matchScore ? `<small>手掛かりの一致度 ${restaurant.matchScore}</small>` : ""}${preview ? `<div class="candidate-rating"><strong>${Number.isFinite(preview.rating) ? `★ ${esc(preview.rating.toFixed(1))}` : "公開評価なし"}</strong>${Number.isInteger(preview.userRatingCount) ? `<span>Google のクチコミ ${esc(preview.userRatingCount.toLocaleString("ja-JP"))}件</span>` : ""}</div>` : ""}${restaurant.attributions?.length ? `<small class="provider-attribution">情報提供：${restaurant.attributions.map((item) => esc(item.provider)).join("、")}</small>` : ""}</div>
+        <div class="candidate-copy"><span class="candidate-label${isSystemLead ? " lead-label" : ""}">${esc(candidateLabel)}</span><small class="candidate-meta">${esc(restaurant.category || "飲食店")}${restaurant.price ? ` · ${esc(restaurant.price)}` : ""}</small><h3>${esc(restaurant.name)}</h3><p>${esc(restaurant.address || [restaurant.area, restaurant.station].filter(Boolean).join(" · "))}</p><small class="business-status status-${esc(String(restaurant.businessStatus || "unknown").toLowerCase())}">${esc(businessStatusLabel(restaurant.businessStatus))}</small>${restaurant.matchReasons?.length ? `<div class="match-reasons">${restaurant.matchReasons.map((reason) => `<small>${esc(reason)}</small>`).join("")}</div>` : restaurant.matchScore ? `<small>入力した店名・場所との一致を確認</small>` : ""}${preview ? `<div class="candidate-rating"><strong>${Number.isFinite(preview.rating) ? `★ ${esc(preview.rating.toFixed(1))}` : "公開評価なし"}</strong>${Number.isInteger(preview.userRatingCount) ? `<span>Google のクチコミ ${esc(preview.userRatingCount.toLocaleString("ja-JP"))}件</span>` : ""}</div>` : ""}${restaurant.attributions?.length ? `<small class="provider-attribution">情報提供：${restaurant.attributions.map((item) => esc(item.provider)).join("、")}</small>` : ""}</div>
         <div class="candidate-actions"><button class="select-button" data-restaurant="${restaurant.id}">この店舗で確認 ${icons.arrow}</button>${live && !preview ? `<button class="preview-button" data-preview-candidate="${restaurant.placeId}" ${previewLoading ? "disabled" : ""}>${previewLoading ? "確認中…" : "評価を確認"}</button>` : ""}<button class="reject-button" data-reject-candidate="${restaurant.id}" aria-label="${esc(restaurant.name)}を候補から外す">別の店舗です</button></div>
       </article>`;
       }).join("")}
@@ -663,7 +666,7 @@ function renderResult() {
     </div>
     <section class="panel sources"><div class="panel-heading"><div><p class="overline">情報の根拠</p><h2>この案内の出典</h2></div><span>${r.sourceContext || "確認直後 · デモ"}</span></div>
       ${r.sources.map((source) => `<div class="source-row"><div>${source.url ? `<a href="${esc(safeExternalUrl(source.url))}" target="_blank" rel="noreferrer"><strong>${esc(source.name)}</strong></a>` : `<strong>${esc(source.name)}</strong>`}${source.official ? '<span class="official">公式</span>' : ""}<p>${esc(source.note)}${source.retrievedAt ? ` · ${formatClientTime(source.retrievedAt)}` : ""}</p>${source.attribution ? `<small class="source-attribution" translate="no">${esc(source.attribution)}</small>` : ""}</div><span class="confidence-${["高", "high"].includes(source.confidence) ? "high" : ["中", "medium"].includes(source.confidence) ? "medium" : "low"}">確度${esc(source.confidence === "high" ? "高" : source.confidence === "medium" ? "中" : source.confidence === "low" ? "低" : source.confidence)}</span></div>`).join("")}
-      ${r.sources.some((source) => source.name === "Hot Pepper") ? '<a class="hotpepper-credit" href="https://webservice.recruit.co.jp/" target="_blank" rel="noreferrer"><img src="https://webservice.recruit.co.jp/banner/hotpepper-s.gif" alt="ホットペッパーグルメ Webサービス" width="135" height="17"></a>' : ""}
+      ${r.sources.some((source) => ["Hot Pepper", "ホットペッパーグルメ"].includes(source.name)) ? '<a class="hotpepper-credit" href="https://webservice.recruit.co.jp/" target="_blank" rel="noreferrer"><img src="https://webservice.recruit.co.jp/banner/hotpepper-s.gif" alt="ホットペッパーグルメ Webサービス" width="135" height="17"></a>' : ""}
       <p class="source-disclaimer">外部情報は必要なときに更新します。保存するのは場所の識別子とユーザー自身の手掛かりだけです。</p>
     </section>
     <section class="feedback-card" id="feedback-card"><div><p class="overline">結果について教えてください</p><h3>次の行動に役立ちましたか？</h3><p>入力した回答だけを送信します。元の画像や検索文は含みません。</p></div><form id="feedback-form" class="feedback-form">
@@ -1021,7 +1024,7 @@ function postEvent(event, extra = {}) {
     analysisRunId: state.analysisRunId || null,
     ...extra
   };
-  return sendEvent(fetch, payload);
+  return sendEvent(fetch, payload, pilotAccessHeaders(state.settings));
 }
 
 function createAnalysisRunId() {
@@ -1214,15 +1217,19 @@ function withDefaultPlan(plan = {}) {
 }
 
 function renderPrivacy() {
+  const publicInfo = state.capabilities?.publicInfo || {};
+  const operator = publicInfo.operatorName || "正式公開前に掲載します";
+  const contact = publicInfo.contactEmail || "正式公開前に掲載します";
   const local = summarizeLocalData(state.saved, state.recent, state.pending);
   app.innerHTML = `<section class="content-view narrow privacy-view">
     <button class="back-button" data-action="home">← ホームへ</button>
-    <div class="section-heading"><span class="step-chip">プライバシーとデータ</span><h2>この端末のデータを管理できます</h2><p>試験版が扱うデータと、削除できる範囲を説明します。</p></div>
+    <div class="section-heading"><span class="step-chip">プライバシーとデータ</span><h1>この端末のデータを管理できます</h1><p>更新日：${esc(TERMS_EFFECTIVE_DATE)} · 招待制テストが扱うデータと、削除できる範囲を説明します。</p></div>
     <div class="privacy-summary"><article><span>${local.savedPlanCount}</span><strong>保存した予定</strong><p>このブラウザだけに保存。</p></article><article><span>${local.pendingAnalysisCount}</span><strong>確認待ちの店舗</strong><p>画像から得た店舗の手掛かりだけを保存。</p></article><article><span>${local.recentAnalysisCount}</span><strong>最近の確認</strong><p>必要最小限の履歴を最大10件保存。</p></article><article><span>0</span><strong>サーバーに保存する画像</strong><p>リクエスト内で処理し、本サービスのディスクには保存しません。</p></article></div>
-    <section class="panel privacy-section"><p class="overline">この端末に保存</p><h2>行きたいリスト、確認待ち、履歴、設定</h2><ul>${local.fields.map((field) => `<li>${esc(field)}</li>`).join("")}</ul><p>オフラインでも画面を開けるよう、HTML、フロントエンドモジュール、スタイル、アイコンをブラウザにキャッシュする場合があります。API 応答、店舗結果、外部ページはキャッシュしません。確認待ちリストに元画像、反応数、投稿本文は保存しません。共有されたタイトル・文章・リンクは現在の画面にだけ入力し、アドレス欄からすぐ削除します。「確認をはじめる」を押すまで送信しません。実在店舗の Google Maps 住所・評価・営業時間、Hot Pepper 詳細、入力された予約 URL は長期保存せず、再表示時に Place ID から更新します。</p></section>
-    <section class="panel privacy-section"><p class="overline">リクエスト時に外部へ送信</p><h2>画像解析と店舗確認</h2><div class="data-flow-list"><p><strong>Qwen / OpenAI fallback</strong><span>画像を追加した場合だけ受け取ります。本サービスは画像をサーバーファイルへ保存しません。提供会社側の処理とログ期間は各社の規約に従います。</span></p><p><strong>Google Places</strong><span>店舗の検索語と、店舗確認または評価表示時の Place ID を受け取り、候補・住所・電話・評価・営業時間を返します。端末の位置情報は要求しません。</span></p><p><strong>Hot Pepper</strong><span>確認した店舗の店名・住所・電話を受け取り、店舗ページを照合します。</span></p><p><strong>店舗の公式サイト</strong><span>店舗確認後、検証済み公式サイトの公開 HTML をサーバーが取得し、予約入口、公式 Instagram、明示された予約ルールを探す場合があります。Instagram の投稿本文は自動取得しません。</span></p></div></section>
+    <section class="panel privacy-section"><p class="overline">運営者と連絡先</p><h2>${esc(operator)}</h2><p>${publicInfo.contactEmail ? `<a href="mailto:${esc(contact)}">${esc(contact)}</a>` : esc(contact)}</p></section>
+    <section class="panel privacy-section"><p class="overline">この端末に保存</p><h2>行きたいリスト、確認待ち、履歴、設定</h2><ul>${local.fields.map((field) => `<li>${esc(field)}</li>`).join("")}</ul><p>オフラインでも画面を開けるよう、HTML、フロントエンドモジュール、スタイル、アイコンをブラウザにキャッシュする場合があります。API 応答、店舗結果、外部ページはキャッシュしません。確認待ちリストに元画像、反応数、投稿本文は保存しません。共有されたタイトル・文章・リンクは現在の画面にだけ入力し、アドレス欄からすぐ削除します。「確認をはじめる」を押すまで送信しません。実在店舗の Google Maps 住所・評価・営業時間、ホットペッパーグルメ詳細、入力された予約 URL は長期保存せず、再表示時に Place ID から更新します。</p></section>
+    <section class="panel privacy-section"><p class="overline">リクエスト時に外部へ送信</p><h2>画像解析と店舗確認</h2><div class="data-flow-list"><p><strong>Qwen / OpenAI fallback</strong><span>画像を追加した場合だけ受け取ります。本サービスは画像をサーバーファイルへ保存しません。提供会社側の処理とログ期間は各社の規約に従います。</span></p><p><strong>Google Places</strong><span>店舗の検索語と、店舗確認または評価表示時の Place ID を受け取り、候補・住所・電話・評価・営業時間を返します。端末の位置情報は要求しません。</span></p><p><strong>ホットペッパーグルメ</strong><span>確認した店舗の店名・住所・電話を受け取り、店舗ページを照合します。</span></p><p><strong>店舗の公式サイト</strong><span>店舗確認後、検証済み公式サイトの公開 HTML をサーバーが取得し、予約入口、公式 Instagram、明示された予約ルールを探す場合があります。Instagram の投稿本文は自動取得しません。</span></p></div></section>
     <section class="panel privacy-section"><p class="overline">サービス運用記録</p><h2>匿名イベント、回答、技術指標</h2><p>入力の種類、候補確認、評価表示、行動ボタン、保存状況、API の成功状態、店舗確認から結果表示までの時間、token 使用量を記録します。表示した評価点そのものは記録しません。回答を送信した場合は、役立ち度、予約結果、正確性、最大500文字の改善コメントも記録します。画像、元の検索文、具体的な来店日、API Key は記録しません。現在はアカウントがないため、端末データの削除から集計済み運用記録を特定・削除することはできません。</p></section>
-    <section class="danger-zone"><div><p class="overline">この端末のデータを削除</p><h2>予定、確認待ち、履歴、設定を消去</h2><p>行きたい予定 ${local.savedPlanCount} 件、確認待ち ${local.pendingAnalysisCount} 件、最近の確認 ${local.recentAnalysisCount} 件、予約名などの端末設定を削除します。Google、Hot Pepper、Qwen、OpenAI、予約サービス側のデータには影響しません。</p></div>${state.deleteConfirmOpen ? `<div class="delete-confirm"><strong>この端末のデータをすべて完全に削除しますか？</strong><button id="cancel-delete">キャンセル</button><button id="confirm-delete">すべて削除</button></div>` : '<button id="start-delete" class="danger-button">この端末のデータを削除</button>'}</section>
+    <section class="danger-zone"><div><p class="overline">この端末のデータを削除</p><h2>予定、確認待ち、履歴、設定を消去</h2><p>行きたい予定 ${local.savedPlanCount} 件、確認待ち ${local.pendingAnalysisCount} 件、最近の確認 ${local.recentAnalysisCount} 件、予約名などの端末設定を削除します。Google、ホットペッパーグルメ、Qwen、OpenAI、予約サービス側のデータには影響しません。</p></div>${state.deleteConfirmOpen ? `<div class="delete-confirm"><strong>この端末のデータをすべて完全に削除しますか？</strong><button id="cancel-delete">キャンセル</button><button id="confirm-delete">すべて削除</button></div>` : '<button id="start-delete" class="danger-button">この端末のデータを削除</button>'}</section>
   </section>`;
   document.querySelector("#start-delete")?.addEventListener("click", () => { state.deleteConfirmOpen = true; renderPrivacy(); });
   document.querySelector("#cancel-delete")?.addEventListener("click", () => { state.deleteConfirmOpen = false; renderPrivacy(); });
@@ -1250,17 +1257,18 @@ function renderSettings() {
     { label: "スクリーンショット解析", ready: Boolean(capabilities.visionExtraction), detail: capabilities.models?.map((item) => `${item.provider}: ${item.model}`).join(" → ") || "未設定" },
     { label: "画像解析の予備モデル", ready: Boolean(capabilities.fallbackAvailable), detail: capabilities.fallbackAvailable ? "主モデルの失敗・無効な出力・低確度時に自動使用" : "現在は画像モデルが1つです。確度が低い場合は手動確認が必要です" },
     { label: "Google Places", ready: Boolean(capabilities.placesSearch), detail: capabilities.placesSearch ? "実在する候補と店舗情報を取得できます" : "デモ候補を使用" },
-    { label: "Hot Pepper", ready: Boolean(capabilities.hotPepper), detail: capabilities.hotPepper ? "店舗情報の補足を利用できます" : "任意の補足情報は未設定" },
+    { label: "ホットペッパーグルメ", ready: Boolean(capabilities.hotPepper), detail: capabilities.hotPepper ? "店舗情報の補足を利用できます" : "任意の補足情報は未設定" },
     { label: "公開ページの手掛かり", ready: Boolean(capabilities.webpageExtraction), detail: capabilities.webpageExtraction ? "制限付き HTML 取得を利用できます" : "未設定" }
   ];
   app.innerHTML = `<section class="content-view narrow settings-view">
     <button class="back-button" data-action="home">← ホームへ</button>
-    <div class="section-heading"><span class="step-chip">設定</span><h2>この端末の設定</h2><p>設定は現在のブラウザだけに保存し、サーバーへ送信しません。</p></div>
+    <div class="section-heading"><span class="step-chip">設定</span><h2>この端末の設定</h2><p>設定値は現在のブラウザに保存します。招待アクセスコードだけは、保護されたリクエストの認証ヘッダーとして本サービスへ送信します。</p></div>
     <section class="panel"><p class="overline">来店時の既定値</p><h2>毎回の入力を減らす</h2><form id="settings-form" class="settings-form">
       <label>既定の人数<input type="number" name="defaultPartySize" min="1" max="20" value="${esc(state.settings.defaultPartySize)}"></label>
       <label>電話予約で使う名前（任意）<input type="text" name="reservationName" maxlength="60" autocomplete="name" value="${esc(state.settings.reservationName)}" placeholder="例：山田"><small>このブラウザだけに保存し、電話用の文例に使います。解析 API には送りません。</small></label>
       <label>既定の電話文例<select name="defaultPhoneScript"><option value="standard" ${state.settings.defaultPhoneScript === "standard" ? "selected" : ""}>標準</option><option value="short" ${state.settings.defaultPhoneScript === "short" ? "selected" : ""}>短め</option><option value="easy" ${state.settings.defaultPhoneScript === "easy" ? "selected" : ""}>やさしい日本語</option></select></label>
-      <label>試験用アクセスコード（任意）<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="管理者から案内されたコード"><small>${capabilities.pilotAccessRequired ? "このサービスではアクセスコードが必要です。保存後、保護されたリクエストに送信します。" : "現在は不要です。このブラウザだけに保存します。"}</small></label>
+      <label>招待アクセスコード${capabilities.pilotAccessRequired ? "（必須）" : "（任意）"}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="管理者から案内されたコード"><small>${capabilities.pilotAccessRequired ? "このサービスではアクセスコードが必要です。保存後、保護されたリクエストに送信します。" : "現在は不要です。このブラウザだけに保存します。"}</small></label>
+      ${state.settings.pilotAccessCode ? '<button type="button" class="text-button clear-access-code" id="clear-access-code">招待アクセスコードを消去</button>' : ""}
       <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>最近の確認を保存</strong><small>最大10件。実在店舗は Place ID、入力した手掛かり、予定だけを保存します。</small></span></label>
       <button type="submit" class="primary-button">この端末に保存</button>
     </form></section>
@@ -1273,6 +1281,12 @@ function renderSettings() {
     state.phoneScriptVersion = state.settings.defaultPhoneScript;
     syncSettings();
     showToast("設定を保存しました");
+    renderSettings();
+  });
+  document.querySelector("#clear-access-code")?.addEventListener("click", () => {
+    state.settings = { ...state.settings, pilotAccessCode: "" };
+    syncSettings();
+    showToast("招待アクセスコードを消去しました");
     renderSettings();
   });
   document.querySelector("#refresh-capabilities")?.addEventListener("click", async (event) => {
@@ -1296,18 +1310,21 @@ function renderDailyBudget(budget = {}) {
 }
 
 function renderTerms() {
+  const publicInfo = state.capabilities?.publicInfo || {};
   app.innerHTML = `<section class="content-view narrow terms-view">
     <button class="back-button" data-action="home">← ホームへ</button>
-    <div class="section-heading"><span class="step-chip">利用条件</span><h2>サービスの範囲と責任</h2><p>適用日：${esc(TERMS_EFFECTIVE_DATE)} · 現在の TabiTabi 試験版に適用されます。</p></div>
+    <div class="section-heading"><span class="step-chip">利用条件</span><h1>サービスの範囲と責任</h1><p>適用日：${esc(TERMS_EFFECTIVE_DATE)} · 現在の TabiTabi 招待制テストに適用されます。</p></div>
     <aside class="terms-highlight"><strong>最も大切なこと</strong><p>TabiTabi が示すのは次の行動であり、予約の確定ではありません。店舗や予約サービスの最終画面、電話回答、確認メールをご確認ください。</p></aside>
     <div class="terms-list">${TERMS_SECTIONS.map((section, index) => `<section class="panel terms-section"><span>${String(index + 1).padStart(2, "0")}</span><div><h3>${esc(section.title)}</h3>${section.paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join("")}</div></section>`).join("")}</div>
-    <p class="terms-footer-note">利用を続けることで、上記の範囲をご理解いただいたものとします。データの取り扱いは「プライバシーとデータ」をご覧ください。</p>
+    <p class="terms-footer-note">運営者：${esc(publicInfo.operatorName || "正式公開前に掲載します")} · お問い合わせ：${publicInfo.contactEmail ? `<a href="mailto:${esc(publicInfo.contactEmail)}">${esc(publicInfo.contactEmail)}</a>` : "正式公開前に掲載します"}</p>
+    <p class="terms-footer-note">利用を続けることで、上記の範囲をご理解いただいたものとします。データの取り扱いは<a href="/privacy" data-action="privacy">プライバシーとデータ</a>をご覧ください。</p>
   </section>`;
 }
 
 document.addEventListener("click", (event) => {
   const action = event.target.closest("[data-action]")?.dataset.action;
   if (!action) return;
+  event.preventDefault();
   if (action === "home") state.view = "home";
   if (action === "saved") state.view = "saved";
   if (action === "history") state.view = "history";
@@ -1316,8 +1333,15 @@ document.addEventListener("click", (event) => {
   if (action === "terms") state.view = "terms";
   if (action === "settings") state.view = "settings";
   if (action === "home") state.activePendingId = null;
+  const nextPath = pathnameForView(state.view);
+  if (window.location.pathname !== nextPath) history.pushState(null, "", nextPath);
   render();
   if (action === "settings") getCapabilities({ force: true }).then(() => { if (state.view === "settings") renderSettings(); });
+});
+
+window.addEventListener("popstate", () => {
+  state.view = viewFromPathname(window.location.pathname);
+  render();
 });
 
 window.addEventListener("online", () => {

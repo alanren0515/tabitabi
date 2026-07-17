@@ -580,7 +580,7 @@ test("decision result remains usable when optional Hot Pepper enrichment fails",
   });
   assert.equal(result.name, "Google Only Restaurant");
   assert.equal(result.sources.length, 1);
-  assert.ok(result.reasons.includes("Hot Pepper との照合を一時的に利用できません"));
+  assert.ok(result.reasons.includes("ホットペッパーグルメとの照合を一時的に利用できません"));
 });
 
 test("permanent closure overrides a still-live third-party listing in the full result", () => {

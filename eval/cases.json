@@ -434,12 +434,12 @@
       "addressIncludes": "東上野1丁目14-14",
       "placeId": "ChIJUx0LdwCPGGARFT0DEFHVB7Q"
     },
-    "verificationStatus": "pending",
+    "verificationStatus": "confirmed",
     "officialSources": [
       "https://tabelog.com/tokyo/A1311/A131101/13304611/",
       "https://www.hotpepper.jp/strJ004004292/"
     ],
-    "notes": "用户提供的小红书截图已由 Qwen3.6-Flash 识别。模型将食光里识别为主要餐厅，将杨国福保留为对比对象；作者推荐、性价比、味道和排队描述分别作为观点或未核验帖子说法。Google Places 唯一匹配食光里 マーラータン，当前状态 OPERATIONAL，地址为東京都台東区東上野1丁目14-14，官方网页为 shokukouri.owst.jp。尚待移动端结果页审计。评估集不保存原图、作者账号或互动数据。"
+    "notes": "用户提供的小红书截图已由 Qwen3.6-Flash 识别，并完成移动端结果页审计。模型将食光里识别为主要餐厅，将杨国福保留为对比对象；作者推荐、性价比、味道和排队描述分别作为观点或未核验帖子说法。Google Places 唯一匹配食光里 マーラータン，当前状态 OPERATIONAL，地址为東京都台東区東上野1丁目14-14，官方网页为 shokukouri.owst.jp。评估集不保存原图、作者账号或互动数据。"
   },
   {
     "id": "xiaohongshu-kinnen-ueno-035",
@@ -458,12 +458,12 @@
       "addressIncludes": "上野6-16-7",
       "placeId": "ChIJr9iDIQCPGGARBsH2C1GV40s"
     },
-    "verificationStatus": "pending",
+    "verificationStatus": "confirmed",
     "officialSources": [
       "https://gurunavi.com/en/gjg5600/rst/",
       "https://tabelog.com/tokyo/A1311/A131101/13303635/dtlmap/",
       "https://www.city.taito.lg.jp/kenkohukusi/kenkokukikanriei/syokuhin-sisetu/index.files/2024-07-PER-PDF.pdf"
     ],
-    "notes": "用户提供的小红书截图已由 Qwen3.6-Flash 识别为鑫燃/KINNEN烧肉，上野，海报价格范围1200–3980日元，电话与公开资料一致。用户说明该帖为一年多前且门店已搬走；Google Places 唯一匹配原店并返回 CLOSED_PERMANENTLY，地址为上野6-16-7 D・B上野IIビル5F。食べログ同时标注掲載保留，因此系统不得沿用旧帖的价格、营业时间或预约暗示，结果应优先提示关闭/现址核对。尚待移动端结果页审计。评估集不保存原图、作者账号或互动数据。"
+    "notes": "用户提供的小红书截图已由 Qwen3.6-Flash 识别为鑫燃/KINNEN烧肉，上野，并完成移动端结果页审计。海报价格范围1200–3980日元，电话与公开资料一致。用户说明该帖为一年多前且门店已搬走；Google Places 唯一匹配原店并返回 CLOSED_PERMANENTLY，地址为上野6-16-7 D・B上野IIビル5F。食べログ同时标注掲載保留，因此系统不得沿用旧帖的价格、营业时间或预约暗示，结果应优先提示关闭/现址核对。评估集不保存原图、作者账号或互动数据。"
   }
 ]

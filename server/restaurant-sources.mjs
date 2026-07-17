@@ -202,7 +202,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
   }
   if (hp) {
     sources.push({
-      name: "Hot Pepper",
+      name: "ホットペッパーグルメ",
       note: "店舗ページ、最寄り駅、予算、営業時間、定休日",
       official: false,
       confidence: "medium",
@@ -286,7 +286,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
       || { label: "Google Maps で確認", url: place.googleMapsUri, type: "map" };
 
   const reasons = hotPepperResult?.error && !closed
-    ? [...decision.reasons, "Hot Pepper との照合を一時的に利用できません"]
+    ? [...decision.reasons, "ホットペッパーグルメとの照合を一時的に利用できません"]
     : decision.reasons;
 
   const conflictMessages = [
@@ -352,7 +352,7 @@ export function detectSourceConflicts(place, hotPepper) {
       severity: "high",
       googleValue: place.address,
       hotPepperValue: hotPepper.address,
-      message: "Google Maps と Hot Pepper の住所が一致しません。同名の別支店を照合した可能性があります。"
+      message: "Google Maps とホットペッパーグルメの住所が一致しません。同名の別支店を照合した可能性があります。"
     });
   }
 
@@ -365,7 +365,7 @@ export function detectSourceConflicts(place, hotPepper) {
         severity: "medium",
         googleValue: googleLine,
         hotPepperValue: hotPepper.close,
-        message: `${weekday}曜日の営業情報が Google Maps と Hot Pepper で一致しません。`
+        message: `${weekday}曜日の営業情報が Google Maps とホットペッパーグルメで一致しません。`
       });
     }
   }

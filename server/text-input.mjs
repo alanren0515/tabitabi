@@ -4,7 +4,7 @@ import { platformForUrl, reservationLinkPriority } from "./reservation-options.m
 const SOCIAL_HOSTS = [
   { platform: "tiktok", label: "TikTok", hosts: ["tiktok.com", "vm.tiktok.com"] },
   { platform: "instagram", label: "Instagram", hosts: ["instagram.com"] },
-  { platform: "youtube", label: "YouTube", hosts: ["youtube.com", "youtu.be"] },
+  { platform: "youtube", label: "YouTube Shorts", hosts: ["youtube.com", "youtu.be"] },
   { platform: "threads", label: "Threads", hosts: ["threads.net"] },
   { platform: "lemon8", label: "Lemon8", hosts: ["lemon8-app.com", "lemon8.com"] },
   { platform: "line", label: "LINE", hosts: ["line.me"] },
@@ -121,7 +121,7 @@ function detectMentionedSocialPlatform(text) {
   const normalized = String(text || "").toLowerCase();
   if (/\b(?:instagram|insta)\b|(?:来自|来源(?:是)?|平台(?:是)?)\s*(?:ins|ig)\b/i.test(normalized)) return { platform: "instagram", label: "Instagram" };
   if (/\btiktok\b|抖音/i.test(normalized)) return { platform: "tiktok", label: "TikTok" };
-  if (/\byoutube\b|\byoutu\.be\b|ユーチューブ/i.test(normalized)) return { platform: "youtube", label: "YouTube" };
+  if (/\byoutube\b|\byoutu\.be\b|ユーチューブ/i.test(normalized)) return { platform: "youtube", label: "YouTube Shorts" };
   if (/\bthreads\b/i.test(normalized)) return { platform: "threads", label: "Threads" };
   if (/\blemon8\b/i.test(normalized)) return { platform: "lemon8", label: "Lemon8" };
   if (/\bline\b|ライン/i.test(normalized)) return { platform: "line", label: "LINE" };

@@ -74,3 +74,19 @@ export function validateDecisionEvalReport({ report, cases = [], now = Date.now(
   }
   return [...new Set(errors)];
 }
+
+export function validateCandidateEvalReport({ report, cases = [], now = Date.now(), maxAgeMs = 7 * 24 * 60 * 60 * 1_000 }) {
+  const errors = [];
+  const confirmedIds = cases.filter((item) => item.verificationStatus === "confirmed").map((item) => item.id).sort();
+  if (!report || typeof report !== "object") return ["candidate evaluation report is missing"];
+  const generatedAt = new Date(report.generatedAt || "").valueOf();
+  if (!Number.isFinite(generatedAt)) errors.push("candidate evaluation report has invalid generatedAt");
+  else if (generatedAt > now + 5 * 60 * 1_000) errors.push("candidate evaluation report is dated in the future");
+  else if (now - generatedAt > maxAgeMs) errors.push("candidate evaluation report is stale");
+  const results = Array.isArray(report.results) ? report.results : [];
+  const resultIds = results.map((item) => item?.id).sort();
+  if (resultIds.length !== confirmedIds.length || resultIds.some((id, index) => id !== confirmedIds[index])) errors.push("candidate evaluation results do not match confirmed cases");
+  if (report.cases !== confirmedIds.length || report.verifiedCases !== confirmedIds.length) errors.push("candidate evaluation case totals do not match confirmed cases");
+  if (report.gatePassed !== true || report.top3Recall < 0.9 || results.some((item) => !item?.passed || !Number.isInteger(item?.matchedRank) || item.matchedRank < 1 || item.matchedRank > 3)) errors.push("candidate evaluation gate did not pass cleanly");
+  return [...new Set(errors)];
+}

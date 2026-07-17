@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-07-14T09:37:04.490Z",
-  "cases": 33,
-  "verifiedCases": 33,
+  "generatedAt": "2026-07-17T11:41:15.692Z",
+  "cases": 35,
+  "verifiedCases": 35,
   "targetCaseCount": 30,
   "coverageGatePassed": true,
-  "top3Passed": 33,
+  "top3Passed": 35,
   "top3Recall": 1,
-  "top1Passed": 33,
+  "top1Passed": 35,
   "top1Rate": 1,
   "results": [
     {
@@ -303,6 +303,24 @@
       "top1": true,
       "matchedRank": 1,
       "candidateCount": 3,
+      "verificationStatus": "confirmed",
+      "failureReason": null
+    },
+    {
+      "id": "xiaohongshu-shikouri-okachimachi-034",
+      "passed": true,
+      "top1": true,
+      "matchedRank": 1,
+      "candidateCount": 3,
+      "verificationStatus": "confirmed",
+      "failureReason": null
+    },
+    {
+      "id": "xiaohongshu-kinnen-ueno-035",
+      "passed": true,
+      "top1": true,
+      "matchedRank": 1,
+      "candidateCount": 1,
       "verificationStatus": "confirmed",
       "failureReason": null
     }

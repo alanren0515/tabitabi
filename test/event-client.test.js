@@ -7,12 +7,13 @@ test("reports success only after the event endpoint accepts the request", async 
   const accepted = await sendEvent(async (url, options) => {
     request = { url, options };
     return { ok: true };
-  }, { event: "feedback_submitted", helpful: true });
+  }, { event: "feedback_submitted", helpful: true }, { "X-Pilot-Access": "pilot-code" });
 
   assert.equal(accepted, true);
   assert.equal(request.url, "/api/events");
   assert.equal(request.options.method, "POST");
   assert.equal(request.options.keepalive, true);
+  assert.equal(request.options.headers["X-Pilot-Access"], "pilot-code");
   assert.deepEqual(JSON.parse(request.options.body), { event: "feedback_submitted", helpful: true });
 });
 

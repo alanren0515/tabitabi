@@ -13,6 +13,8 @@ primary_region = "nrt"
 [mounts]
   source = "tabitabi_data"
   destination = "/app/data"
+  scheduled_snapshots = true
+  snapshot_retention = 7
 
 [http_service]
   internal_port = 4173

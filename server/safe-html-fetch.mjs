@@ -40,18 +40,20 @@ export async function safeFetchHtml({
 }) {
   let currentUrl = validatePublicHttpUrl(url);
   if (!currentUrl) throw new SafeHtmlFetchError("INVALID_URL", "A public http(s) URL is required");
+  const deadlineAt = Date.now() + timeoutMs;
 
   for (let redirects = 0; redirects <= maxRedirects; redirects += 1) {
     const parsed = new URL(currentUrl);
-    const addresses = await resolvePublicAddresses(parsed.hostname, lookupImpl, requestImpl);
+    const addresses = await withinDeadline(resolvePublicAddresses(parsed.hostname, lookupImpl, requestImpl), deadlineAt);
     const pinnedAddress = addresses[0];
-    const rawResponse = await requestImpl(currentUrl, {
+    const remainingMs = remainingTime(deadlineAt);
+    const rawResponse = await withinDeadline(requestImpl(currentUrl, {
       headers,
-      timeoutMs,
+      timeoutMs: remainingMs,
       pinnedAddress: pinnedAddress.address,
       pinnedFamily: pinnedAddress.family,
       servername: parsed.hostname
-    });
+    }), deadlineAt);
     const response = normalizeResponse(rawResponse);
 
     if (REDIRECT_STATUSES.has(response.status)) {
@@ -59,26 +61,26 @@ export async function safeFetchHtml({
       const location = response.headers.get("location");
       const nextUrl = location ? validatePublicHttpUrl(new URL(location, currentUrl).href) : "";
       if (!nextUrl) throw new SafeHtmlFetchError("UNSAFE_REDIRECT", "The webpage redirected to an unsafe URL");
-      await cancelBody(response.body);
+      void cancelBody(response.body);
       currentUrl = nextUrl;
       continue;
     }
 
     if (response.status < 200 || response.status >= 300) {
-      await cancelBody(response.body);
+      void cancelBody(response.body);
       throw new SafeHtmlFetchError("UPSTREAM_ERROR", `The webpage returned HTTP ${response.status || 0}`, 502);
     }
     const contentType = String(response.headers.get("content-type") || "").toLowerCase();
     if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
-      await cancelBody(response.body);
+      void cancelBody(response.body);
       throw new SafeHtmlFetchError("NOT_HTML", "The URL did not return an HTML page");
     }
     const declaredLength = Number(response.headers.get("content-length"));
     if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
-      await cancelBody(response.body);
+      void cancelBody(response.body);
       throw new SafeHtmlFetchError("TOO_LARGE", "The webpage is too large to inspect", 413);
     }
-    return { html: await readBoundedBody(response.body, maxBytes), sourceUrl: currentUrl, status: response.status };
+    return { html: await readBoundedBody(response.body, maxBytes, deadlineAt), sourceUrl: currentUrl, status: response.status };
   }
   throw new SafeHtmlFetchError("TOO_MANY_REDIRECTS", "The webpage redirected too many times");
 }
@@ -106,12 +108,21 @@ function requestPinned(value, { headers, timeoutMs, pinnedAddress, pinnedFamily,
       method: "GET",
       headers,
       servername: url.protocol === "https:" ? servername : undefined,
-      lookup: (_hostname, _options, callback) => callback(null, pinnedAddress, pinnedFamily)
+      lookup: createPinnedLookup(pinnedAddress, pinnedFamily)
     }, (response) => resolve({ status: response.statusCode || 0, headers: response.headers, body: response }));
     request.setTimeout(timeoutMs, () => request.destroy(new SafeHtmlFetchError("TIMEOUT", "The webpage request timed out", 504)));
     request.on("error", reject);
     request.end();
   });
+}
+
+export function createPinnedLookup(address, family) {
+  return (_hostname, options, callback) => {
+    const done = typeof options === "function" ? options : callback;
+    const lookupOptions = typeof options === "object" && options ? options : {};
+    if (lookupOptions.all) done(null, [{ address, family }]);
+    else done(null, address, family);
+  };
 }
 
 function normalizeResponse(response) {
@@ -123,8 +134,38 @@ function normalizeResponse(response) {
   };
 }
 
-async function readBoundedBody(body, maxBytes) {
+async function readBoundedBody(body, maxBytes, deadlineAt) {
   if (!body) return "";
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      void cancelBody(body);
+      reject(new SafeHtmlFetchError("TIMEOUT", "The webpage response body timed out", 504));
+    }, remainingTime(deadlineAt));
+  });
+  try {
+    return await Promise.race([readBodyChunks(body, maxBytes), timeout]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function remainingTime(deadlineAt) {
+  const remaining = deadlineAt - Date.now();
+  if (remaining <= 0) throw new SafeHtmlFetchError("TIMEOUT", "The webpage request timed out", 504);
+  return remaining;
+}
+
+async function withinDeadline(promise, deadlineAt) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new SafeHtmlFetchError("TIMEOUT", "The webpage request timed out", 504)), remainingTime(deadlineAt));
+  });
+  try { return await Promise.race([promise, timeout]); }
+  finally { clearTimeout(timeoutId); }
+}
+
+async function readBodyChunks(body, maxBytes) {
   const chunks = [];
   let bytes = 0;
   try {
@@ -132,7 +173,7 @@ async function readBoundedBody(body, maxBytes) {
       const chunk = typeof value === "string" ? Buffer.from(value) : Buffer.from(value);
       bytes += chunk.length;
       if (bytes > maxBytes) {
-        await cancelBody(body);
+        void cancelBody(body);
         throw new SafeHtmlFetchError("TOO_LARGE", "The webpage is too large to inspect", 413);
       }
       chunks.push(chunk);
