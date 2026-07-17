@@ -6,12 +6,12 @@
   "scope": "/",
   "display": "standalone",
   "lang": "ja",
-  "background_color": "#f7f4ed",
-  "theme_color": "#f7f4ed",
+  "background_color": "#eef3f0",
+  "theme_color": "#eef3f0",
   "description": "SNSで見つけた飲食店を確認し、予約・電話・来店までの次の一歩を整理します。",
   "icons": [
     { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ],
   "share_target": {
     "action": "/?share=1",

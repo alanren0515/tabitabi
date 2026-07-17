@@ -169,9 +169,13 @@ function renderHome() {
   const accessLocked = pilotAccessLocked(state.capabilities, state.settings);
   app.innerHTML = `
     <section class="hero">
-      <div class="eyebrow">SNSで見つけた店を、確かな次の一歩へ</div>
-      <h1>気になる店を、<br><em>次の行動へ。</em></h1>
-      <p class="hero-copy">リンク、店名、スクリーンショットから店舗を確認。予約・電話・来店のうち、いま取るべき行動を整理します。</p>
+      <div class="hero-intro">
+        <div class="eyebrow">SNSから、お店の入口まで</div>
+        <h1>気になる店を、<br><em>次の行動へ。</em></h1>
+        <p class="hero-copy">リンク、店名、スクリーンショットから店舗を確認。予約・電話・来店の次の一歩を整理します。</p>
+        <div class="hero-route" aria-hidden="true"><span>SNS</span><i></i><span>店舗確認</span><i></i><span>行動</span></div>
+      </div>
+      <div class="hero-workbench">
       ${state.sharedInputPending ? `<aside class="shared-input-banner"><strong>共有内容を受け取りました</strong><span>共有されたタイトル、文章、リンクを入力欄に反映しました。内容を確認してから開始してください。</span></aside>` : ""}
       ${offline ? `<aside class="offline-banner"><strong>オフラインです</strong><span>保存済みのリストは確認できます。新しい画像解析、店舗検索、公式サイト確認にはインターネット接続が必要です。</span></aside>` : ""}
       ${accessLocked ? `<form id="pilot-access-form" class="pilot-access-card" aria-labelledby="pilot-access-title">
@@ -197,6 +201,7 @@ function renderHome() {
         <button data-example="銀座 鮨 蒼月">予約が必要な寿司店</button>
         <button data-example="新宿 麺処 灯 ラーメン">並んで入るラーメン店</button>
         <button data-example="京都 喫茶 こもれび">情報が不足している喫茶店</button>
+      </div>
       </div>
     </section>
     ${state.pending.length ? `<section class="recent-preview queue-preview"><div><p class="overline">あとで確認</p><h2>画像内のほかの店舗を続けて確認</h2></div><div class="recent-preview-list">${state.pending.slice(0, 3).map((item) => `<button data-open-pending="${esc(item.id)}"><strong>${esc(item.clues.name)}</strong><span>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || "場所を要確認")}</span></button>`).join("")}</div><button class="text-button" data-action="queue">全 ${state.pending.length} 件を見る</button></section>` : ""}
