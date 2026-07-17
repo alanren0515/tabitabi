@@ -9,3 +9,4 @@ output/platform-audit/
 !.env.example
 data/*.jsonl
 data/daily-budget.json
+data/provider-circuit.json

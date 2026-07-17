@@ -9,6 +9,7 @@ primary_region = "nrt"
   PORT = "4173"
   TRUST_PROXY = "true"
   NODE_ENV = "production"
+  PAID_API_EMERGENCY_STOP = "false"
 
 [mounts]
   source = "tabitabi_data"
@@ -28,7 +29,7 @@ primary_region = "nrt"
     grace_period = "15s"
     interval = "30s"
     method = "GET"
-    path = "/readyz"
+    path = "/healthz"
     timeout = "5s"
 
 [[vm]]

@@ -165,6 +165,12 @@ export async function extractScreenshotWithFallback({ imageDataUrl, env = proces
       bestLowConfidenceResult = chooseSaferResult(bestLowConfidenceResult, result);
       fallbackReason = qualityReason;
     } catch (error) {
+      if (error?.code === "PROVIDER_CIRCUIT_OPEN") {
+        attempts.push({ provider: provider.name, model: provider.model, status: "skipped", durationMs: Date.now() - startedAt, requestId: null, usage: null, fallbackReason: index ? fallbackReason : null, errorCode: "provider_circuit" });
+        if (index < providers.length - 1) { fallbackReason = "provider_circuit"; continue; }
+        if (bestLowConfidenceResult) return { ...bestLowConfidenceResult, attempts, fallbackAttemptSuppressed: true };
+        throw error;
+      }
       if (error?.code === "DAILY_BUDGET_EXHAUSTED") {
         attempts.push({
           provider: provider.name,

@@ -10,15 +10,17 @@ export function evaluateDeploymentPreflight({ env = {}, flyConfig = "", dockerfi
     pilotAccessCode: String(env.PILOT_ACCESS_CODE || "").trim().length >= 24,
     operatorName: present(env.PUBLIC_OPERATOR_NAME),
     contactEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(env.PUBLIC_CONTACT_EMAIL || "").trim()),
+    emergencyStopReady: fly["env.PAID_API_EMERGENCY_STOP"] === "false",
     providerBudgetCaps: safeLimit(env.DAILY_VISION_REQUEST_LIMIT, 60, 60)
       && safeLimit(env.DAILY_QWEN_ATTEMPT_LIMIT, 60, 60)
       && safeLimit(env.DAILY_OPENAI_FALLBACK_LIMIT, 10, 10)
       && safeLimit(env.DAILY_PLACES_SEARCH_LIMIT, 90, 90)
       && safeLimit(env.DAILY_PLACES_DETAILS_LIMIT, 90, 90)
+      && safeLimit(env.DAILY_HOTPEPPER_ATTEMPT_LIMIT, 60, 60)
       && safeLimit(env.VISION_MAX_OUTPUT_TOKENS, 1_200, 1_800, 256),
     flyTokyo: fly[".primary_region"] === "nrt",
     flyIdleLifecycle: fly["http_service.auto_start_machines"] === true && fly["http_service.auto_stop_machines"] === "stop" && fly["http_service.min_machines_running"] === 0,
-    flyHttpsAndHealth: fly["http_service.force_https"] === true && fly["http_service.checks.path"] === "/readyz",
+    flyHttpsAndHealth: fly["http_service.force_https"] === true && fly["http_service.checks.path"] === "/healthz",
     flyMachineShape: fly["vm.size"] === "shared-cpu-1x" && fly["vm.memory"] === "512mb" && fly["vm.cpus"] === 1,
     flyPersistentData: fly["mounts.source"] === "tabitabi_data" && fly["mounts.destination"] === "/app/data",
     flySnapshots: fly["mounts.scheduled_snapshots"] === true && fly["mounts.snapshot_retention"] === 7,

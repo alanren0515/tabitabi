@@ -14,8 +14,8 @@ test("production image contains the complete PWA shell and a writable runtime di
   assert.match(dockerfile, /COPY --chown=node:node assets \.\/assets/);
   assert.match(dockerfile, /COPY --chown=node:node src \.\/src/);
   assert.match(dockerfile, /RUN mkdir -p \/app\/data && chown node:node \/app\/data/);
-  assert.match(dockerfile, /\/readyz/);
-  assert.doesNotMatch(dockerfile, /HEALTHCHECK[^]*\/healthz/);
+  assert.match(dockerfile, /HEALTHCHECK[^]*\/healthz/);
+  assert.doesNotMatch(dockerfile, /HEALTHCHECK[^]*\/readyz/);
   assert.ok(dockerfile.indexOf("RUN mkdir -p /app/data") < dockerfile.indexOf("USER node"));
   assert.doesNotMatch(dockerfile, /audit\.html/);
 });
@@ -89,5 +89,7 @@ test("production server wires all reviewed model-abuse cost controls", async () 
   assert.match(serverSource, /dailyBudget\.consume\("vision_qwen_attempts"/);
   assert.match(serverSource, /dailyBudget\.consume\("vision_openai_fallback_attempts"/);
   assert.match(serverSource, /Boolean\(process\.env\.FLY_APP_NAME\)/);
+  assert.match(serverSource, /createProviderCircuitBreaker/);
+  assert.match(serverSource, /PAID_API_EMERGENCY_STOP/);
   assert.ok(serverSource.indexOf("pilotAccessAuthorized") < serverSource.indexOf('request.url === "/api/extract-screenshot"'));
 });

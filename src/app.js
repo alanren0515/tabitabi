@@ -1255,6 +1255,10 @@ function renderSettings() {
   const capabilities = state.capabilities || {};
   const budget = capabilities.dailyBudget || {};
   const capabilitiesUnavailable = Boolean(capabilities.capabilitiesUnavailable);
+  const providerStopped = Boolean(capabilities.emergencyStop || capabilities.providerCircuit?.open);
+  const providerStopUntil = capabilities.providerCircuit?.openUntil ? new Date(capabilities.providerCircuit.openUntil).toLocaleString("ja-JP") : "管理者が再開するまで";
+  const degradedProviders = Array.isArray(capabilities.providerCircuit?.degradedProviders) ? capabilities.providerCircuit.degradedProviders.map((item) => item.provider).join("、") : "";
+  const providerStopMessage = capabilities.emergencyStop ? "すべての外部 API を管理者が緊急停止しています。" : `${degradedProviders || "一部の外部 API"} を自動停止しています。ほかの機能は引き続き利用できます。`;
   const providers = [
     { label: "スクリーンショット解析", ready: Boolean(capabilities.visionExtraction), detail: capabilities.models?.map((item) => `${item.provider}: ${item.model}`).join(" → ") || "未設定" },
     { label: "画像解析の予備モデル", ready: Boolean(capabilities.fallbackAvailable), detail: capabilities.fallbackAvailable ? "主モデルの失敗・無効な出力・低確度時に自動使用" : "現在は画像モデルが1つです。確度が低い場合は手動確認が必要です" },
@@ -1274,6 +1278,7 @@ function renderSettings() {
       <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>最近の確認を保存</strong><small>最大10件。実在店舗は Place ID、入力した手掛かり、予定だけを保存します。</small></span></label>
       <button type="submit" class="primary-button">この端末に保存</button>
     </form></section>
+    ${providerStopped ? `<aside class="inline-error"><strong>外部 API を安全停止しています</strong><span>${esc(providerStopMessage)} 再開予定：${esc(providerStopUntil)}</span></aside>` : ""}
     <section class="panel capability-panel"><div class="panel-heading"><div><p class="overline">現在利用できる機能</p><h2>API と情報源の状態</h2></div><button type="button" class="text-button" id="refresh-capabilities">状態を更新</button></div>${capabilitiesUnavailable ? '<aside class="inline-error"><strong>サービス状態を取得できません</strong><span>不明な状態を「未設定」とは表示しません。接続後に更新してください。</span></aside>' : `<div class="capability-grid">${providers.map((item) => `<article class="${item.ready ? "ready" : "pending"}"><span>${item.ready ? "利用可能" : "未設定"}</span><strong>${esc(item.label)}</strong><p>${esc(item.detail)}</p></article>`).join("")}</div>`}<p class="source-disclaimer">API Key は表示・返却しません。</p></section>
     ${renderDailyBudget(budget)}
   </section>`;

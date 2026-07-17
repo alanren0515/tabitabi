@@ -38,7 +38,7 @@ export function evaluateFlyRemoteState({ machines = [], volumes = [], checks = [
     volumeMounted: "确认 Machine 将该 Volume 挂载到 /app/data。",
     healthChecksPresent: "先运行 provider-free smoke，再执行 flyctl checks list -a <app>。",
     healthChecksForMachine: "健康检查必须属于唯一 Machine。",
-    healthChecksPassing: "任何 warning/critical/unknown 都不通过；先检查 /readyz。"
+    healthChecksPassing: "任何 warning/critical/unknown 都不通过；先检查 /healthz，再读取 /readyz 的供应商降级状态。"
   };
   const missing = Object.entries(results).filter(([, value]) => !value).map(([name]) => name);
   return {

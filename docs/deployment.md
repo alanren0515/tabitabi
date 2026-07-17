@@ -4,11 +4,11 @@ The app is a single Node.js service that serves the frontend and keeps all provi
 
 ## Hosting decision for the first pilot
 
-**Selected host: Fly.io in Tokyo (`nrt`).** Deploy the existing Dockerfile as one `shared-cpu-1x` Machine with 512 MB RAM, attach a 1 GB Fly Volume at `/app/data`, and keep exactly one Machine. The Machine automatically stops when idle and starts on the next request. Fly.io does not charge CPU or RAM while it is stopped; a full month of continuously running Tokyo compute is approximately USD 4.18. The 1 GB volume is USD 0.15/month, and a stopped Machine's root filesystem is also billed by provisioned GB, so the idle fixed cost is not only the volume charge. Snapshots and outbound traffic can add usage charges. This remains below Railway's USD 5 minimum only when actual running time is limited by autostop.
+**Selected host: Fly.io in Tokyo (`nrt`).** Deploy the existing Dockerfile as one `shared-cpu-1x` Machine with 512 MB RAM, attach a 1 GB Fly Volume at `/app/data`, and keep exactly one Machine. The Machine automatically stops when idle and starts on the next request. Fly.io does not charge CPU or RAM while it is stopped; at the price verified on 2026-07-17, a full month of continuously running Tokyo compute is approximately USD 3.19. The 1 GB volume is USD 0.15/month, and a stopped Machine's root filesystem is USD 0.15/GB-month. Volume snapshots are USD 0.08/GB-month after Fly's first 10 GB of snapshot storage; outbound traffic can add usage charges. Actual compute should be lower when autostop is effective.
 
 **Domain decision: use `tabitabi-jp.fly.dev` for the closed pilot.** Fly automatically supplies the app-name-based `fly.dev` hostname and HTTPS. Do not buy a custom domain before the pilot proves value. After 20 live inputs and 10 valid feedback records pass the pilot gate, register a short branded domain and attach it with a Fly-managed certificate.
 
-The checked-in [`fly.toml`](../fly.toml) fixes the production region, one 512 MB Machine, idle autostop with request-driven autostart, HTTPS redirect, `/readyz` health check and `/app/data` volume mount. The first request after an idle period may experience a short cold start. The provisional app name is globally scoped; if `tabitabi-jp` is unavailable at creation time, choose the nearest available name and update both `app` and the generated-domain reference in this document.
+The checked-in [`fly.toml`](../fly.toml) fixes the production region, one 512 MB Machine, idle autostop with request-driven autostart, HTTPS redirect, `/healthz` routing check and `/app/data` volume mount. `/readyz` remains an operator status endpoint and reports provider degradation without removing the whole Machine from Fly routing. The first request after an idle period may experience a short cold start.
 
 **Why not Railway or Render for this phase:** Railway's current Hobby minimum is USD 5/month. Render's free web service does not preserve pilot metrics, while a paid web service plus persistent disk costs more than this Fly configuration. Both remain viable fallbacks if Fly capacity or account setup becomes a problem.
 
@@ -24,10 +24,11 @@ This decision is for the first closed pilot, not a claim that Railway is the per
 - Idle policy: stop the Machine when idle, keep zero Machines permanently running, and automatically start it on the next request.
 - Persistent volume: create `tabitabi_data` as 1 GB in `nrt`; mount at `/app/data`.
 - Snapshots: daily automatic snapshots retained for 7 days; verify with `fly volumes snapshots list <volume-id>` after deployment.
-- Health check: `/readyz`.
+- Fly routing and Docker health check: `/healthz`; operator readiness/degradation status: `/readyz`.
 - Public URL: `https://tabitabi-jp.fly.dev` unless the globally unique app name changes.
 - Secrets: use `fly secrets set`; never upload `.env.local`.
-- Initial cost guardrail: Google quotas at 100 search/detail calls per day; application limits are 90 search/detail calls, 60 new vision analyses, 60 Qwen attempts and 10 OpenAI fallback attempts per Tokyo day.
+- Initial cost guardrail: Google quotas at 100 search/detail calls per day; application limits are 90 search/detail calls, 60 new vision analyses, 60 Qwen attempts, 10 OpenAI fallback attempts and 60 Hot Pepper HTTP requests per Tokyo day.
+- Emergency stop: setting the Fly secret `PAID_API_EMERGENCY_STOP=true` blocks every paid-provider route before an upstream request. The automatic persistent circuit isolates only the affected provider for six hours after bursts or repeated availability failures. See [`security-incident-response.md`](security-incident-response.md).
 
 ## Required environment variables
 
@@ -45,6 +46,8 @@ Optional:
 - `OPENAI_API_KEY` for the quality fallback
 - `HOTPEPPER_API_KEY` for listing enrichment
 - `TRUST_PROXY=true` only when the service is behind a trusted reverse proxy that overwrites `X-Forwarded-For`
+
+`PAID_API_EMERGENCY_STOP=false` is committed in `fly.toml`. During an incident, set it as a Fly secret to `true`; the secret overrides the non-secret default and restarts the Machine into fail-closed mode.
 
 Never copy `.env.local` into an image or commit it. The included `.dockerignore` excludes all local environment files, runtime metrics, screenshots, tests, and development artifacts.
 
@@ -94,7 +97,7 @@ After deployment, first run the provider-free smoke test. It checks liveness, re
 TABITABI_BASE_URL=https://tabitabi-jp.fly.dev npm run release:smoke
 ```
 
-Then run one explicitly authorized live provider smoke with a non-private test screenshot. This consumes one Qwen request, one Google Places Text Search request and one Place Details request:
+Only when separately authorized, run one live provider smoke with a non-private test screenshot. The current full details path may consume one Qwen request, one Google Places Text Search request, one Place Details request, up to three Hot Pepper searches, and one bounded public restaurant-website fetch. Report this scope and the estimated cost before running it:
 
 ```bash
 TABITABI_BASE_URL=https://tabitabi-jp.fly.dev \
@@ -109,13 +112,13 @@ Use the random output as `PILOT_ACCESS_CODE`; production readiness rejects codes
 
 Use `fly secrets import` through standard input so secret values do not become shell-history command arguments. Never paste them into a task message, screenshot, committed shell script or deployment log. The first deploy must use `--ha=false`; Fly can otherwise create two Machines by default. After every deploy, verify `fly machine list` still shows exactly one Machine.
 
-The container runs as the unprivileged `node` user. `GET /healthz` is a liveness check. In production, `GET /readyz` returns HTTP 200 only when live screenshot extraction, Google Places, the invite access code, public operator name, and public contact email are configured; OpenAI fallback and Hot Pepper remain optional and are reported only as booleans. The Docker health check uses `/readyz`, and neither endpoint returns keys.
+The container runs as the unprivileged `node` user. `GET /healthz` is the Fly routing and Docker liveness check. In production, `GET /readyz` returns HTTP 200 when core configuration and storage are ready; it separately reports automatic provider degradation and the manual emergency stop. OpenAI fallback and Hot Pepper remain optional and are reported only as booleans. Neither endpoint returns keys.
 
 Unhandled promise rejections and uncaught exceptions are treated as fatal: the service logs only a bounded error type/name/code summary, closes the listener, and exits with status 1. Configure the container platform to restart failed instances and investigate repeated restarts; the process must not continue after an unknown fatal state.
 
 The image creates `/app/data` as a writable directory for privacy-minimized event and provider-health JSONL records. The service enforces a 30-day default retention window plus 50,000-line and 10 MB caps per file, pruning atomically on startup traffic and periodically thereafter. Configure `LOG_RETENTION_DAYS`, `EVENT_LOG_MAX_LINES`, `EVENT_LOG_MAX_BYTES`, `SOURCE_LOG_MAX_LINES`, and `SOURCE_LOG_MAX_BYTES` only when a documented deployment policy requires different limits. Container filesystems are commonly ephemeral; attach a persistent volume only if operational history must survive a restart. The app does not require persistence to serve user requests.
 
-If pilot metrics must survive host loss, back up the complete `data/` volume (including `events.jsonl`, `source-metrics.jsonl`, and `daily-budget.json`) with encrypted, access-controlled volume snapshots. Use the same or shorter retention period as the live data, test restoring to a non-production directory, and preserve ownership for the unprivileged `node` user. Do not selectively merge JSONL files from multiple instances.
+If pilot metrics must survive host loss, back up the complete `data/` volume (including `events.jsonl`, `source-metrics.jsonl`, `daily-budget.json`, and `provider-circuit.json`) with encrypted, access-controlled volume snapshots. Use the same or shorter retention period as the live data, test restoring to a non-production directory, and preserve ownership for the unprivileged `node` user. Do not selectively merge JSONL files from multiple instances.
 
 Run exactly one application instance for this MVP. Rate limits and request caches are in memory, while the daily budget is a local file; multiple replicas would create independent rate-limit/cache state and unsafe concurrent budget accounting. Horizontal scaling requires shared atomic rate-limit, cache, budget, and event stores before adding replicas.
 
@@ -126,9 +129,11 @@ Run exactly one application instance for this MVP. Rate limits and request cache
    If `PILOT_ACCESS_CODE` is used, generate a long random value and distribute it only to pilot participants. It is a lightweight shared gate, not an account system.
 3. Fly.io deployments use the Fly Proxy-provided `Fly-Client-IP` header. Set `TRUST_PROXY=true` on other hosts only if the service is reachable exclusively through a controlled proxy that removes any client-supplied `X-Forwarded-For` and writes the authoritative client address. Otherwise leave it `false`; trusting an append-only or publicly forgeable header defeats IP rate limits.
 4. Confirm Google Places daily quotas remain at 100 Text Search and 100 Place Details requests.
-   The application defaults `DAILY_PLACES_SEARCH_LIMIT` and `DAILY_PLACES_DETAILS_LIMIT` to 90, leaving ten console-quota calls for diagnosis. Vision is separately capped at `DAILY_VISION_REQUEST_LIMIT=60`, `DAILY_QWEN_ATTEMPT_LIMIT=60`, and `DAILY_OPENAI_FALLBACK_LIMIT=10`. Counters persist in `/app/data/daily-budget.json`, reset on the next Tokyo calendar day, and are consumed only before an upstream call. Exact-image and Places cache hits do not consume another provider budget unit. Deployment preflight fails if any ceiling is raised beyond the reviewed maximum.
+   The application defaults `DAILY_PLACES_SEARCH_LIMIT` and `DAILY_PLACES_DETAILS_LIMIT` to 90, leaving ten console-quota calls for diagnosis. Vision is separately capped at `DAILY_VISION_REQUEST_LIMIT=60`, `DAILY_QWEN_ATTEMPT_LIMIT=60`, and `DAILY_OPENAI_FALLBACK_LIMIT=10`; Hot Pepper is capped at `DAILY_HOTPEPPER_ATTEMPT_LIMIT=60` real HTTP requests. Counters persist in `/app/data/daily-budget.json`, reset on the next Tokyo calendar day, and are consumed only before an upstream call. Exact-image and Places cache hits do not consume another provider budget unit. Deployment preflight fails if any ceiling is raised beyond the reviewed maximum.
 
    In addition, a client may submit at most four screenshot analyses per minute and twenty per true rolling 24 hours. At most four screenshot bodies may be received and decoded concurrently, and only two uncached model jobs may run concurrently. Identical decoded image bytes share a ten-minute in-memory result cache and concurrent duplicates are coalesced. Images over 8 MB, 20 million pixels, or 10,000 px on either edge are rejected before a provider call. Model output defaults to 1,200 tokens and cannot exceed 1,800 through environment configuration. A corrupt daily-budget file fails closed and stops new paid calls until it is repaired.
+
+   A second persistent anomaly circuit allows at most 10 Qwen, 3 OpenAI, 20 Google Places or 20 Hot Pepper upstream attempts in any five-minute window. It isolates the affected provider for six hours after a burst, two authentication/rate-limit failures, or five network/timeout/5xx failures. Model quality errors do not trigger it. `/healthz` and the application shell remain routable while the affected paid route returns 503. A corrupt circuit file fails closed for all providers. The incident runbook contains the manual kill and recovery commands.
 5. Add a stable production egress IP restriction to the Google key when the host provides one.
 6. Review provider dashboards after the first real users and lower rate limits if abuse appears.
 7. Keep outbound DNS and HTTP egress controls enabled. The public-webpage endpoint rejects private/reserved DNS results, unsafe redirects, non-HTML responses, and bodies over 512 KB, but production network policy should remain the final SSRF boundary.

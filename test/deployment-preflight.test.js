@@ -4,7 +4,7 @@ import { evaluateDeploymentPreflight, flyApplicationName, parseEnvironmentFile }
 
 const valid = {
   env: { DASHSCOPE_API_KEY: "key", DASHSCOPE_BASE_URL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", QWEN_VISION_MODEL: "qwen3.6-flash", GOOGLE_MAPS_API_KEY: "key", PILOT_ACCESS_CODE: "a-strong-random-access-code", PUBLIC_OPERATOR_NAME: "TabiTabi", PUBLIC_CONTACT_EMAIL: "support@example.com" },
-  flyConfig: 'primary_region = "nrt"\n[mounts]\nsource = "tabitabi_data"\ndestination = "/app/data"\nscheduled_snapshots = true\nsnapshot_retention = 7\n[http_service]\nforce_https = true\nauto_start_machines = true\nauto_stop_machines = "stop"\nmin_machines_running = 0\n[[http_service.checks]]\npath = "/readyz"\n[[vm]]\nsize = "shared-cpu-1x"\nmemory = "512mb"\ncpus = 1',
+  flyConfig: 'primary_region = "nrt"\n[env]\nPAID_API_EMERGENCY_STOP = "false"\n[mounts]\nsource = "tabitabi_data"\ndestination = "/app/data"\nscheduled_snapshots = true\nsnapshot_retention = 7\n[http_service]\nforce_https = true\nauto_start_machines = true\nauto_stop_machines = "stop"\nmin_machines_running = 0\n[[http_service.checks]]\npath = "/healthz"\n[[vm]]\nsize = "shared-cpu-1x"\nmemory = "512mb"\ncpus = 1',
   dockerfile: `FROM node:22@sha256:${"a".repeat(64)}`,
   releaseGate: { gatePassed: true }
 };
@@ -13,6 +13,11 @@ test("passes only when production configuration and release evidence are complet
   assert.equal(evaluateDeploymentPreflight(valid).passed, true);
   const failed = evaluateDeploymentPreflight({ ...valid, env: { ...valid.env, PUBLIC_CONTACT_EMAIL: "" }, releaseGate: { gatePassed: false } });
   assert.deepEqual(failed.missing, ["contactEmail", "releaseEvidence"]);
+});
+
+test("requires the reviewed emergency-stop switch in Fly configuration", () => {
+  const flyConfig = valid.flyConfig.replace('PAID_API_EMERGENCY_STOP = "false"', 'PAID_API_EMERGENCY_STOP = "true"');
+  assert.equal(evaluateDeploymentPreflight({ ...valid, flyConfig }).checks.emergencyStopReady, false);
 });
 
 test("rejects lookalike Qwen endpoints, unsafe budgets, and Fly values found only in comments", () => {
@@ -29,6 +34,7 @@ test("fails deployment when model attempt, fallback, or output ceilings are rais
     { DAILY_VISION_REQUEST_LIMIT: "61" },
     { DAILY_QWEN_ATTEMPT_LIMIT: "61" },
     { DAILY_OPENAI_FALLBACK_LIMIT: "11" },
+    { DAILY_HOTPEPPER_ATTEMPT_LIMIT: "61" },
     { VISION_MAX_OUTPUT_TOKENS: "1801" }
   ]) {
     const result = evaluateDeploymentPreflight({ ...valid, env: { ...valid.env, ...override } });

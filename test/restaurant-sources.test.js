@@ -496,6 +496,7 @@ test("Hot Pepper falls back from an empty phone lookup to name and address", asy
 
 test("Hot Pepper relaxes an over-specific address keyword to the restaurant name", async () => {
   const urls = [];
+  let admittedRequests = 0;
   const fetchImpl = async (url) => {
     urls.push(String(url));
     if (urls.length < 3) return Response.json({ results: { shop: [] } });
@@ -516,10 +517,12 @@ test("Hot Pepper relaxes an over-specific address keyword to the restaurant name
     address: "東京都台東区上野6-8-8 POKKE B1F",
     phone: "03-0000-0000",
     apiKey: "hp-key",
-    fetchImpl
+    fetchImpl,
+    beforeRequest: async () => { admittedRequests += 1; }
   });
 
   assert.equal(urls.length, 3);
+  assert.equal(admittedRequests, 3);
   assert.match(decodeURIComponent(urls[2]), /keyword=HUB\+?上野店|keyword=HUB 上野店/);
   assert.equal(result.match.id, "J001178343");
 });

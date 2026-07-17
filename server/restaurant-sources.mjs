@@ -87,20 +87,20 @@ export async function getGooglePlaceDetails({ placeId, apiKey, fetchImpl = fetch
   return normalizePlaceDetails(payload, new Date().toISOString());
 }
 
-export async function searchHotPepper({ name, address = "", phone = "", apiKey, fetchImpl = fetch }) {
+export async function searchHotPepper({ name, address = "", phone = "", apiKey, fetchImpl = fetch, beforeRequest = async () => {} }) {
   if (!apiKey) return { match: null, retrievedAt: null, available: false };
   const keyword = [name, compactJapaneseAddress(address)].filter(Boolean).join(" ").trim();
   const nameKeyword = String(name || "").trim();
   if (!keyword && !phone) return { match: null, retrievedAt: null, available: true };
   const phoneDigits = phone.replace(/\D/g, "");
-  let shops = phoneDigits ? await fetchHotPepperShops({ apiKey, tel: phoneDigits, fetchImpl }) : [];
+  let shops = phoneDigits ? await fetchHotPepperShops({ apiKey, tel: phoneDigits, fetchImpl, beforeRequest }) : [];
   let best = bestHotPepperMatch(shops, { name, address });
   if ((!best || best.score < 6) && keyword) {
-    shops = await fetchHotPepperShops({ apiKey, keyword, fetchImpl });
+    shops = await fetchHotPepperShops({ apiKey, keyword, fetchImpl, beforeRequest });
     best = bestHotPepperMatch(shops, { name, address });
   }
   if ((!best || best.score < 6) && nameKeyword && nameKeyword !== keyword) {
-    shops = await fetchHotPepperShops({ apiKey, keyword: nameKeyword, fetchImpl });
+    shops = await fetchHotPepperShops({ apiKey, keyword: nameKeyword, fetchImpl, beforeRequest });
     best = bestHotPepperMatch(shops, { name, address });
   }
   return {
@@ -110,13 +110,14 @@ export async function searchHotPepper({ name, address = "", phone = "", apiKey, 
   };
 }
 
-async function fetchHotPepperShops({ apiKey, tel = "", keyword = "", fetchImpl }) {
+async function fetchHotPepperShops({ apiKey, tel = "", keyword = "", fetchImpl, beforeRequest }) {
   const url = new URL(HOTPEPPER_URL);
   url.searchParams.set("key", apiKey);
   url.searchParams.set("format", "json");
   url.searchParams.set("count", "3");
   if (tel) url.searchParams.set("tel", tel);
   else url.searchParams.set("keyword", keyword);
+  await beforeRequest();
   const response = await fetchSource(fetchImpl, url, { headers: { Accept: "application/json" } }, "hotpepper");
   const payload = await readSourceResponse(response, "hotpepper");
   return Array.isArray(payload?.results?.shop) ? payload.results.shop : [];

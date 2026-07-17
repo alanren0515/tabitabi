@@ -22,6 +22,7 @@ import { pilotAccessAuthorized, pilotAccessRequired, protectedPilotApiPath } fro
 import { installFatalProcessHandlers } from "./server/process-failures.mjs";
 import { probeWritableDataStore } from "./server/data-store-readiness.mjs";
 import { createVisionConcurrencyGate, imageContentFingerprint, VisionConcurrencyError } from "./server/vision-abuse-protection.mjs";
+import { createProviderCircuitBreaker, ProviderCircuitOpenError } from "./server/provider-circuit-breaker.mjs";
 
 const ROOT = resolve(process.cwd());
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
@@ -62,12 +63,14 @@ const sourceMetricLog = createJsonlStore({
   maxBytes: boundedEnvInteger(process.env.SOURCE_LOG_MAX_BYTES, 64 * 1024, 100 * 1024 * 1024, 10 * 1024 * 1024)
 });
 const dailyBudget = createDailyBudgetStore({ path: join(ROOT, "data", "daily-budget.json") });
+const providerCircuit = createProviderCircuitBreaker({ path: join(ROOT, "data", "provider-circuit.json") });
 const dailyLimits = {
   visionRequests: boundedEnvInteger(process.env.DAILY_VISION_REQUEST_LIMIT, 1, 60, 60),
   visionQwenAttempts: boundedEnvInteger(process.env.DAILY_QWEN_ATTEMPT_LIMIT, 1, 60, 60),
   visionFallbackAttempts: boundedEnvInteger(process.env.DAILY_OPENAI_FALLBACK_LIMIT, 1, 10, 10),
   placesSearch: boundedEnvInteger(process.env.DAILY_PLACES_SEARCH_LIMIT, 1, 10_000, 90),
-  placesDetails: boundedEnvInteger(process.env.DAILY_PLACES_DETAILS_LIMIT, 1, 10_000, 90)
+  placesDetails: boundedEnvInteger(process.env.DAILY_PLACES_DETAILS_LIMIT, 1, 10_000, 90),
+  hotPepperAttempts: boundedEnvInteger(process.env.DAILY_HOTPEPPER_ATTEMPT_LIMIT, 1, 60, 60)
 };
 
 const server = createServer(async (request, response) => {
@@ -82,12 +85,18 @@ const server = createServer(async (request, response) => {
       sendJson(response, 401, { code: "PILOT_ACCESS_REQUIRED", error: "有効な招待アクセスコードが必要です。設定画面に保存してから再試行してください。" });
       return;
     }
+    if (paidProviderApiPath(request.method, requestPath) && paidApiEmergencyStopped()) {
+      sendJson(response, 503, { code: "PAID_API_EMERGENCY_STOP", error: "安全のため外部 API 呼び出しを一時停止しています。" });
+      return;
+    }
     if (request.method === "GET" && request.url === "/healthz") {
       sendJson(response, 200, { status: "ok", visionExtraction: visionCapabilities.visionExtraction, placesSearch: Boolean(process.env.GOOGLE_MAPS_API_KEY) });
       return;
     }
     if (request.method === "GET" && request.url === "/readyz") {
-      sendJson(response, readiness.ready ? 200 : 503, readiness);
+      const circuit = await providerCircuit.snapshot();
+      const ready = readiness.ready;
+      sendJson(response, ready ? 200 : 503, { ...readiness, ready, status: ready ? "ready" : "not_ready", providerCircuit: circuit, emergencyStop: paidApiEmergencyStopped() });
       return;
     }
     if (request.method === "GET" && request.url === "/api/capabilities") {
@@ -96,8 +105,10 @@ const server = createServer(async (request, response) => {
         vision_qwen_attempts: dailyLimits.visionQwenAttempts,
         vision_openai_fallback_attempts: dailyLimits.visionFallbackAttempts,
         places_search: dailyLimits.placesSearch,
-        places_details: dailyLimits.placesDetails
+        places_details: dailyLimits.placesDetails,
+        hotpepper_attempts: dailyLimits.hotPepperAttempts
       });
+      const providerCircuitStatus = await providerCircuit.snapshot();
       sendJson(response, 200, {
         ...visionCapabilities,
         placesSearch: Boolean(process.env.GOOGLE_MAPS_API_KEY),
@@ -105,6 +116,8 @@ const server = createServer(async (request, response) => {
         webpageExtraction: true,
         pilotAccessRequired: pilotAccessRequired(process.env),
         dailyBudget: dailyBudgetStatus,
+        providerCircuit: providerCircuitStatus,
+        emergencyStop: paidApiEmergencyStopped(),
         publicInfo: publicOperatorInfo(process.env)
       });
       return;
@@ -194,7 +207,7 @@ const server = createServer(async (request, response) => {
     const standaloneDocument = ["/privacy", "/terms"].includes(requestPath) ? requestPath.slice(1) : "";
     await serveStatic(request, response, standaloneDocument ? "/index.html" : "", standaloneDocument ? { "X-TabiTabi-Document": standaloneDocument } : {});
   } catch (error) {
-    console.error(error);
+    console.error("REQUEST_FAILED", safeErrorSummary(error, "request"));
     if (!response.headersSent && error?.statusCode === 413) sendJson(response, 413, { code: "BODY_TOO_LARGE", error: "Request body is too large" });
     else if (!response.headersSent) sendJson(response, 500, { error: "Internal server error" });
     else response.end();
@@ -233,13 +246,16 @@ async function handleRestaurantSearch(request, response) {
   try {
     const cacheKey = stableCacheKey([body?.query, body?.clues || {}]);
     const { value: result, cacheStatus } = await placesSearchCache.getOrLoad(cacheKey, async () => {
+      await admitProviderCall("google_places");
       const budget = await dailyBudget.consume("places_search", dailyLimits.placesSearch);
       response.setHeader("X-Daily-Budget-Remaining", String(budget.remaining));
       return searchGooglePlaces({ query: body?.query, clues: body?.clues || {}, apiKey: process.env.GOOGLE_MAPS_API_KEY });
     });
+    await providerCircuit.recordOutcome("google_places", { status: "success" });
     await recordSourceMetric({ source: "google_places", operation: "text_search", skuClass: "pro", status: "success", durationMs: Date.now() - startedAt, resultCount: result.candidates.length, cacheStatus });
     sendJson(response, 200, { ...result, mode: "live", cacheStatus });
   } catch (error) {
+    await recordProviderFailure("google_places", error);
     await recordSourceMetric({ source: "google_places", operation: "text_search", skuClass: "pro", status: "error", durationMs: Date.now() - startedAt, errorCode: error instanceof DataSourceError ? error.status : "unknown" });
     sendSourceError(response, error, "Restaurant search failed");
   }
@@ -251,10 +267,12 @@ async function handleCandidatePreview(request, response) {
   try {
     const placeId = String(body?.placeId || "").trim();
     const { value: place, cacheStatus } = await placesDetailsCache.getOrLoad(placeId, async () => {
+      await admitProviderCall("google_places");
       const budget = await dailyBudget.consume("places_details", dailyLimits.placesDetails);
       response.setHeader("X-Daily-Budget-Remaining", String(budget.remaining));
       return getGooglePlaceDetails({ placeId, apiKey: process.env.GOOGLE_MAPS_API_KEY });
     });
+    await providerCircuit.recordOutcome("google_places", { status: "success" });
     await recordSourceMetric({ source: "google_places", operation: "candidate_preview", skuClass: "enterprise", status: "success", durationMs: Date.now() - startedAt, resultCount: 1, cacheStatus });
     sendJson(response, 200, {
       preview: {
@@ -269,6 +287,7 @@ async function handleCandidatePreview(request, response) {
       cacheStatus
     });
   } catch (error) {
+    await recordProviderFailure("google_places", error);
     await recordSourceMetric({ source: "google_places", operation: "candidate_preview", skuClass: "enterprise", status: "error", durationMs: Date.now() - startedAt, errorCode: error instanceof DataSourceError ? error.status : "unknown" });
     sendSourceError(response, error, "Candidate preview failed");
   }
@@ -307,10 +326,12 @@ async function handleRestaurantDetails(request, response) {
   const googleStartedAt = Date.now();
   try {
     const { value: place, cacheStatus } = await placesDetailsCache.getOrLoad(String(body?.placeId || ""), async () => {
+      await admitProviderCall("google_places");
       const budget = await dailyBudget.consume("places_details", dailyLimits.placesDetails);
       response.setHeader("X-Daily-Budget-Remaining", String(budget.remaining));
       return getGooglePlaceDetails({ placeId: body?.placeId, apiKey: process.env.GOOGLE_MAPS_API_KEY });
     });
+    await providerCircuit.recordOutcome("google_places", { status: "success" });
     await recordSourceMetric({ source: "google_places", operation: "place_details", skuClass: "enterprise", status: "success", durationMs: Date.now() - googleStartedAt, resultCount: 1, cacheStatus });
     const hotPepperStartedAt = Date.now();
     let hotPepperResult;
@@ -319,12 +340,18 @@ async function handleRestaurantDetails(request, response) {
         name: place.name,
         address: place.address,
         phone: place.phone,
-        apiKey: process.env.HOTPEPPER_API_KEY
+        apiKey: process.env.HOTPEPPER_API_KEY,
+        beforeRequest: async () => {
+          await admitProviderCall("hotpepper");
+          await dailyBudget.consume("hotpepper_attempts", dailyLimits.hotPepperAttempts);
+        }
       });
+      await providerCircuit.recordOutcome("hotpepper", { status: "success" });
       if (hotPepperResult.available) {
         await recordSourceMetric({ source: "hotpepper", operation: "shop_search", skuClass: "api", status: "success", durationMs: Date.now() - hotPepperStartedAt, resultCount: hotPepperResult.match ? 1 : 0 });
       }
     } catch (error) {
+      await recordProviderFailure("hotpepper", error);
       console.error("Hot Pepper enrichment skipped", error instanceof DataSourceError ? error.status : "unknown");
       await recordSourceMetric({ source: "hotpepper", operation: "shop_search", skuClass: "api", status: "error", durationMs: Date.now() - hotPepperStartedAt, errorCode: error instanceof DataSourceError ? error.status : "unknown" });
       hotPepperResult = { match: null, retrievedAt: null, available: Boolean(process.env.HOTPEPPER_API_KEY), error: true };
@@ -357,12 +384,17 @@ async function handleRestaurantDetails(request, response) {
     const restaurant = buildRestaurantResult({ place, hotPepperResult, discoveredReservationLinks: userProvidedReservationLinks, officialWebsiteDiscovery, verifiedOfficialSource, userClues: body?.clues || {}, planIntent: body?.plan || {} });
     sendJson(response, 200, { restaurant, mode: "live", hotPepperAvailable: hotPepperResult.available, cacheStatus });
   } catch (error) {
+    await recordProviderFailure("google_places", error);
     await recordSourceMetric({ source: "google_places", operation: "place_details", skuClass: "enterprise", status: "error", durationMs: Date.now() - googleStartedAt, errorCode: error instanceof DataSourceError ? error.status : "unknown" });
     sendSourceError(response, error, "Restaurant details failed");
   }
 }
 
 function sendSourceError(response, error, fallbackMessage) {
+  if (error instanceof ProviderCircuitOpenError) {
+    sendProviderCircuitError(response, error);
+    return;
+  }
   if (error instanceof DailyBudgetExceededError) {
     sendDailyBudgetError(response, error);
     return;
@@ -379,8 +411,33 @@ function sendSourceError(response, error, fallbackMessage) {
     sendJson(response, responseStatus, { code, error: error.message });
     return;
   }
-  console.error(error);
+  console.error("DATA_SOURCE_FAILURE", safeErrorSummary(error, "data_source"));
   sendJson(response, 500, { code: "DATA_SOURCE_ERROR", error: fallbackMessage });
+}
+
+function sendProviderCircuitError(response, error) {
+  const retryAfterSeconds = error.openUntil
+    ? Math.max(60, Math.ceil((new Date(error.openUntil).getTime() - Date.now()) / 1000))
+    : 300;
+  response.setHeader("Retry-After", String(retryAfterSeconds));
+  console.error("SECURITY_CIRCUIT_OPEN", { provider: String(error.provider || "unknown").slice(0, 40), reason: String(error.reason || "automatic_guard").slice(0, 120), openUntil: error.openUntil || null });
+  sendJson(response, 503, { code: error.code, error: "異常な外部 API 利用を検知したため、自動的に呼び出しを停止しました。", provider: error.provider || null, openUntil: error.openUntil || null });
+}
+
+async function admitProviderCall(provider) {
+  if (paidApiEmergencyStopped()) throw new ProviderCircuitOpenError({ reason: "manual_emergency_stop", openUntil: new Date(Date.now() + 24 * 60 * 60_000).toISOString() });
+  return providerCircuit.admit(provider);
+}
+
+async function recordProviderFailure(provider, error) {
+  if (error instanceof ProviderCircuitOpenError || error instanceof DailyBudgetExceededError || error instanceof DailyBudgetUnavailableError) return;
+  if (!(error instanceof DataSourceError) || error.source !== provider) return;
+  if (error instanceof DataSourceError && error.status >= 400 && error.status < 500 && ![401, 403, 429].includes(error.status)) return;
+  const errorCode = error instanceof DataSourceError
+    ? ([401, 403].includes(error.status) ? "authentication" : error.status === 429 ? "rate_limit" : String(error.status))
+    : String(error?.kind || error?.code || "unknown");
+  const snapshot = await providerCircuit.recordOutcome(provider, { status: "error", errorCode });
+  if (snapshot.open) console.error("SECURITY_CIRCUIT_OPEN", { reason: snapshot.reason, openUntil: snapshot.openUntil });
 }
 
 function sendDailyBudgetUnavailableError(response) {
@@ -451,6 +508,7 @@ async function handleScreenshotExtraction(request, response) {
         imageDataUrl,
         env: process.env,
         beforeProviderAttempt: async (provider) => {
+          await admitProviderCall(provider.name);
           if (provider.name === "qwen") await dailyBudget.consume("vision_qwen_attempts", dailyLimits.visionQwenAttempts);
           else if (provider.name === "openai") await dailyBudget.consume("vision_openai_fallback_attempts", dailyLimits.visionFallbackAttempts);
         }
@@ -467,6 +525,10 @@ async function handleScreenshotExtraction(request, response) {
     }
     if (error instanceof DailyBudgetUnavailableError) {
       sendDailyBudgetUnavailableError(response);
+      return;
+    }
+    if (error instanceof ProviderCircuitOpenError) {
+      sendProviderCircuitError(response, error);
       return;
     }
     if (error instanceof VisionExtractionError) {
@@ -496,6 +558,9 @@ async function handleScreenshotExtraction(request, response) {
 
 async function recordVisionAttempts(attempts) {
   for (const attempt of attempts || []) {
+    if (attempt.status === "success" || ["authentication", "rate_limit", "timeout", "network", "upstream_5xx"].includes(attempt.errorCode)) {
+      await providerCircuit.recordOutcome(attempt.provider, { status: attempt.status, errorCode: attempt.errorCode });
+    }
     await recordSourceMetric({
       source: attempt.provider,
       operation: "screenshot_extraction",
@@ -512,6 +577,25 @@ async function recordVisionAttempts(attempts) {
       providerRequestId: attempt.requestId || null
     });
   }
+}
+
+function paidApiEmergencyStopped() {
+  return process.env.PAID_API_EMERGENCY_STOP === "true";
+}
+
+function paidProviderApiPath(method, pathname) {
+  if (String(method || "").toUpperCase() !== "POST") return false;
+  return pathname === "/api/extract-screenshot" || pathname.startsWith("/api/restaurants/");
+}
+
+function safeErrorSummary(error, operation) {
+  return {
+    operation,
+    name: String(error?.name || "UnknownError").slice(0, 80),
+    code: typeof error?.code === "string" ? error.code.slice(0, 80) : null,
+    source: typeof error?.source === "string" ? error.source.slice(0, 40) : null,
+    status: Number.isInteger(error?.status) ? error.status : null
+  };
 }
 
 function publicVisionError(code) {

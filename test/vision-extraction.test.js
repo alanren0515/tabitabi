@@ -189,6 +189,24 @@ test("uses Qwen without calling OpenAI when Qwen returns a valid high-confidence
   assert.deepEqual(result.attempts[0].usage, { inputTokens: 2400, outputTokens: 420, totalTokens: 2820, imageTokens: 1900 });
 });
 
+test("uses the fallback provider when only the primary provider circuit is open", async () => {
+  const result = await extractScreenshotWithFallback({
+    imageDataUrl: PNG_DATA_URL,
+    env: { DASHSCOPE_API_KEY: "qwen-key", OPENAI_API_KEY: "openai-key" },
+    beforeProviderAttempt: async (provider) => {
+      if (provider.name === "qwen") {
+        const error = new Error("circuit open");
+        error.code = "PROVIDER_CIRCUIT_OPEN";
+        throw error;
+      }
+    },
+    fetchImpl: async () => jsonResponse({ output: [{ content: [{ type: "output_text", text: JSON.stringify(sampleTikTokExtraction) }] }], usage: {} })
+  });
+  assert.equal(result.provider, "openai");
+  assert.equal(result.attempts[0].errorCode, "provider_circuit");
+  assert.equal(result.attempts[0].status, "skipped");
+});
+
 test("normalizes Qwen string claims and derives a missing search query", async () => {
   const extraction = structuredClone(sampleTikTokExtraction);
   extraction.claims = ["6月9日グランドオープンの新店"];
