@@ -205,7 +205,7 @@ const server = createServer(async (request, response) => {
       sendJson(response, 405, { error: "Method not allowed" });
       return;
     }
-    const standaloneDocument = ["/privacy", "/terms"].includes(requestPath) ? requestPath.slice(1) : "";
+    const standaloneDocument = ["/pilot", "/privacy", "/terms"].includes(requestPath) ? requestPath.slice(1) : "";
     await serveStatic(request, response, standaloneDocument ? "/index.html" : "", standaloneDocument ? { "X-TabiTabi-Document": standaloneDocument } : {});
   } catch (error) {
     console.error("REQUEST_FAILED", safeErrorSummary(error, "request"));

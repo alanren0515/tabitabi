@@ -82,6 +82,7 @@ const VIEW_LABELS = {
   saved: "行きたいリスト",
   history: "最近の確認",
   queue: "あとで確認する店舗",
+  pilot: "テスト参加",
   privacy: "プライバシーとデータ",
   terms: "利用条件",
   settings: "設定"
@@ -143,6 +144,7 @@ function render() {
   if (state.view === "saved") renderSaved();
   if (state.view === "history") renderHistory();
   if (state.view === "queue") renderQueue();
+  if (state.view === "pilot") renderPilot();
   if (state.view === "privacy") renderPrivacy();
   if (state.view === "terms") renderTerms();
   if (state.view === "settings") renderSettings();
@@ -150,7 +152,7 @@ function render() {
   syncRecent();
   syncSettings();
   syncPending();
-  document.title = state.view === "privacy" ? "プライバシーとデータ | TabiTabi" : state.view === "terms" ? "利用条件 | TabiTabi" : "TabiTabi | SNSで見つけた店を、次の行動へ";
+  document.title = state.view === "pilot" ? "クローズドテスト参加 | TabiTabi" : state.view === "privacy" ? "プライバシーとデータ | TabiTabi" : state.view === "terms" ? "利用条件 | TabiTabi" : "TabiTabi | SNSで見つけた店を、次の行動へ";
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
   if (viewChanged) {
@@ -1313,6 +1315,38 @@ function renderPrivacy() {
   });
 }
 
+function renderPilot() {
+  const publicInfo = state.capabilities?.publicInfo || {};
+  const contact = publicInfo.contactEmail || "";
+  const subject = encodeURIComponent("TabiTabi クローズドテスト参加希望");
+  const body = encodeURIComponent("TabiTabi クローズドテストへの参加を希望します。\n\n普段使うSNS：\n端末：iPhone / Android\n");
+  const mailto = contact ? `mailto:${encodeURIComponent(contact)}?subject=${subject}&body=${body}` : "";
+  app.innerHTML = `<section class="content-view narrow pilot-view">
+    <button class="back-button" data-action="home">← ホームへ</button>
+    <div class="pilot-hero">
+      <span class="step-chip">クローズドテスト参加者募集</span>
+      <h1>SNSで見つけた店を、<br>行ける情報に。</h1>
+      <p>日本国内にお住まいで、InstagramやTikTokなどから飲食店を探す方に、15〜20分の試作テストをお願いしています。</p>
+    </div>
+    <section class="pilot-criteria" aria-label="参加条件">
+      <article><span>01</span><strong>18歳以上・日本国内在住</strong><p>普段使っているiPhoneまたはAndroidから参加できます。</p></article>
+      <article><span>02</span><strong>自分の本当の店探しで試す</strong><p>公開SNSのスクリーンショットや、覚えている店名を使います。</p></article>
+      <article><span>03</span><strong>予約や購入は不要</strong><p>店舗と次の行動を確認し、結果ページから感想を送るところまでです。</p></article>
+    </section>
+    <section class="panel pilot-task">
+      <p class="overline">お願いすること</p>
+      <h2>2〜4件の飲食店を確認</h2>
+      <ol><li>Instagram・TikTokなどの公開投稿スクリーンショット、または店名を入力</li><li>抽出された店名と支店を確認し、正しい店舗を選択</li><li>公式サイト、電話、予約サービスなどの案内を確認</li><li>結果ページで「役に立ったか」「情報が正確か」を回答</li></ol>
+    </section>
+    <aside class="pilot-safety"><strong>安全とプライバシー</strong><p>予約の確定、支払い、電話は必要ありません。DM、通知、非公開投稿、他人の個人情報を含む画像は使用しないでください。画像は解析リクエスト内で処理し、TabiTabiのサーバーディスクには保存しません。</p></aside>
+    <section class="panel pilot-join">
+      <div><p class="overline">参加方法</p><h2>連絡後、招待コードをお送りします</h2><p>参加条件と注意事項を確認したうえで、テスト用アクセスコードをご案内します。コードを公開投稿へ転載しないでください。</p></div>
+      <div class="pilot-actions">${mailto ? `<a class="primary-button" href="${esc(mailto)}">メールで参加を相談する ${icons.arrow}</a>` : `<p class="inline-error">連絡先を準備中です。しばらくしてからもう一度ご確認ください。</p>`}<a class="secondary-button" href="/" data-action="home">招待コードをお持ちの方</a></div>
+    </section>
+    <p class="terms-footer-note">参加前に<a href="/privacy" data-action="privacy">プライバシーとデータ</a>と<a href="/terms" data-action="terms">利用条件</a>をご確認ください。テスト謝礼の有無や条件は、個別の募集案内で事前にお伝えします。</p>
+  </section>`;
+}
+
 function renderSettings() {
   const capabilities = state.capabilities || {};
   const budget = capabilities.dailyBudget || {};
@@ -1398,6 +1432,7 @@ document.addEventListener("click", (event) => {
   if (action === "saved") state.view = "saved";
   if (action === "history") state.view = "history";
   if (action === "queue") state.view = "queue";
+  if (action === "pilot") state.view = "pilot";
   if (action === "privacy") state.view = "privacy";
   if (action === "terms") state.view = "terms";
   if (action === "settings") state.view = "settings";

@@ -31,6 +31,12 @@ export async function runDeploymentSmoke({ baseUrl, allowedOrigin = "https://tab
   checks.capabilities = capabilities.visionExtraction === true && capabilities.placesSearch === true && capabilities.pilotAccessRequired === true
     && (!expectedRevision || capabilities.releaseRevision === expectedRevision);
   if (!checks.capabilities) throw new DeploymentSmokeError("capabilities", null, "本番機能と埋め込み release revision を確認してください。");
+  checks.pilot = await expectDocument("pilot", fetchImpl, `${origin}/pilot`);
+  checks.pilotContent = await expectTextMarkers("pilotContent", fetchImpl, `${origin}/src/app.js`, [
+    "クローズドテスト参加者募集",
+    "予約の確定、支払い、電話は必要ありません",
+    "メールで参加を相談する"
+  ]);
   checks.privacy = await expectDocument("privacy", fetchImpl, `${origin}/privacy`);
   checks.terms = await expectDocument("terms", fetchImpl, `${origin}/terms`);
   if (live) {
@@ -63,6 +69,14 @@ async function expectDocument(stage, fetchImpl, url) {
   catch { throw new DeploymentSmokeError(stage, null, "公開ページへの接続と Fly の起動状態を確認してください。"); }
   const text = await response.text();
   if (!response.ok || !/id="app"/.test(text) || response.headers.get("x-tabitabi-document") !== stage) throw new DeploymentSmokeError(stage, response.status, "独立した公開ページのサーバールートを確認してください。");
+  return true;
+}
+async function expectTextMarkers(stage, fetchImpl, url, markers) {
+  let response;
+  try { response = await fetchImpl(url, { redirect: "error", signal: AbortSignal.timeout(15_000) }); }
+  catch { throw new DeploymentSmokeError(stage, null, "公開ページのフロントエンド資源を取得できません。"); }
+  const text = await response.text();
+  if (!response.ok || !markers.every((marker) => text.includes(marker))) throw new DeploymentSmokeError(stage, response.status, "招募説明、プライバシー境界、参加 CTA の本番バンドルを確認してください。");
   return true;
 }
 function hintFor(status, code) {

@@ -4,7 +4,7 @@ export const FORMAL_EVIDENCE_MAX_AGE_MS = 24 * 60 * 60 * 1_000;
 const TECHNICAL_GATES = ["schemaValid", "confirmedSampleSize", "auditedSampleSize", "identificationAccuracy", "severeActionErrors", "bookingSafety", "coverageMatrix", "candidateTop3", "decisionSafety"];
 const PREFLIGHT_CHECKS = ["qwenKey", "qwenEndpoint", "qwenModel", "googlePlacesKey", "pilotAccessCode", "operatorName", "contactEmail", "emergencyStopReady", "providerBudgetCaps", "flyTokyo", "flyIdleLifecycle", "flyHttpsAndHealth", "flyMachineShape", "flyPersistentData", "flySnapshots", "pinnedContainerBase", "releaseEvidence"];
 const FLY_CHECKS = ["exactlyOneMachine", "machineStarted", "machineTokyo", "machineShape", "machineIdleLifecycle", "exactlyOneVolume", "volumeCreated", "volumeTokyo", "volumeName", "volumeSize", "volumeEncrypted", "volumeSnapshots", "volumeAttached", "volumeMounted", "healthChecksPresent", "healthChecksForMachine", "healthChecksPassing", "requiredSecretsDeployed"];
-const SMOKE_CHECKS = ["health", "readiness", "capabilities", "privacy", "terms"];
+const SMOKE_CHECKS = ["health", "readiness", "capabilities", "pilot", "pilotContent", "privacy", "terms"];
 
 export function evaluateFormalReleaseGate({
   releaseEvidence,

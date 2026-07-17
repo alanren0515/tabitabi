@@ -1,4 +1,5 @@
 const PUBLIC_ROUTES = Object.freeze({
+  "/pilot": "pilot",
   "/privacy": "privacy",
   "/terms": "terms"
 });
@@ -12,5 +13,5 @@ export function pathnameForView(view = "home") {
 }
 
 export function isPublicDocumentView(view) {
-  return view === "privacy" || view === "terms";
+  return view === "pilot" || view === "privacy" || view === "terms";
 }
