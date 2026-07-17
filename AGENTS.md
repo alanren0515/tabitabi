@@ -10,7 +10,9 @@
 ## Delivery and review loop
 
 - Work autonomously through ordinary implementation, testing, documentation, and reversible project-local changes.
-- After each meaningful implementation round, run the relevant automated and browser checks, then ask at least one independent subagent to review the completed scope. Use two reviewers when product/UX and engineering/release risks are both material.
+- At the start of each work loop, explicitly decide whether a subagent is worth its resource cost. Use one only when the task can progress independently in parallel, benefits materially from a distinct review perspective, or carries enough product/security/release risk that independent review is likely to catch consequential issues.
+- Do not use a subagent for small or tightly coupled edits, critical-path work the main agent must complete immediately, routine verification already covered by focused tests, or work that would duplicate the main agent's analysis. Prefer the minimum number of agents that covers the actual risk; two reviewers are reserved for genuinely separate product/UX and engineering/release concerns.
+- After a meaningful implementation round, always run the relevant automated and browser checks. Add independent subagent review only when the loop-level decision above justifies it, and briefly state the reason when one is used.
 - Triage every reviewer finding against current code and evidence. Fix actionable issues in scope, add regression coverage where appropriate, rerun verification, and report findings that were intentionally not adopted with a concrete reason.
 - Do not stop for ordinary technical choices. Pause only for actions that require the user in person, create or confirm payment, expose or transmit sensitive credentials/data, request a new external permission, or make an irreversible external change.
 - Never treat subagent approval as completion evidence by itself; the main agent remains responsible for inspecting changes and proving the final state.
