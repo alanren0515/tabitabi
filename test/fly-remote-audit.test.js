@@ -4,7 +4,7 @@ import { evaluateFlyRemoteState, parseFlyChecksJson, parseFlyJson } from "../ser
 
 const valid = {
   machines: [{ id: "machine-1", state: "started", region: "nrt", config: { guest: { cpu_kind: "shared", cpus: 1, memory_mb: 512 }, mounts: [{ volume: "volume-1", path: "/app/data" }] } }],
-  volumes: [{ id: "volume-1", state: "created", attached_machine_id: "machine-1", name: "tabitabi_data", region: "nrt", size_gb: 1 }],
+  volumes: [{ id: "volume-1", state: "created", attached_machine_id: "machine-1", name: "tabitabi_data", region: "nrt", size_gb: 1, snapshot_retention: 7, auto_backup_enabled: true }],
   checks: [{ machineId: "machine-1", name: "http_service", status: "passing" }]
 };
 
@@ -28,6 +28,7 @@ test("fails closed for stopped machines, unattached volumes, warnings, and missi
   for (const changed of [
     { machines: [{ ...valid.machines[0], state: "stopped" }] },
     { volumes: [{ ...valid.volumes[0], attached_machine_id: null }] },
+    { volumes: [{ ...valid.volumes[0], snapshot_retention: 5 }] },
     { checks: [...valid.checks, { machineId: "machine-1", name: "secondary", status: "warning" }] },
     { machines: [{ ...valid.machines[0], config: { ...valid.machines[0].config, guest: { cpus: 1, memory_mb: 512 } } }] }
   ]) assert.equal(evaluateFlyRemoteState({ ...valid, ...changed }).passed, false);
