@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createDailyBudgetStore, dailyBudgetSnapshot, DailyBudgetExceededError } from "../server/daily-budget.mjs";
+import { createDailyBudgetStore, dailyBudgetSnapshot, DailyBudgetExceededError, DailyBudgetUnavailableError } from "../server/daily-budget.mjs";
 
 test("serializes a persistent daily budget and stops at the configured limit", async () => {
   const root = await mkdtemp(join(tmpdir(), "tabitabi-budget-"));
@@ -46,4 +46,16 @@ test("exposes only bounded daily usage and remaining counts", () => {
       places_details: { used: 0, limit: 90, remaining: 90 }
     }
   });
+});
+
+test("fails closed when the persistent budget file is corrupt", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tabitabi-budget-"));
+  const path = join(root, "budget.json");
+  try {
+    await writeFile(path, "{not-json", "utf8");
+    const store = createDailyBudgetStore({ path, now: () => new Date("2026-07-14T01:00:00Z") });
+    await assert.rejects(() => store.consume("vision_requests", 60), (error) => error instanceof DailyBudgetUnavailableError && error.status === 503);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

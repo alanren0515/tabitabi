@@ -24,6 +24,18 @@ test("rejects lookalike Qwen endpoints, unsafe budgets, and Fly values found onl
   assert.equal(result.checks.flyIdleLifecycle, false);
 });
 
+test("fails deployment when model attempt, fallback, or output ceilings are raised", () => {
+  for (const override of [
+    { DAILY_VISION_REQUEST_LIMIT: "61" },
+    { DAILY_QWEN_ATTEMPT_LIMIT: "61" },
+    { DAILY_OPENAI_FALLBACK_LIMIT: "11" },
+    { VISION_MAX_OUTPUT_TOKENS: "1801" }
+  ]) {
+    const result = evaluateDeploymentPreflight({ ...valid, env: { ...valid.env, ...override } });
+    assert.equal(result.checks.providerBudgetCaps, false);
+  }
+});
+
 test("accepts an Alibaba Model Studio workspace endpoint only on the approved path", () => {
   const workspace = { ...valid.env, DASHSCOPE_BASE_URL: "https://workspace-id.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1" };
   assert.equal(evaluateDeploymentPreflight({ ...valid, env: workspace }).checks.qwenEndpoint, true);

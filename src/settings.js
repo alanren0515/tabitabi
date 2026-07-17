@@ -1,4 +1,5 @@
 export const SETTINGS_STORAGE_KEY = "tabitabi-settings";
+export const PILOT_ACCESS_SESSION_KEY = "tabitabi-pilot-access-v1";
 export const DEFAULT_SETTINGS = Object.freeze({ defaultPartySize: 2, reservationName: "", defaultPhoneScript: "standard", saveRecentAnalyses: true, pilotAccessCode: "" });
 
 export function normalizeSettings(value = {}) {
@@ -25,6 +26,31 @@ export function settingsFromForm(values = {}) {
 export function pilotAccessHeaders(settings = {}) {
   const code = normalizePilotAccessCode(settings?.pilotAccessCode);
   return code ? { "X-Pilot-Access": code } : {};
+}
+
+export function persistentSettings(settings = {}) {
+  const normalized = normalizeSettings(settings);
+  const { pilotAccessCode: _discarded, ...persistent } = normalized;
+  return persistent;
+}
+
+export function settingsWithSessionAccess(persistent = {}, sessionStorage) {
+  return normalizeSettings({ ...persistent, pilotAccessCode: sessionStorage?.getItem(PILOT_ACCESS_SESSION_KEY) || "" });
+}
+
+export function savePilotAccessForSession(settings = {}, sessionStorage) {
+  const code = normalizePilotAccessCode(settings?.pilotAccessCode);
+  if (!sessionStorage) return;
+  if (code) sessionStorage.setItem(PILOT_ACCESS_SESSION_KEY, code);
+  else sessionStorage.removeItem(PILOT_ACCESS_SESSION_KEY);
+}
+
+export function loadSettingsFromStorage(localStorage, sessionStorage) {
+  let stored = {};
+  try { stored = JSON.parse(localStorage?.getItem(SETTINGS_STORAGE_KEY) || "{}"); } catch { stored = {}; }
+  const settings = settingsWithSessionAccess(stored, sessionStorage);
+  localStorage?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(persistentSettings(settings)));
+  return settings;
 }
 
 function normalizePilotAccessCode(value) {

@@ -10,7 +10,12 @@ export function evaluateDeploymentPreflight({ env = {}, flyConfig = "", dockerfi
     pilotAccessCode: String(env.PILOT_ACCESS_CODE || "").trim().length >= 24,
     operatorName: present(env.PUBLIC_OPERATOR_NAME),
     contactEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(env.PUBLIC_CONTACT_EMAIL || "").trim()),
-    providerBudgetCaps: ["DAILY_VISION_REQUEST_LIMIT", "DAILY_PLACES_SEARCH_LIMIT", "DAILY_PLACES_DETAILS_LIMIT"].every((key) => safeLimit(env[key])),
+    providerBudgetCaps: safeLimit(env.DAILY_VISION_REQUEST_LIMIT, 60, 60)
+      && safeLimit(env.DAILY_QWEN_ATTEMPT_LIMIT, 60, 60)
+      && safeLimit(env.DAILY_OPENAI_FALLBACK_LIMIT, 10, 10)
+      && safeLimit(env.DAILY_PLACES_SEARCH_LIMIT, 90, 90)
+      && safeLimit(env.DAILY_PLACES_DETAILS_LIMIT, 90, 90)
+      && safeLimit(env.VISION_MAX_OUTPUT_TOKENS, 1_200, 1_800, 256),
     flyTokyo: fly[".primary_region"] === "nrt",
     flyIdleLifecycle: fly["http_service.auto_start_machines"] === true && fly["http_service.auto_stop_machines"] === "stop" && fly["http_service.min_machines_running"] === 0,
     flyHttpsAndHealth: fly["http_service.force_https"] === true && fly["http_service.checks.path"] === "/readyz",
@@ -46,9 +51,9 @@ function stripQuotes(value) {
 
 function present(value) { return Boolean(String(value || "").trim()); }
 
-function safeLimit(value) {
-  const numeric = value === undefined || value === "" ? 90 : Number(value);
-  return Number.isInteger(numeric) && numeric >= 1 && numeric <= 90;
+function safeLimit(value, fallback, maximum, minimum = 1) {
+  const numeric = value === undefined || value === "" ? fallback : Number(value);
+  return Number.isInteger(numeric) && numeric >= minimum && numeric <= maximum;
 }
 
 function parseSimpleToml(content = "") {

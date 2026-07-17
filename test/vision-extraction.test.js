@@ -5,12 +5,14 @@ import {
   extractScreenshotWithFallback,
   extractionPrompt,
   getVisionCapabilities,
+  MAX_VISION_IMAGE_DIMENSION,
+  MAX_VISION_IMAGE_PIXELS,
   validateExtraction,
   validateImageDataUrl,
   VisionExtractionError
 } from "../server/vision-extraction.mjs";
 
-const PNG_DATA_URL = "data:image/png;base64,iVBORw0KGgo=";
+const PNG_DATA_URL = pngDataUrl(390, 844);
 
 test("distinguishes Instagram Reels controls from visually similar TikTok layouts", () => {
   assert.match(extractionPrompt, /Instagram Reels/);
@@ -82,6 +84,59 @@ test("requires manual confirmation for a low-resolution screenshot without spend
   assert.match(result.extraction.warnings.at(-1), /320×568/);
   assert.deepEqual(validateImageDataUrl(jpegDataUrl(320, 568)), { type: "jpeg", width: 320, height: 568, bytes: 21 });
   assert.deepEqual(validateImageDataUrl(webpDataUrl(320, 568)), { type: "webp", width: 320, height: 568, bytes: 30 });
+});
+
+test("rejects images whose declared dimensions could amplify provider cost", () => {
+  assert.throws(
+    () => validateImageDataUrl(pngDataUrl(MAX_VISION_IMAGE_DIMENSION + 1, 100)),
+    (error) => error instanceof VisionExtractionError && error.code === "IMAGE_DIMENSIONS_TOO_LARGE" && error.status === 413
+  );
+  const side = Math.floor(Math.sqrt(MAX_VISION_IMAGE_PIXELS)) + 1;
+  assert.throws(
+    () => validateImageDataUrl(pngDataUrl(side, side)),
+    (error) => error instanceof VisionExtractionError && error.code === "IMAGE_DIMENSIONS_TOO_LARGE"
+  );
+});
+
+test("keeps model output tokens below the code-enforced ceiling", async () => {
+  let requestBody;
+  await extractScreenshotWithFallback({
+    imageDataUrl: PNG_DATA_URL,
+    env: { DASHSCOPE_API_KEY: "qwen-test-key", VISION_MAX_OUTPUT_TOKENS: "999999" },
+    fetchImpl: async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return jsonResponse({ choices: [{ message: { content: JSON.stringify(sampleTikTokExtraction) } }] });
+    }
+  });
+  assert.equal(requestBody.max_completion_tokens, 1200);
+});
+
+test("returns the safe Qwen result without spending fallback budget when the fallback cap is exhausted", async () => {
+  const lowConfidence = structuredClone(sampleTikTokExtraction);
+  lowConfidence.overall_confidence = "low";
+  const providerAttempts = [];
+  let fetchCalls = 0;
+  const result = await extractScreenshotWithFallback({
+    imageDataUrl: PNG_DATA_URL,
+    env: { DASHSCOPE_API_KEY: "qwen-test-key", OPENAI_API_KEY: "openai-test-key" },
+    beforeProviderAttempt: async (provider) => {
+      providerAttempts.push(provider.name);
+      if (provider.name === "openai") {
+        const error = new Error("daily cap");
+        error.code = "DAILY_BUDGET_EXHAUSTED";
+        throw error;
+      }
+    },
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      return jsonResponse({ choices: [{ message: { content: JSON.stringify(lowConfidence) } }] });
+    }
+  });
+  assert.deepEqual(providerAttempts, ["qwen", "openai"]);
+  assert.equal(fetchCalls, 1);
+  assert.equal(result.provider, "qwen");
+  assert.equal(result.fallbackAttemptSuppressed, true);
+  assert.equal(result.fallbackReason, "fallback_daily_budget_exhausted");
 });
 
 test("reports Qwen as primary and OpenAI as fallback when both are configured", () => {

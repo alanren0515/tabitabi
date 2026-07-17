@@ -6,7 +6,7 @@ import { candidateDecision, candidateDecisionCopy, rejectCandidate, restoreCandi
 import { TERMS_EFFECTIVE_DATE, TERMS_SECTIONS } from "./terms-data.js";
 import { addRecentAnalysis, createRecentAnalysis, normalizeRecentAnalyses, RECENT_STORAGE_KEY } from "./recent-analyses.js";
 import { buildSharePayload } from "./share-result.js";
-import { DEFAULT_SETTINGS, normalizeSettings, pilotAccessHeaders, settingsFromForm, SETTINGS_STORAGE_KEY } from "./settings.js";
+import { DEFAULT_SETTINGS, loadSettingsFromStorage, persistentSettings, pilotAccessHeaders, savePilotAccessForSession, settingsFromForm, SETTINGS_STORAGE_KEY } from "./settings.js";
 import { addPendingRestaurants, normalizePendingAnalyses, parseBatchRestaurantLines, pendingAnalysisToTextExtraction, PENDING_STORAGE_KEY, removePendingAnalysis, restaurantClueKey } from "./analysis-queue.js";
 import { parseShareTarget, urlWithoutShareTarget } from "./shared-input.js";
 import { createCapabilitiesLoader } from "./capabilities.js";
@@ -22,7 +22,7 @@ const AUDIT_SESSION_KEY = "tabitabi-audit-session-v1";
 const initialParams = new URLSearchParams(window.location.search);
 if (initialParams.get("audit") === "1") sessionStorage.setItem(AUDIT_SESSION_KEY, "1");
 const trafficType = sessionStorage.getItem(AUDIT_SESSION_KEY) === "1" ? "audit" : "product";
-const initialSettings = normalizeSettings(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}"));
+const initialSettings = loadSettingsFromStorage(localStorage, sessionStorage);
 const initialSharedInput = parseShareTarget(window.location.search);
 if (initialParams.get("share") === "1" || initialParams.get("audit") === "1") {
   const cleanUrl = new URL(urlWithoutShareTarget(window.location.href), window.location.origin);
@@ -67,6 +67,7 @@ const state = {
   activePendingId: null,
   settings: initialSettings
 };
+
 let lastRenderedView = "";
 
 const VIEW_LABELS = {
@@ -118,7 +119,8 @@ function syncRecent() {
 }
 
 function syncSettings() {
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(state.settings));
+  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(persistentSettings(state.settings)));
+  savePilotAccessForSession(state.settings, sessionStorage);
 }
 
 function syncPending() {
@@ -1226,7 +1228,7 @@ function renderPrivacy() {
     <div class="section-heading"><span class="step-chip">プライバシーとデータ</span><h1>この端末のデータを管理できます</h1><p>更新日：${esc(TERMS_EFFECTIVE_DATE)} · 招待制テストが扱うデータと、削除できる範囲を説明します。</p></div>
     <div class="privacy-summary"><article><span>${local.savedPlanCount}</span><strong>保存した予定</strong><p>このブラウザだけに保存。</p></article><article><span>${local.pendingAnalysisCount}</span><strong>確認待ちの店舗</strong><p>画像から得た店舗の手掛かりだけを保存。</p></article><article><span>${local.recentAnalysisCount}</span><strong>最近の確認</strong><p>必要最小限の履歴を最大10件保存。</p></article><article><span>0</span><strong>サーバーに保存する画像</strong><p>リクエスト内で処理し、本サービスのディスクには保存しません。</p></article></div>
     <section class="panel privacy-section"><p class="overline">運営者と連絡先</p><h2>${esc(operator)}</h2><p>${publicInfo.contactEmail ? `<a href="mailto:${esc(contact)}">${esc(contact)}</a>` : esc(contact)}</p></section>
-    <section class="panel privacy-section"><p class="overline">この端末に保存</p><h2>行きたいリスト、確認待ち、履歴、設定</h2><ul>${local.fields.map((field) => `<li>${esc(field)}</li>`).join("")}</ul><p>オフラインでも画面を開けるよう、HTML、フロントエンドモジュール、スタイル、アイコンをブラウザにキャッシュする場合があります。API 応答、店舗結果、外部ページはキャッシュしません。確認待ちリストに元画像、反応数、投稿本文は保存しません。共有されたタイトル・文章・リンクは現在の画面にだけ入力し、アドレス欄からすぐ削除します。「確認をはじめる」を押すまで送信しません。実在店舗の Google Maps 住所・評価・営業時間、ホットペッパーグルメ詳細、入力された予約 URL は長期保存せず、再表示時に Place ID から更新します。</p></section>
+    <section class="panel privacy-section"><p class="overline">この端末に保存</p><h2>行きたいリスト、確認待ち、履歴、設定</h2><ul>${local.fields.map((field) => `<li>${esc(field)}</li>`).join("")}${(local.sessionFields || []).map((field) => `<li>${esc(field)}</li>`).join("")}</ul><p>オフラインでも画面を開けるよう、HTML、フロントエンドモジュール、スタイル、アイコンをブラウザにキャッシュする場合があります。API 応答、店舗結果、外部ページはキャッシュしません。確認待ちリストに元画像、反応数、投稿本文は保存しません。共有されたタイトル・文章・リンクは現在の画面にだけ入力し、アドレス欄からすぐ削除します。「確認をはじめる」を押すまで送信しません。実在店舗の Google Maps 住所・評価・営業時間、ホットペッパーグルメ詳細、入力された予約 URL は長期保存せず、再表示時に Place ID から更新します。</p></section>
     <section class="panel privacy-section"><p class="overline">リクエスト時に外部へ送信</p><h2>画像解析と店舗確認</h2><div class="data-flow-list"><p><strong>Qwen / OpenAI fallback</strong><span>画像を追加した場合だけ受け取ります。本サービスは画像をサーバーファイルへ保存しません。提供会社側の処理とログ期間は各社の規約に従います。</span></p><p><strong>Google Places</strong><span>店舗の検索語と、店舗確認または評価表示時の Place ID を受け取り、候補・住所・電話・評価・営業時間を返します。端末の位置情報は要求しません。</span></p><p><strong>ホットペッパーグルメ</strong><span>確認した店舗の店名・住所・電話を受け取り、店舗ページを照合します。</span></p><p><strong>店舗の公式サイト</strong><span>店舗確認後、検証済み公式サイトの公開 HTML をサーバーが取得し、予約入口、公式 Instagram、明示された予約ルールを探す場合があります。Instagram の投稿本文は自動取得しません。</span></p></div></section>
     <section class="panel privacy-section"><p class="overline">サービス運用記録</p><h2>匿名イベント、回答、技術指標</h2><p>入力の種類、候補確認、評価表示、行動ボタン、保存状況、API の成功状態、店舗確認から結果表示までの時間、token 使用量を記録します。表示した評価点そのものは記録しません。回答を送信した場合は、役立ち度、予約結果、正確性、最大500文字の改善コメントも記録します。画像、元の検索文、具体的な来店日、API Key は記録しません。現在はアカウントがないため、端末データの削除から集計済み運用記録を特定・削除することはできません。</p></section>
     <section class="danger-zone"><div><p class="overline">この端末のデータを削除</p><h2>予定、確認待ち、履歴、設定を消去</h2><p>行きたい予定 ${local.savedPlanCount} 件、確認待ち ${local.pendingAnalysisCount} 件、最近の確認 ${local.recentAnalysisCount} 件、予約名などの端末設定を削除します。Google、ホットペッパーグルメ、Qwen、OpenAI、予約サービス側のデータには影響しません。</p></div>${state.deleteConfirmOpen ? `<div class="delete-confirm"><strong>この端末のデータをすべて完全に削除しますか？</strong><button id="cancel-delete">キャンセル</button><button id="confirm-delete">すべて削除</button></div>` : '<button id="start-delete" class="danger-button">この端末のデータを削除</button>'}</section>
@@ -1234,7 +1236,7 @@ function renderPrivacy() {
   document.querySelector("#start-delete")?.addEventListener("click", () => { state.deleteConfirmOpen = true; renderPrivacy(); });
   document.querySelector("#cancel-delete")?.addEventListener("click", () => { state.deleteConfirmOpen = false; renderPrivacy(); });
   document.querySelector("#confirm-delete")?.addEventListener("click", () => {
-    deleteLocalData(localStorage);
+    deleteLocalData(localStorage, sessionStorage);
     state.saved = [];
     state.recent = [];
     state.pending = [];
@@ -1262,12 +1264,12 @@ function renderSettings() {
   ];
   app.innerHTML = `<section class="content-view narrow settings-view">
     <button class="back-button" data-action="home">← ホームへ</button>
-    <div class="section-heading"><span class="step-chip">設定</span><h2>この端末の設定</h2><p>設定値は現在のブラウザに保存します。招待アクセスコードだけは、保護されたリクエストの認証ヘッダーとして本サービスへ送信します。</p></div>
+    <div class="section-heading"><span class="step-chip">設定</span><h2>この端末の設定</h2><p>通常の設定値は現在のブラウザに保存します。招待アクセスコードだけは現在のタブ内に一時保持し、保護されたリクエストの認証ヘッダーとして本サービスへ送信します。</p></div>
     <section class="panel"><p class="overline">来店時の既定値</p><h2>毎回の入力を減らす</h2><form id="settings-form" class="settings-form">
       <label>既定の人数<input type="number" name="defaultPartySize" min="1" max="20" value="${esc(state.settings.defaultPartySize)}"></label>
       <label>電話予約で使う名前（任意）<input type="text" name="reservationName" maxlength="60" autocomplete="name" value="${esc(state.settings.reservationName)}" placeholder="例：山田"><small>このブラウザだけに保存し、電話用の文例に使います。解析 API には送りません。</small></label>
       <label>既定の電話文例<select name="defaultPhoneScript"><option value="standard" ${state.settings.defaultPhoneScript === "standard" ? "selected" : ""}>標準</option><option value="short" ${state.settings.defaultPhoneScript === "short" ? "selected" : ""}>短め</option><option value="easy" ${state.settings.defaultPhoneScript === "easy" ? "selected" : ""}>やさしい日本語</option></select></label>
-      <label>招待アクセスコード${capabilities.pilotAccessRequired ? "（必須）" : "（任意）"}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="管理者から案内されたコード"><small>${capabilities.pilotAccessRequired ? "このサービスではアクセスコードが必要です。保存後、保護されたリクエストに送信します。" : "現在は不要です。このブラウザだけに保存します。"}</small></label>
+      <label>招待アクセスコード${capabilities.pilotAccessRequired ? "（必須）" : "（任意）"}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="管理者から案内されたコード"><small>${capabilities.pilotAccessRequired ? "このタブを閉じるまでだけ保持し、保護されたリクエストに送信します。" : "現在は不要です。入力してもこのタブを閉じると消去されます。"}</small></label>
       ${state.settings.pilotAccessCode ? '<button type="button" class="text-button clear-access-code" id="clear-access-code">招待アクセスコードを消去</button>' : ""}
       <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>最近の確認を保存</strong><small>最大10件。実在店舗は Place ID、入力した手掛かり、予定だけを保存します。</small></span></label>
       <button type="submit" class="primary-button">この端末に保存</button>
@@ -1298,7 +1300,7 @@ function renderSettings() {
 }
 
 function renderDailyBudget(budget = {}) {
-  const labels = { vision_requests: "画像解析", places_search: "店舗候補の検索", places_details: "店舗情報の取得" };
+  const labels = { vision_requests: "画像解析の総受付枠", vision_qwen_attempts: "Qwen 実呼び出し", vision_openai_fallback_attempts: "OpenAI 予備呼び出し", places_search: "店舗候補の検索", places_details: "店舗情報の取得" };
   const rows = Object.entries(budget.buckets || {}).map(([key, item]) => {
     const limit = Number(item?.limit) || 0;
     const used = Number(item?.used) || 0;
@@ -1306,7 +1308,7 @@ function renderDailyBudget(budget = {}) {
     return `<article><div><strong>${esc(labels[key] || key)}</strong><span>本日 ${esc(used)} / ${esc(limit)} 回使用 · 残り ${esc(remaining)} 回</span></div><progress value="${esc(used)}" max="${esc(limit || 1)}"></progress></article>`;
   }).join("");
   if (!rows) return "";
-  return `<section class="panel budget-panel"><p class="overline">利用上限</p><h2>本日の API 利用枠</h2><p>日本時間 ${esc(budget.date || "本日")} の集計です。キャッシュ利用は加算しません。上限に達した機能は翌日まで新規呼び出しを停止します。</p><div class="budget-grid">${rows}</div></section>`;
+  return `<section class="panel budget-panel"><p class="overline">利用上限</p><h2>本日の API 利用枠</h2><p>日本時間 ${esc(budget.date || "本日")} の集計です。新しい画像解析は総受付枠と実際に使ったモデルの両方に数えられるため、各行を合計しないでください。キャッシュ利用は加算しません。上限に達した機能は翌日まで新規呼び出しを停止します。</p><div class="budget-grid">${rows}</div></section>`;
 }
 
 function renderTerms() {

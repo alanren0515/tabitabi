@@ -13,6 +13,15 @@ export class DailyBudgetExceededError extends Error {
   }
 }
 
+export class DailyBudgetUnavailableError extends Error {
+  constructor() {
+    super("The daily budget store is unavailable");
+    this.name = "DailyBudgetUnavailableError";
+    this.code = "DAILY_BUDGET_UNAVAILABLE";
+    this.status = 503;
+  }
+}
+
 export function createDailyBudgetStore({ path, timeZone = "Asia/Tokyo", now = () => new Date() }) {
   let queue = Promise.resolve();
   return {
@@ -60,7 +69,8 @@ async function readDailyBudget(path, date) {
     if (value?.date !== date || !value.counts || typeof value.counts !== "object") return { date, counts: {} };
     return { date, counts: Object.fromEntries(Object.entries(value.counts).filter(([key, count]) => /^[a-z][a-z0-9_]{1,60}$/.test(key) && Number.isInteger(count) && count >= 0)) };
   } catch (error) {
-    if (error.code === "ENOENT" || error instanceof SyntaxError) return { date, counts: {} };
+    if (error.code === "ENOENT") return { date, counts: {} };
+    if (error instanceof SyntaxError) throw new DailyBudgetUnavailableError();
     throw error;
   }
 }

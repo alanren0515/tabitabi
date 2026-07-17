@@ -1,5 +1,11 @@
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 import { guardVisionIdentityFields } from "./prompt-injection-guard.mjs";
+
+export const MAX_VISION_IMAGE_BYTES = 8 * 1024 * 1024;
+export const MAX_VISION_IMAGE_PIXELS = 20_000_000;
+export const MAX_VISION_IMAGE_DIMENSION = 10_000;
+const DEFAULT_VISION_OUTPUT_TOKENS = 1_200;
+const MAX_VISION_OUTPUT_TOKENS = 1_800;
 import { DEFAULT_QWEN_BASE_URL, isApprovedQwenBaseUrl } from "./qwen-endpoint.mjs";
 
 const restaurantSchema = {
@@ -102,7 +108,7 @@ export function getVisionCapabilities(env = process.env) {
   };
 }
 
-export async function extractScreenshotWithFallback({ imageDataUrl, env = process.env, fetchImpl = fetch }) {
+export async function extractScreenshotWithFallback({ imageDataUrl, env = process.env, fetchImpl = fetch, beforeProviderAttempt = async () => {} }) {
   const imageInfo = validateImageDataUrl(imageDataUrl);
   const imageReviewReason = lowResolutionReason(imageInfo);
   const providers = configuredProviders(env);
@@ -124,6 +130,7 @@ export async function extractScreenshotWithFallback({ imageDataUrl, env = proces
     const provider = providers[index];
     const startedAt = Date.now();
     try {
+      await beforeProviderAttempt(provider);
       const raw = provider.name === "qwen"
         ? await callQwen({ provider, imageDataUrl, env, fetchImpl })
         : await callOpenAI({ provider, imageDataUrl, env, fetchImpl });
@@ -158,6 +165,27 @@ export async function extractScreenshotWithFallback({ imageDataUrl, env = proces
       bestLowConfidenceResult = chooseSaferResult(bestLowConfidenceResult, result);
       fallbackReason = qualityReason;
     } catch (error) {
+      if (error?.code === "DAILY_BUDGET_EXHAUSTED") {
+        attempts.push({
+          provider: provider.name,
+          model: provider.model,
+          status: "skipped",
+          durationMs: Date.now() - startedAt,
+          requestId: null,
+          usage: null,
+          fallbackReason: index ? fallbackReason : null,
+          errorCode: "daily_budget"
+        });
+        if (bestLowConfidenceResult) {
+          return {
+            ...bestLowConfidenceResult,
+            attempts,
+            fallbackAttemptSuppressed: true,
+            fallbackReason: "fallback_daily_budget_exhausted"
+          };
+        }
+        throw error;
+      }
       const normalized = normalizeProviderError(error, provider.name);
       attempts.push({
         provider: provider.name,
@@ -217,7 +245,35 @@ export function validateImageDataUrl(imageDataUrl) {
       fallbackAllowed: false
     });
   }
+  if (bytes.length > MAX_VISION_IMAGE_BYTES) {
+    throw new VisionExtractionError({
+      code: "IMAGE_TOO_LARGE",
+      message: "The screenshot exceeds the maximum encoded image size",
+      status: 413,
+      kind: "image_too_large",
+      fallbackAllowed: false
+    });
+  }
   const dimensions = imageDimensions(bytes, actual);
+  if (!dimensions) {
+    throw new VisionExtractionError({
+      code: "INVALID_IMAGE",
+      message: "The screenshot dimensions could not be verified",
+      status: 400,
+      kind: "invalid_image",
+      fallbackAllowed: false
+    });
+  }
+  if (dimensions.width > MAX_VISION_IMAGE_DIMENSION || dimensions.height > MAX_VISION_IMAGE_DIMENSION
+    || dimensions.width * dimensions.height > MAX_VISION_IMAGE_PIXELS) {
+    throw new VisionExtractionError({
+      code: "IMAGE_DIMENSIONS_TOO_LARGE",
+      message: "The screenshot dimensions exceed the safe processing limit",
+      status: 413,
+      kind: "image_dimensions_too_large",
+      fallbackAllowed: false
+    });
+  }
   return { type: actual, width: dimensions?.width || null, height: dimensions?.height || null, bytes: bytes.length };
 }
 
@@ -240,7 +296,7 @@ async function callQwen({ provider, imageDataUrl, env, fetchImpl }) {
       }],
       response_format: { type: "json_object" },
       enable_thinking: false,
-      max_completion_tokens: numberFromEnv(env.VISION_MAX_OUTPUT_TOKENS, 1800)
+      max_completion_tokens: boundedNumberFromEnv(env.VISION_MAX_OUTPUT_TOKENS, 256, MAX_VISION_OUTPUT_TOKENS, DEFAULT_VISION_OUTPUT_TOKENS)
     }
   });
   return {
@@ -269,7 +325,7 @@ async function callOpenAI({ provider, imageDataUrl, env, fetchImpl }) {
           ]
         }
       ],
-      max_output_tokens: numberFromEnv(env.VISION_MAX_OUTPUT_TOKENS, 1800),
+      max_output_tokens: boundedNumberFromEnv(env.VISION_MAX_OUTPUT_TOKENS, 256, MAX_VISION_OUTPUT_TOKENS, DEFAULT_VISION_OUTPUT_TOKENS),
       text: {
         format: {
           type: "json_schema",
@@ -623,6 +679,11 @@ function appendBoundedWarning(warnings, warning) {
 function numberFromEnv(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function boundedNumberFromEnv(value, minimum, maximum, fallback) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= minimum && parsed <= maximum ? parsed : fallback;
 }
 
 function finiteNumber(value) {

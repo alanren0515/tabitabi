@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_SETTINGS, normalizeSettings, pilotAccessHeaders, settingsFromForm } from "../src/settings.js";
+import { DEFAULT_SETTINGS, loadSettingsFromStorage, normalizeSettings, persistentSettings, pilotAccessHeaders, PILOT_ACCESS_SESSION_KEY, savePilotAccessForSession, settingsFromForm, settingsWithSessionAccess, SETTINGS_STORAGE_KEY } from "../src/settings.js";
 
 test("normalizes local preferences to bounded supported values", () => {
   assert.deepEqual(normalizeSettings({}), DEFAULT_SETTINGS);
@@ -19,9 +19,35 @@ test("normalizes local preferences to bounded supported values", () => {
   assert.deepEqual(pilotAccessHeaders({}), {});
 });
 
+test("keeps the pilot access code out of persistent settings and only in session storage", () => {
+  const values = new Map();
+  const storage = {
+    getItem: (key) => values.get(key) || null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
+  const settings = normalizeSettings({ defaultPartySize: 4, pilotAccessCode: "session-secret" });
+  assert.equal("pilotAccessCode" in persistentSettings(settings), false);
+  savePilotAccessForSession(settings, storage);
+  assert.equal(values.get(PILOT_ACCESS_SESSION_KEY), "session-secret");
+  assert.equal(settingsWithSessionAccess(persistentSettings(settings), storage).pilotAccessCode, "session-secret");
+  savePilotAccessForSession({ pilotAccessCode: "" }, storage);
+  assert.equal(values.has(PILOT_ACCESS_SESSION_KEY), false);
+});
+
 test("requires the recent-history checkbox to be present in submitted form values", () => {
   assert.equal(settingsFromForm({ defaultPartySize: "4", defaultPhoneScript: "short", saveRecentAnalyses: "on" }).saveRecentAnalyses, true);
   assert.equal(settingsFromForm({ defaultPartySize: "4", defaultPhoneScript: "short" }).saveRecentAnalyses, false);
   assert.equal(settingsFromForm({ reservationName: "  郭 泉  " }).reservationName, "郭 泉");
   assert.equal(settingsFromForm({ pilotAccessCode: "test-code" }).pilotAccessCode, "test-code");
+});
+
+test("removes legacy persistent access codes synchronously and recovers malformed settings", () => {
+  const localValues = new Map([[SETTINGS_STORAGE_KEY, JSON.stringify({ defaultPartySize: 3, pilotAccessCode: "legacy-secret" })]]);
+  const localStorage = { getItem: (key) => localValues.get(key) || null, setItem: (key, value) => localValues.set(key, value) };
+  const sessionStorage = { getItem: () => null };
+  assert.equal(loadSettingsFromStorage(localStorage, sessionStorage).pilotAccessCode, "");
+  assert.doesNotMatch(localValues.get(SETTINGS_STORAGE_KEY), /legacy-secret|pilotAccessCode/);
+  localValues.set(SETTINGS_STORAGE_KEY, "{bad-json");
+  assert.deepEqual(loadSettingsFromStorage(localStorage, sessionStorage), DEFAULT_SETTINGS);
 });

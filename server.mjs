@@ -5,7 +5,7 @@ import { networkInterfaces } from "node:os";
 import { buildRestaurantResult, DataSourceError, getGooglePlaceDetails, searchGooglePlaces, searchHotPepper } from "./server/restaurant-sources.mjs";
 import { extractScreenshotWithFallback, getVisionCapabilities, validateImageDataUrl, VisionExtractionError } from "./server/vision-extraction.mjs";
 import { createRequestCache } from "./server/request-cache.mjs";
-import { createFixedWindowRateLimiter, requestClientKey } from "./server/rate-limiter.mjs";
+import { createFixedWindowRateLimiter, createSlidingWindowRateLimiter, requestClientKey } from "./server/rate-limiter.mjs";
 import { discoverReservationLinks } from "./server/reservation-link-discovery.mjs";
 import { findVerifiedOfficialSource } from "./server/verified-official-sources.mjs";
 import { parseTextInput, TextInputError } from "./server/text-input.mjs";
@@ -17,17 +17,22 @@ import { resolveStaticFile } from "./server/static-path.mjs";
 import { AuditWorkbenchError, auditAccessInfo, auditLanMode, auditRequestAuthorized, auditSessionCookie, auditWorkbenchEnabled, readAuditBundle, saveAuditEvidence, saveAuditUpdates } from "./server/audit-workbench.mjs";
 import { createJsonlStore } from "./server/jsonl-store.mjs";
 import { serviceReadiness } from "./server/readiness.mjs";
-import { createDailyBudgetStore, dailyBudgetSnapshot, DailyBudgetExceededError } from "./server/daily-budget.mjs";
+import { createDailyBudgetStore, dailyBudgetSnapshot, DailyBudgetExceededError, DailyBudgetUnavailableError } from "./server/daily-budget.mjs";
 import { pilotAccessAuthorized, pilotAccessRequired, protectedPilotApiPath } from "./server/pilot-access.mjs";
 import { installFatalProcessHandlers } from "./server/process-failures.mjs";
 import { probeWritableDataStore } from "./server/data-store-readiness.mjs";
+import { createVisionConcurrencyGate, imageContentFingerprint, VisionConcurrencyError } from "./server/vision-abuse-protection.mjs";
 
 const ROOT = resolve(process.cwd());
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
 const placesSearchCache = createRequestCache({ ttlMs: 60_000, maxEntries: 200 });
 const placesDetailsCache = createRequestCache({ ttlMs: 60_000, maxEntries: 300 });
 const reservationLinkCache = createRequestCache({ ttlMs: 10 * 60_000, maxEntries: 300 });
-const screenshotLimiter = createFixedWindowRateLimiter({ limit: 10, windowMs: 60_000 });
+const visionResultCache = createRequestCache({ ttlMs: 10 * 60_000, maxEntries: 100 });
+const visionConcurrency = createVisionConcurrencyGate({ limit: 2 });
+const visionUploadConcurrency = createVisionConcurrencyGate({ limit: 4 });
+const screenshotLimiter = createFixedWindowRateLimiter({ limit: 4, windowMs: 60_000 });
+const screenshotDailyClientLimiter = createSlidingWindowRateLimiter({ limit: 20, windowMs: 24 * 60 * 60_000 });
 const placesSearchLimiter = createFixedWindowRateLimiter({ limit: 30, windowMs: 60_000 });
 const placesDetailsLimiter = createFixedWindowRateLimiter({ limit: 30, windowMs: 60_000 });
 const webpageLimiter = createFixedWindowRateLimiter({ limit: 10, windowMs: 60_000 });
@@ -58,7 +63,9 @@ const sourceMetricLog = createJsonlStore({
 });
 const dailyBudget = createDailyBudgetStore({ path: join(ROOT, "data", "daily-budget.json") });
 const dailyLimits = {
-  visionRequests: boundedEnvInteger(process.env.DAILY_VISION_REQUEST_LIMIT, 1, 10_000, 90),
+  visionRequests: boundedEnvInteger(process.env.DAILY_VISION_REQUEST_LIMIT, 1, 60, 60),
+  visionQwenAttempts: boundedEnvInteger(process.env.DAILY_QWEN_ATTEMPT_LIMIT, 1, 60, 60),
+  visionFallbackAttempts: boundedEnvInteger(process.env.DAILY_OPENAI_FALLBACK_LIMIT, 1, 10, 10),
   placesSearch: boundedEnvInteger(process.env.DAILY_PLACES_SEARCH_LIMIT, 1, 10_000, 90),
   placesDetails: boundedEnvInteger(process.env.DAILY_PLACES_DETAILS_LIMIT, 1, 10_000, 90)
 };
@@ -86,6 +93,8 @@ const server = createServer(async (request, response) => {
     if (request.method === "GET" && request.url === "/api/capabilities") {
       const dailyBudgetStatus = dailyBudgetSnapshot(await dailyBudget.read(), {
         vision_requests: dailyLimits.visionRequests,
+        vision_qwen_attempts: dailyLimits.visionQwenAttempts,
+        vision_openai_fallback_attempts: dailyLimits.visionFallbackAttempts,
         places_search: dailyLimits.placesSearch,
         places_details: dailyLimits.placesDetails
       });
@@ -139,7 +148,14 @@ const server = createServer(async (request, response) => {
     }
     if (request.method === "POST" && request.url === "/api/extract-screenshot") {
       if (!allowExpensiveRequest(request, response, screenshotLimiter)) return;
-      await handleScreenshotExtraction(request, response);
+      if (!allowExpensiveRequest(request, response, screenshotDailyClientLimiter)) return;
+      try {
+        await visionUploadConcurrency.run(() => handleScreenshotExtraction(request, response));
+      } catch (error) {
+        if (!(error instanceof VisionConcurrencyError)) throw error;
+        response.setHeader("Retry-After", "5");
+        sendJson(response, 429, { code: "VISION_UPLOAD_BUSY", error: "画像の受信が混み合っています。数秒後にもう一度お試しください。" });
+      }
       return;
     }
     if (request.method === "POST" && request.url === "/api/extract-text") {
@@ -351,6 +367,10 @@ function sendSourceError(response, error, fallbackMessage) {
     sendDailyBudgetError(response, error);
     return;
   }
+  if (error instanceof DailyBudgetUnavailableError) {
+    sendDailyBudgetUnavailableError(response);
+    return;
+  }
   if (error instanceof DataSourceError) {
     const code = error.source === "google_places" && error.status === 503
       ? "GOOGLE_PLACES_KEY_MISSING"
@@ -363,13 +383,18 @@ function sendSourceError(response, error, fallbackMessage) {
   sendJson(response, 500, { code: "DATA_SOURCE_ERROR", error: fallbackMessage });
 }
 
+function sendDailyBudgetUnavailableError(response) {
+  response.setHeader("Retry-After", "300");
+  sendJson(response, 503, { code: "DAILY_BUDGET_UNAVAILABLE", error: "利用上限を安全に確認できないため、現在は有料 API 呼び出しを停止しています。" });
+}
+
 function sendDailyBudgetError(response, error) {
   response.setHeader("Retry-After", "86400");
   sendJson(response, 429, { code: error.code, error: "本日の利用上限に達しました。明日もう一度お試しください。", bucket: error.bucket, date: error.date });
 }
 
 function allowExpensiveRequest(request, response, limiter) {
-  const key = requestClientKey(request, process.env.TRUST_PROXY === "true");
+  const key = requestClientKey(request, process.env.TRUST_PROXY === "true", Boolean(process.env.FLY_APP_NAME));
   const result = limiter(key);
   response.setHeader("X-RateLimit-Remaining", String(result.remaining));
   if (result.allowed) return true;
@@ -415,14 +440,33 @@ async function handleScreenshotExtraction(request, response) {
   }
   const imageDataUrl = body?.imageDataUrl;
   let result;
+  let cacheStatus = "miss";
   try {
     validateImageDataUrl(imageDataUrl);
-    const budget = await dailyBudget.consume("vision_requests", dailyLimits.visionRequests);
-    response.setHeader("X-Daily-Budget-Remaining", String(budget.remaining));
-    result = await extractScreenshotWithFallback({ imageDataUrl, env: process.env });
+    const fingerprint = imageContentFingerprint(imageDataUrl);
+    const cached = await visionResultCache.getOrLoad(fingerprint, () => visionConcurrency.run(async () => {
+      const budget = await dailyBudget.consume("vision_requests", dailyLimits.visionRequests);
+      response.setHeader("X-Daily-Budget-Remaining", String(budget.remaining));
+      const extracted = await extractScreenshotWithFallback({
+        imageDataUrl,
+        env: process.env,
+        beforeProviderAttempt: async (provider) => {
+          if (provider.name === "qwen") await dailyBudget.consume("vision_qwen_attempts", dailyLimits.visionQwenAttempts);
+          else if (provider.name === "openai") await dailyBudget.consume("vision_openai_fallback_attempts", dailyLimits.visionFallbackAttempts);
+        }
+      });
+      await recordVisionAttempts(extracted.attempts);
+      return extracted;
+    }));
+    result = cached.value;
+    cacheStatus = cached.cacheStatus;
   } catch (error) {
     if (error instanceof DailyBudgetExceededError) {
       sendDailyBudgetError(response, error);
+      return;
+    }
+    if (error instanceof DailyBudgetUnavailableError) {
+      sendDailyBudgetUnavailableError(response);
       return;
     }
     if (error instanceof VisionExtractionError) {
@@ -430,18 +474,23 @@ async function handleScreenshotExtraction(request, response) {
       sendJson(response, error.status, { code: error.code, error: publicVisionError(error.code) });
       return;
     }
+    if (error instanceof VisionConcurrencyError) {
+      response.setHeader("Retry-After", "5");
+      sendJson(response, 429, { code: error.code, error: "画像解析が混み合っています。数秒後にもう一度お試しください。" });
+      return;
+    }
     console.error("Unexpected screenshot extraction error", error?.name || "unknown");
     sendJson(response, 500, { code: "VISION_INTERNAL_ERROR", error: "Screenshot extraction failed unexpectedly" });
     return;
   }
-  await recordVisionAttempts(result.attempts);
   sendJson(response, 200, {
     extraction: result.extraction,
     provider: result.provider,
     model: result.model,
     fallbackUsed: result.usedFallback,
     fallbackReason: result.fallbackReason,
-    requiresUserConfirmation: result.requiresUserConfirmation
+    requiresUserConfirmation: result.requiresUserConfirmation,
+    cacheStatus
   });
 }
 
@@ -468,6 +517,8 @@ async function recordVisionAttempts(attempts) {
 function publicVisionError(code) {
   return {
     INVALID_IMAGE: "A valid PNG, JPEG, or WebP screenshot is required",
+    IMAGE_TOO_LARGE: "The screenshot file is too large",
+    IMAGE_DIMENSIONS_TOO_LARGE: "The screenshot dimensions are too large",
     VISION_NOT_CONFIGURED: "Screenshot extraction is not configured",
     VISION_TIMEOUT: "Screenshot extraction timed out",
     VISION_RATE_LIMITED: "Screenshot extraction is temporarily busy",

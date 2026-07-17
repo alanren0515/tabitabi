@@ -27,7 +27,7 @@ This decision is for the first closed pilot, not a claim that Railway is the per
 - Health check: `/readyz`.
 - Public URL: `https://tabitabi-jp.fly.dev` unless the globally unique app name changes.
 - Secrets: use `fly secrets set`; never upload `.env.local`.
-- Initial cost guardrail: Google quotas at 100 search/detail calls per day and application limits at their current 90-call defaults.
+- Initial cost guardrail: Google quotas at 100 search/detail calls per day; application limits are 90 search/detail calls, 60 new vision analyses, 60 Qwen attempts and 10 OpenAI fallback attempts per Tokyo day.
 
 ## Required environment variables
 
@@ -124,9 +124,11 @@ Run exactly one application instance for this MVP. Rate limits and request cache
 1. Terminate TLS at a trusted hosting-platform proxy and redirect all HTTP traffic to HTTPS. HSTS should be configured at that layer after the production hostname is final.
 2. Store keys in the platform secret manager.
    If `PILOT_ACCESS_CODE` is used, generate a long random value and distribute it only to pilot participants. It is a lightweight shared gate, not an account system.
-3. Set `TRUST_PROXY=true` only if the service is reachable exclusively through a controlled proxy that removes any client-supplied `X-Forwarded-For` and writes the authoritative client address. Otherwise leave it `false`; trusting an append-only or publicly forgeable header defeats IP rate limits.
+3. Fly.io deployments use the Fly Proxy-provided `Fly-Client-IP` header. Set `TRUST_PROXY=true` on other hosts only if the service is reachable exclusively through a controlled proxy that removes any client-supplied `X-Forwarded-For` and writes the authoritative client address. Otherwise leave it `false`; trusting an append-only or publicly forgeable header defeats IP rate limits.
 4. Confirm Google Places daily quotas remain at 100 Text Search and 100 Place Details requests.
-   The application defaults `DAILY_PLACES_SEARCH_LIMIT` and `DAILY_PLACES_DETAILS_LIMIT` to 90, leaving ten console-quota calls for diagnosis. `DAILY_VISION_REQUEST_LIMIT` also defaults to 90. Counters persist in `/app/data/daily-budget.json`, reset on the next Tokyo calendar day, and are consumed only before an upstream call; Places cache hits do not consume another application-budget unit.
+   The application defaults `DAILY_PLACES_SEARCH_LIMIT` and `DAILY_PLACES_DETAILS_LIMIT` to 90, leaving ten console-quota calls for diagnosis. Vision is separately capped at `DAILY_VISION_REQUEST_LIMIT=60`, `DAILY_QWEN_ATTEMPT_LIMIT=60`, and `DAILY_OPENAI_FALLBACK_LIMIT=10`. Counters persist in `/app/data/daily-budget.json`, reset on the next Tokyo calendar day, and are consumed only before an upstream call. Exact-image and Places cache hits do not consume another provider budget unit. Deployment preflight fails if any ceiling is raised beyond the reviewed maximum.
+
+   In addition, a client may submit at most four screenshot analyses per minute and twenty per true rolling 24 hours. At most four screenshot bodies may be received and decoded concurrently, and only two uncached model jobs may run concurrently. Identical decoded image bytes share a ten-minute in-memory result cache and concurrent duplicates are coalesced. Images over 8 MB, 20 million pixels, or 10,000 px on either edge are rejected before a provider call. Model output defaults to 1,200 tokens and cannot exceed 1,800 through environment configuration. A corrupt daily-budget file fails closed and stops new paid calls until it is repaired.
 5. Add a stable production egress IP restriction to the Google key when the host provides one.
 6. Review provider dashboards after the first real users and lower rate limits if abuse appears.
 7. Keep outbound DNS and HTTP egress controls enabled. The public-webpage endpoint rejects private/reserved DNS results, unsafe redirects, non-HTML responses, and bodies over 512 KB, but production network policy should remain the final SSRF boundary.

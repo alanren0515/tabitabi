@@ -78,3 +78,16 @@ test("public privacy and terms URLs serve the application shell", async () => {
   assert.match(serverSource, /standaloneDocument = \["\/privacy", "\/terms"\]\.includes\(requestPath\)/);
   assert.match(serverSource, /"X-TabiTabi-Document": standaloneDocument/);
 });
+
+test("production server wires all reviewed model-abuse cost controls", async () => {
+  const serverSource = await readFile(resolve(ROOT, "server.mjs"), "utf8");
+  assert.match(serverSource, /createFixedWindowRateLimiter\(\{ limit: 4, windowMs: 60_000 \}\)/);
+  assert.match(serverSource, /createSlidingWindowRateLimiter\(\{ limit: 20, windowMs: 24 \* 60 \* 60_000 \}\)/);
+  assert.match(serverSource, /createVisionConcurrencyGate\(\{ limit: 4 \}\)/);
+  assert.match(serverSource, /createVisionConcurrencyGate\(\{ limit: 2 \}\)/);
+  assert.match(serverSource, /createRequestCache\(\{ ttlMs: 10 \* 60_000, maxEntries: 100 \}\)/);
+  assert.match(serverSource, /dailyBudget\.consume\("vision_qwen_attempts"/);
+  assert.match(serverSource, /dailyBudget\.consume\("vision_openai_fallback_attempts"/);
+  assert.match(serverSource, /Boolean\(process\.env\.FLY_APP_NAME\)/);
+  assert.ok(serverSource.indexOf("pilotAccessAuthorized") < serverSource.indexOf('request.url === "/api/extract-screenshot"'));
+});
