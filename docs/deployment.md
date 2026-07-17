@@ -78,7 +78,7 @@ fly apps create tabitabi-jp --org personal
 fly volumes create tabitabi_data --region nrt --size 1
 fly secrets import --stage -a tabitabi-jp
 # Paste NAME=value lines for the required variables, then press Control-D.
-fly deploy --ha=false
+fly deploy --ha=false --build-arg RELEASE_REVISION="$(git rev-parse HEAD)"
 fly scale count 1 -a tabitabi-jp
 fly machine list -a tabitabi-jp
 fly volumes list -a tabitabi-jp
