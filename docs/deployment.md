@@ -18,6 +18,8 @@ This decision is for the first closed pilot, not a claim that Railway is the per
 
 Formal public release is separately gated. The technical evaluation gate is necessary but not sufficient: the production Fly Volume must also contain a passing real-user pilot. Production images embed the full Git commit through the reviewed `RELEASE_REVISION` build argument. After a provider-free smoke wakes the Machine, run `npm run release:pilot-remote`; it computes the pilot report inside the container and returns only aggregate metrics. Then refresh `release:preflight`, `release:fly-audit`, and `release:smoke`, and run `npm run release:formal-gate`. The gate requires a clean repository, matching Git revision and Fly image digest, production pilot provenance, post-deployment evidence, and reports no older than 24 hours.
 
+The formal gate trusts the local release operator, the local Git checkout, and the Fly account. Its ignored JSON artifacts prevent accidental reuse, source mixing, stale releases, and incomplete checks; they are not cryptographic attestations against a malicious person who can modify the repository and verifier together. A Fly-account or release-workstation compromise must be handled as a credential incident under `security-incident-response.md`, not treated as something this gate can prove away.
+
 ### Fly.io setup values
 
 - App config: deploy the checked-in `fly.toml` and `Dockerfile`.

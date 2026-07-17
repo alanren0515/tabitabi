@@ -13,11 +13,11 @@ const valid = {
   app: "tabitabi-jp",
   currentRevision: revision,
   repositoryClean: true,
-  releaseEvidence: { generatedAt, revision, repositoryClean: true, gatePassed: true },
+  releaseEvidence: { generatedAt, revision, repositoryClean: true, gatePassed: true, gates: { schemaValid: true, confirmedSampleSize: true, auditedSampleSize: true, identificationAccuracy: true, severeActionErrors: true, bookingSafety: true, coverageMatrix: true, candidateTop3: true, decisionSafety: true } },
   pilotEvidence: { schemaVersion: 1, source: "fly-volume", app: "tabitabi-jp", volume: "tabitabi_data", generatedAt, auditRevision: revision, releaseRevision: revision, imageRef: `registry.fly.io/tabitabi-jp:${imageTag}`, repositoryClean: true, gatePassed: true, gates: { inputSample: true, feedbackSample: true, analysisCompletion: true, actionRate: true, helpfulRate: true }, blockedBy: [], metrics: pilotMetrics },
-  preflightEvidence: { generatedAt, revision, repositoryClean: true, passed: true },
-  flyEvidence: { generatedAt, revision, repositoryClean: true, app: "tabitabi-jp", passed: true, deployment: { releaseCreatedAt: "2026-07-18T10:00:00.000Z", imageDigest, imageTag } },
-  smokeEvidence: { generatedAt, revision, releaseRevision: revision, repositoryClean: true, baseUrl: "https://tabitabi-jp.fly.dev", passed: true, live: false }
+  preflightEvidence: { generatedAt, revision, repositoryClean: true, passed: true, checks: Object.fromEntries(["qwenKey", "qwenEndpoint", "qwenModel", "googlePlacesKey", "pilotAccessCode", "operatorName", "contactEmail", "emergencyStopReady", "providerBudgetCaps", "flyTokyo", "flyIdleLifecycle", "flyHttpsAndHealth", "flyMachineShape", "flyPersistentData", "flySnapshots", "pinnedContainerBase", "releaseEvidence"].map((key) => [key, true])) },
+  flyEvidence: { generatedAt, revision, repositoryClean: true, app: "tabitabi-jp", passed: true, checks: Object.fromEntries(["exactlyOneMachine", "machineStarted", "machineTokyo", "machineShape", "machineIdleLifecycle", "exactlyOneVolume", "volumeCreated", "volumeTokyo", "volumeName", "volumeSize", "volumeEncrypted", "volumeSnapshots", "volumeAttached", "volumeMounted", "healthChecksPresent", "healthChecksForMachine", "healthChecksPassing", "requiredSecretsDeployed"].map((key) => [key, true])), deployment: { releaseCreatedAt: "2026-07-18T10:00:00.000Z", imageDigest, imageTag } },
+  smokeEvidence: { generatedAt, revision, releaseRevision: revision, repositoryClean: true, baseUrl: "https://tabitabi-jp.fly.dev", passed: true, live: false, checks: { health: true, readiness: true, capabilities: true, privacy: true, terms: true } }
 };
 
 test("passes only when technical, pilot, deployment, Fly, and provider-free evidence all pass", () => {
@@ -44,6 +44,13 @@ test("rejects a forged passing pilot and local-report provenance", () => {
   const forged = { ...valid.pilotEvidence, gatePassed: true, metrics: { inputRuns: 0, feedbackRuns: 0 } };
   assert.equal(evaluateFormalReleaseGate({ ...valid, pilotEvidence: forged }).gates.productionPilot, false);
   assert.equal(evaluateFormalReleaseGate({ ...valid, pilotEvidence: { ...valid.pilotEvidence, source: "local-events" } }).gates.productionPilot, false);
+});
+
+test("rejects top-level pass flags without complete check schemas", () => {
+  assert.equal(evaluateFormalReleaseGate({ ...valid, releaseEvidence: { ...valid.releaseEvidence, gates: {} } }).gates.technicalRelease, false);
+  assert.equal(evaluateFormalReleaseGate({ ...valid, preflightEvidence: { ...valid.preflightEvidence, checks: {} } }).gates.deploymentPreflight, false);
+  assert.equal(evaluateFormalReleaseGate({ ...valid, flyEvidence: { ...valid.flyEvidence, checks: {} } }).gates.flyRemoteState, false);
+  assert.equal(evaluateFormalReleaseGate({ ...valid, smokeEvidence: { ...valid.smokeEvidence, checks: {} } }).gates.providerFreeSmoke, false);
 });
 
 test("rejects mixed commits, mismatched images, dirty repositories, and pre-deploy evidence", () => {

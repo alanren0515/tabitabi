@@ -61,3 +61,13 @@ test("normalizes the current checks map shape and preserves Machine ownership", 
   })), [{ machineId: "machine-1", name: "http_service", status: "passing" }]);
   assert.throws(() => parseFlyChecksJson("[]"), /checks map/);
 });
+
+test("selects the newest complete release when the same image tag appears more than once", () => {
+  const releases = [
+    { Status: "complete", Version: 5, CreatedAt: "2026-07-18T09:00:00.000Z", ImageRef: "registry.fly.io/tabitabi-jp:deployment-TEST" },
+    { Status: "complete", Version: 7, CreatedAt: "2026-07-18T11:00:00.000Z", ImageRef: "registry.fly.io/tabitabi-jp:deployment-TEST" }
+  ];
+  const result = evaluateFlyRemoteState({ ...valid, releases });
+  assert.equal(result.deployment.releaseVersion, 7);
+  assert.equal(result.deployment.releaseCreatedAt, "2026-07-18T11:00:00.000Z");
+});

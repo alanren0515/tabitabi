@@ -1,6 +1,10 @@
 import { evaluatePilotGate } from "./pilot-metrics.mjs";
 
 export const FORMAL_EVIDENCE_MAX_AGE_MS = 24 * 60 * 60 * 1_000;
+const TECHNICAL_GATES = ["schemaValid", "confirmedSampleSize", "auditedSampleSize", "identificationAccuracy", "severeActionErrors", "bookingSafety", "coverageMatrix", "candidateTop3", "decisionSafety"];
+const PREFLIGHT_CHECKS = ["qwenKey", "qwenEndpoint", "qwenModel", "googlePlacesKey", "pilotAccessCode", "operatorName", "contactEmail", "emergencyStopReady", "providerBudgetCaps", "flyTokyo", "flyIdleLifecycle", "flyHttpsAndHealth", "flyMachineShape", "flyPersistentData", "flySnapshots", "pinnedContainerBase", "releaseEvidence"];
+const FLY_CHECKS = ["exactlyOneMachine", "machineStarted", "machineTokyo", "machineShape", "machineIdleLifecycle", "exactlyOneVolume", "volumeCreated", "volumeTokyo", "volumeName", "volumeSize", "volumeEncrypted", "volumeSnapshots", "volumeAttached", "volumeMounted", "healthChecksPresent", "healthChecksForMachine", "healthChecksPassing", "requiredSecretsDeployed"];
+const SMOKE_CHECKS = ["health", "readiness", "capabilities", "privacy", "terms"];
 
 export function evaluateFormalReleaseGate({
   releaseEvidence,
@@ -34,12 +38,12 @@ export function evaluateFormalReleaseGate({
     repositoryClean: repositoryClean === true && [releaseEvidence, pilotEvidence, preflightEvidence, flyEvidence, smokeEvidence].every((report) => report?.repositoryClean === true),
     releaseRevision: sameRevision,
     deployedImage: sameImage && evidenceAfterDeployment,
-    technicalRelease: releaseEvidence?.gatePassed === true && fresh(releaseEvidence, now, maxAgeMs),
+    technicalRelease: releaseEvidence?.gatePassed === true && exactTrueMap(releaseEvidence?.gates, TECHNICAL_GATES) && fresh(releaseEvidence, now, maxAgeMs),
     productionPilot: pilotProvenance && pilotConsistent && recomputedPilot.gatePassed === true && fresh(pilotEvidence, now, maxAgeMs),
-    deploymentPreflight: preflightEvidence?.passed === true && fresh(preflightEvidence, now, maxAgeMs),
-    flyRemoteState: flyEvidence?.passed === true && flyEvidence?.app === app && fresh(flyEvidence, now, maxAgeMs),
+    deploymentPreflight: preflightEvidence?.passed === true && exactTrueMap(preflightEvidence?.checks, PREFLIGHT_CHECKS) && fresh(preflightEvidence, now, maxAgeMs),
+    flyRemoteState: flyEvidence?.passed === true && flyEvidence?.app === app && exactTrueMap(flyEvidence?.checks, FLY_CHECKS) && fresh(flyEvidence, now, maxAgeMs),
     providerFreeSmoke: smokeEvidence?.passed === true && smokeEvidence?.live === false
-      && smokeEvidence?.baseUrl === `https://${app}.fly.dev` && fresh(smokeEvidence, now, maxAgeMs)
+      && smokeEvidence?.baseUrl === `https://${app}.fly.dev` && exactTrueMap(smokeEvidence?.checks, SMOKE_CHECKS) && fresh(smokeEvidence, now, maxAgeMs)
   };
   const blockedBy = Object.entries(gates).filter(([, passed]) => !passed).map(([name]) => name);
   return {
@@ -67,6 +71,11 @@ function sameMap(left, right) {
 
 function sameList(left, right) {
   return Array.isArray(left) && Array.isArray(right) && JSON.stringify([...left].sort()) === JSON.stringify([...right].sort());
+}
+
+function exactTrueMap(value, expectedKeys) {
+  const keys = Object.keys(value || {}).sort();
+  return JSON.stringify(keys) === JSON.stringify([...expectedKeys].sort()) && expectedKeys.every((key) => value[key] === true);
 }
 
 function fresh(report, now, maxAgeMs) {

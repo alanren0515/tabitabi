@@ -21,8 +21,10 @@ export function evaluateFlyRemoteState({ machines = [], volumes = [], checks = [
     .filter((item) => String(item.status || "").toLowerCase() === "deployed")
     .map((item) => String(item.name || "")));
   const machineImageTag = String(machine.image_ref?.tag ?? machine.imageRef?.tag ?? "");
-  const release = releases.find((item) => String(item.Status ?? item.status ?? "").toLowerCase() === "complete"
-    && String(item.ImageRef ?? item.imageRef ?? "").endsWith(`:${machineImageTag}`)) || {};
+  const release = releases.filter((item) => String(item.Status ?? item.status ?? "").toLowerCase() === "complete"
+    && String(item.ImageRef ?? item.imageRef ?? "").endsWith(`:${machineImageTag}`))
+    .sort((left, right) => Date.parse(String(right.CreatedAt ?? right.createdAt ?? "")) - Date.parse(String(left.CreatedAt ?? left.createdAt ?? ""))
+      || Number(right.Version ?? right.version ?? 0) - Number(left.Version ?? left.version ?? 0))[0] || {};
   const results = {
     exactlyOneMachine: machines.length === 1,
     machineStarted: String(machine.state || "").toLowerCase() === "started",
