@@ -68,7 +68,8 @@ export function evaluateFlyRemoteState({ machines = [], volumes = [], checks = [
     nextSteps: missing.map((name) => guidance[name]),
     deployment: {
       machineUpdatedAt: machine.updated_at ?? machine.updatedAt ?? null,
-      imageDigest: machine.image_ref?.digest ?? machine.imageRef?.digest ?? null
+      imageDigest: machine.image_ref?.digest ?? machine.imageRef?.digest ?? null,
+      imageTag: machine.image_ref?.tag ?? machine.imageRef?.tag ?? null
     }
   };
 }

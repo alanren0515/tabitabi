@@ -7,7 +7,7 @@ import { currentGitState } from "../server/release-revision.mjs";
 const run = promisify(execFile);
 const app = flyApplicationName(await readFile("fly.toml", "utf8"));
 if (!app) throw new Error("fly.toml must contain a valid committed app name");
-const remoteCommand = `node --input-type=module -e "import('./server/pilot-report.mjs').then(async({loadPilotReport})=>console.log('TABITABI_REPORT='+JSON.stringify({schemaVersion:1,source:'fly-volume',app:${JSON.stringify(app)},volume:'tabitabi_data',releaseRevision:process.env.RELEASE_REVISION||null,imageRef:process.env.FLY_IMAGE_REF||null,...await loadPilotReport('/app/data/events.jsonl')})))"`;
+const remoteCommand = "node /app/server/remote-pilot-report.mjs";
 
 try {
   const { stdout } = await run("flyctl", ["ssh", "console", "-a", app, "-C", remoteCommand], { timeout: 45_000, maxBuffer: 512 * 1024 });

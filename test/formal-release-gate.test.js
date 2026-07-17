@@ -6,6 +6,7 @@ const now = Date.parse("2026-07-18T12:00:00.000Z");
 const generatedAt = "2026-07-18T11:00:00.000Z";
 const revision = "a".repeat(40);
 const imageDigest = `sha256:${"b".repeat(64)}`;
+const imageTag = "deployment-01KXRBYNTMPKPM0CPT8YZHPFJW";
 const pilotMetrics = { inputRuns: 20, feedbackRuns: 10, analysisCompletionRate: 0.8, actionRate: 0.35, helpfulRate: 0.6 };
 const valid = {
   now,
@@ -13,9 +14,9 @@ const valid = {
   currentRevision: revision,
   repositoryClean: true,
   releaseEvidence: { generatedAt, revision, repositoryClean: true, gatePassed: true },
-  pilotEvidence: { schemaVersion: 1, source: "fly-volume", app: "tabitabi-jp", volume: "tabitabi_data", generatedAt, auditRevision: revision, releaseRevision: revision, imageRef: `registry.fly.io/tabitabi-jp@${imageDigest}`, repositoryClean: true, gatePassed: true, gates: { inputSample: true, feedbackSample: true, analysisCompletion: true, actionRate: true, helpfulRate: true }, blockedBy: [], metrics: pilotMetrics },
+  pilotEvidence: { schemaVersion: 1, source: "fly-volume", app: "tabitabi-jp", volume: "tabitabi_data", generatedAt, auditRevision: revision, releaseRevision: revision, imageRef: `registry.fly.io/tabitabi-jp:${imageTag}`, repositoryClean: true, gatePassed: true, gates: { inputSample: true, feedbackSample: true, analysisCompletion: true, actionRate: true, helpfulRate: true }, blockedBy: [], metrics: pilotMetrics },
   preflightEvidence: { generatedAt, revision, repositoryClean: true, passed: true },
-  flyEvidence: { generatedAt, revision, repositoryClean: true, app: "tabitabi-jp", passed: true, deployment: { machineUpdatedAt: "2026-07-18T10:00:00.000Z", imageDigest } },
+  flyEvidence: { generatedAt, revision, repositoryClean: true, app: "tabitabi-jp", passed: true, deployment: { machineUpdatedAt: "2026-07-18T10:00:00.000Z", imageDigest, imageTag } },
   smokeEvidence: { generatedAt, revision, releaseRevision: revision, repositoryClean: true, baseUrl: "https://tabitabi-jp.fly.dev", passed: true, live: false }
 };
 
