@@ -24,7 +24,7 @@
 
 ## Fly.io deployment memory
 
-- This project's approved Fly target is app `tabitabi-jp` in Tokyo region `nrt` with one `shared-cpu-1x` Machine, 512 MB RAM, `--ha=false`, automatic start, idle stop, and zero permanently running Machines. Remote state last verified on 2026-07-18: the app and Volume exist, but no Machine has been deployed yet.
+- This project's approved Fly target is app `tabitabi-jp` in Tokyo region `nrt` with one `shared-cpu-1x` Machine, 512 MB RAM, `--ha=false`, automatic start, idle stop, and zero permanently running Machines. Remote state verified on 2026-07-18: exactly one Machine (`2874ddda755048`) is deployed, its health check passes, and all 12 required Secrets are deployed. Do not create a second Machine without a new cost report and explicit approval.
 - The persistent Volume is `tabitabi_data`, 1 GB, encrypted, mounted at `/app/data`, with scheduled snapshots and 7-day retention. Do not create another Machine or Volume without a new cost report and explicit approval.
 - The pilot hostname is `https://tabitabi-jp.fly.dev`; keep the free `fly.dev` domain until pilot value is proven. Do not purchase a domain without explicit approval.
 - Fly routing and Docker liveness use `/healthz`. `/readyz` reports core readiness, provider degradation, and the paid-API emergency-stop state without removing the application shell from routing.
