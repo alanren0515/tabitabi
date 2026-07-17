@@ -1,11 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { evaluateFlyRemoteState, parseFlyChecksJson, parseFlyJson } from "../server/fly-remote-audit.mjs";
+import { evaluateFlyRemoteState, parseFlyChecksJson, parseFlyJson, REQUIRED_FLY_SECRETS } from "../server/fly-remote-audit.mjs";
 
 const valid = {
-  machines: [{ id: "machine-1", state: "started", region: "nrt", config: { guest: { cpu_kind: "shared", cpus: 1, memory_mb: 512 }, mounts: [{ volume: "volume-1", path: "/app/data" }] } }],
-  volumes: [{ id: "volume-1", state: "created", attached_machine_id: "machine-1", name: "tabitabi_data", region: "nrt", size_gb: 1, snapshot_retention: 7, auto_backup_enabled: true }],
-  checks: [{ machineId: "machine-1", name: "http_service", status: "passing" }]
+  machines: [{ id: "machine-1", state: "started", region: "nrt", config: { guest: { cpu_kind: "shared", cpus: 1, memory_mb: 512 }, mounts: [{ volume: "volume-1", path: "/app/data" }], services: [{ internal_port: 4173, checks: [{ path: "/healthz" }], autostart: true, autostop: true, min_machines_running: 0 }] } }],
+  volumes: [{ id: "volume-1", state: "created", attached_machine_id: "machine-1", name: "tabitabi_data", region: "nrt", size_gb: 1, encrypted: true, snapshot_retention: 7, auto_backup_enabled: true }],
+  checks: [{ machineId: "machine-1", name: "http_service", status: "passing" }],
+  secrets: REQUIRED_FLY_SECRETS.map((name) => ({ name, status: "Deployed" }))
 };
 
 test("accepts exactly one healthy Tokyo machine and one 1 GB Tokyo volume", () => {
@@ -29,10 +30,23 @@ test("fails closed for stopped machines, unattached volumes, warnings, and missi
     { machines: [{ ...valid.machines[0], state: "stopped" }] },
     { volumes: [{ ...valid.volumes[0], attached_machine_id: null }] },
     { volumes: [{ ...valid.volumes[0], snapshot_retention: 5 }] },
+    { volumes: [{ ...valid.volumes[0], encrypted: false }] },
+    { secrets: valid.secrets.slice(1) },
+    { secrets: valid.secrets.map((item, index) => index === 0 ? { ...item, status: "Staged" } : item) },
+    { machines: withService({ autostart: false }) },
+    { machines: withService({ autostop: false }) },
+    { machines: withService({ min_machines_running: 1 }) },
+    { machines: withService({ internal_port: 9999 }) },
     { checks: [...valid.checks, { machineId: "machine-1", name: "secondary", status: "warning" }] },
     { machines: [{ ...valid.machines[0], config: { ...valid.machines[0].config, guest: { cpus: 1, memory_mb: 512 } } }] }
   ]) assert.equal(evaluateFlyRemoteState({ ...valid, ...changed }).passed, false);
 });
+
+function withService(overrides) {
+  const machine = structuredClone(valid.machines[0]);
+  machine.config.services[0] = { ...machine.config.services[0], ...overrides };
+  return [machine];
+}
 
 test("requires Fly JSON commands to return arrays", () => {
   assert.deepEqual(parseFlyJson("[]", "machines"), []);

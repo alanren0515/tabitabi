@@ -1,12 +1,14 @@
 import { readFile } from "node:fs/promises";
 import { evaluateDeploymentPreflight, parseEnvironmentFile } from "../server/deployment-preflight.mjs";
 import { evaluateReleaseEvidence } from "../server/release-evidence.mjs";
+import { readMacKeychainSecret } from "../server/keychain-secret.mjs";
 
 const [localEnv, flyConfig, dockerfile, cases, matrix, audits, candidateResults, decisionResults] = await Promise.all([
   readText(".env.local"), readText("fly.toml"), readText("Dockerfile"), readJson("eval/cases.json"), readJson("eval/coverage-matrix.json"),
   readJson("eval/manual-audits.json"), readJson("eval/latest-candidate-results.json"), readJson("eval/latest-decision-results.json")
 ]);
 const env = { ...parseEnvironmentFile(localEnv), ...process.env };
+if (!env.PILOT_ACCESS_CODE) env.PILOT_ACCESS_CODE = await readMacKeychainSecret({ service: "tabitabi-jp-pilot-access" });
 const releaseGate = evaluateReleaseEvidence({ cases, matrix, audits, candidateResults, decisionResults });
 const result = evaluateDeploymentPreflight({ env, flyConfig, dockerfile, releaseGate });
 const guidance = {
@@ -20,7 +22,7 @@ const guidance = {
   providerBudgetCaps: "将三个 DAILY_*_LIMIT 保持在 1–90；Google 控制台配额仍需人工核对为 100/日。",
   flyTokyo: "检查 fly.toml 的 primary_region = \"nrt\"。",
   flyIdleLifecycle: "检查 Fly 自动启动、空闲停止和 min_machines_running=0。",
-  flyHttpsAndHealth: "检查 Fly 强制 HTTPS 且健康检查为 /readyz。",
+  flyHttpsAndHealth: "检查 Fly 强制 HTTPS 且路由健康检查为 /healthz；供应商状态另看 /readyz。",
   flyMachineShape: "检查 Fly VM 为 shared-cpu-1x、512mb、1 CPU。",
   flyPersistentData: "检查 tabitabi_data 挂载到 /app/data。",
   flySnapshots: "检查每日快照开启且保留 7 天。",
