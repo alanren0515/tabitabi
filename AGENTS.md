@@ -21,3 +21,13 @@
 - After a billable action, report the resource actually created or request actually made, the amount shown by the provider when available, and a clearly labeled estimate when the provider has not yet posted an exact charge.
 - Never hide uncertain pricing behind a generic warning. State what is known, what remains uncertain, and the maximum exposure enforced by quotas, budgets, auto-stop, or other controls.
 - Normal no-cost local work and requests covered by an already approved, explicitly stated spending ceiling may continue autonomously. Any new provider, paid plan, recurring resource, quota increase, or action that could exceed the approved ceiling requires a new confirmation.
+
+## Fly.io deployment memory
+
+- This project's approved Fly target is app `tabitabi-jp` in Tokyo region `nrt` with one `shared-cpu-1x` Machine, 512 MB RAM, `--ha=false`, automatic start, idle stop, and zero permanently running Machines. Remote state last verified on 2026-07-18: the app and Volume exist, but no Machine has been deployed yet.
+- The persistent Volume is `tabitabi_data`, 1 GB, encrypted, mounted at `/app/data`, with scheduled snapshots and 7-day retention. Do not create another Machine or Volume without a new cost report and explicit approval.
+- The pilot hostname is `https://tabitabi-jp.fly.dev`; keep the free `fly.dev` domain until pilot value is proven. Do not purchase a domain without explicit approval.
+- Fly routing and Docker liveness use `/healthz`. `/readyz` reports core readiness, provider degradation, and the paid-API emergency-stop state without removing the application shell from routing.
+- Keep Qwen, Google Places, Hot Pepper, pilot access, and public operator values in Fly Secrets. Never record secret values in project memory, Git, logs, screenshots, commands, or chat.
+- The manual global cost kill switch is the Fly Secret `PAID_API_EMERGENCY_STOP=true`. Automatic provider-specific circuit state lives at `/app/data/provider-circuit.json`. Follow `docs/security-incident-response.md` for containment and recovery.
+- The checked-in `fly.toml`, `Dockerfile`, preflight, remote audit, and provider-free smoke scripts are the reusable source of truth. Re-check live Fly pricing before future deployment work; historical prices are not guarantees.
