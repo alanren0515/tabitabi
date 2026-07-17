@@ -80,6 +80,14 @@ fly checks list
 
 Do not continue until `fly machine list` shows exactly one Tokyo Machine with the configured 512 MB shape and `fly volumes list` shows exactly one Tokyo `tabitabi_data` Volume. This remote-state check is a hard gate because local `fly.toml` cannot prove existing Fly resources.
 
+After the Machine has started and the health check is passing, run the read-only automated equivalent:
+
+```bash
+npm run release:fly-audit
+```
+
+It reads only Fly's JSON status output and fails unless there is exactly one started `nrt` shared 1-CPU/512 MB Machine, exactly one created 1 GB `tabitabi_data` Volume attached and mounted at `/app/data`, and every health check belongs to that Machine and is passing. Warning or missing fields fail closed. It never creates, scales, restarts or deletes resources. A passing remote audit does not replace the direct provider-free `/readyz` smoke because Fly's reported check timestamp can be stale.
+
 After deployment, first run the provider-free smoke test. It checks liveness, readiness, capabilities, privacy and terms without calling Qwen or Google Places. It can wake an auto-stopped Fly Machine and therefore may incur a small amount of Fly compute/network usage:
 
 ```bash

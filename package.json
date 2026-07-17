@@ -20,6 +20,7 @@
     "pilot:gate": "node scripts/pilot-gate.mjs",
     "status": "node scripts/project-status.mjs",
     "release:preflight": "node scripts/predeploy-check.mjs",
-    "release:smoke": "node scripts/postdeploy-smoke.mjs"
+    "release:smoke": "node scripts/postdeploy-smoke.mjs",
+    "release:fly-audit": "node scripts/audit-fly-remote.mjs"
   }
 }
