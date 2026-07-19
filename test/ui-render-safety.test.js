@@ -7,9 +7,9 @@ test("escapes user-visible result strings before inserting HTML", async () => {
   for (const expression of [
     "${esc(r.summary)}",
     "${esc(reason)}",
-    "${esc(r.nextAction)}",
+    "esc(r.nextAction)",
     "${esc(r.queue)}",
-    "${esc(r.conflictTitle || \"情報が一致していません\")}",
+    "esc(r.conflictTitle || \"情報が一致していません\")",
     "${esc(r.conflict)}"
   ]) assert.ok(source.includes(expression), expression);
 });

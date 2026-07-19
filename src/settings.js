@@ -1,13 +1,16 @@
+import { normalizeLocale } from "./i18n.js";
+
 export const SETTINGS_STORAGE_KEY = "tabitabi-settings";
 export const PILOT_ACCESS_SESSION_KEY = "tabitabi-pilot-access-v1";
-export const DEFAULT_SETTINGS = Object.freeze({ defaultPartySize: 2, saveRecentAnalyses: true, pilotAccessCode: "" });
+export const DEFAULT_SETTINGS = Object.freeze({ defaultPartySize: 2, saveRecentAnalyses: true, pilotAccessCode: "", locale: "ja" });
 
 export function normalizeSettings(value = {}) {
   const party = Number.parseInt(value?.defaultPartySize, 10);
   return {
     defaultPartySize: Number.isFinite(party) ? Math.min(20, Math.max(1, party)) : DEFAULT_SETTINGS.defaultPartySize,
     saveRecentAnalyses: value?.saveRecentAnalyses !== false,
-    pilotAccessCode: normalizePilotAccessCode(value?.pilotAccessCode)
+    pilotAccessCode: normalizePilotAccessCode(value?.pilotAccessCode),
+    locale: normalizeLocale(value?.locale)
   };
 }
 
@@ -15,7 +18,8 @@ export function settingsFromForm(values = {}) {
   return normalizeSettings({
     defaultPartySize: values.defaultPartySize,
     saveRecentAnalyses: values.saveRecentAnalyses === "on" || values.saveRecentAnalyses === true,
-    pilotAccessCode: values.pilotAccessCode
+    pilotAccessCode: values.pilotAccessCode,
+    locale: values.locale
   });
 }
 

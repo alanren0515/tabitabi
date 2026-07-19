@@ -7,12 +7,16 @@ test("normalizes local preferences to bounded supported values", () => {
   assert.deepEqual(normalizeSettings({ defaultPartySize: 99, defaultPhoneScript: "easy", reservationName: "legacy", saveRecentAnalyses: false }), {
     defaultPartySize: 20,
     saveRecentAnalyses: false,
-    pilotAccessCode: ""
+    pilotAccessCode: "",
+    locale: "ja"
   });
   assert.equal(normalizeSettings({ defaultPartySize: "bad", defaultPhoneScript: "unknown" }).defaultPartySize, 2);
   assert.equal("reservationName" in normalizeSettings({ reservationName: "legacy" }), false);
   assert.equal("defaultPhoneScript" in normalizeSettings({ defaultPhoneScript: "easy" }), false);
   assert.equal(normalizeSettings({ pilotAccessCode: `  code\n${"x".repeat(300)}  ` }).pilotAccessCode.length, 256);
+  assert.equal(normalizeSettings({ locale: "en-US" }).locale, "en");
+  assert.equal(normalizeSettings({ locale: "zh-TW" }).locale, "zh-CN");
+  assert.equal(normalizeSettings({ locale: "fr" }).locale, "ja");
   assert.deepEqual(pilotAccessHeaders({ pilotAccessCode: " pilot-code " }), { "X-Pilot-Access": "pilot-code" });
   assert.deepEqual(pilotAccessHeaders({}), {});
 });
@@ -30,7 +34,8 @@ test("recognizes a rejected access code and clears only that session value", () 
   assert.deepEqual(settingsWithoutPilotAccess({ defaultPartySize: 4, pilotAccessCode: "wrong-code" }), {
     defaultPartySize: 4,
     saveRecentAnalyses: true,
-    pilotAccessCode: ""
+    pilotAccessCode: "",
+    locale: "ja"
   });
 });
 
@@ -54,6 +59,7 @@ test("requires the recent-history checkbox to be present in submitted form value
   assert.equal(settingsFromForm({ defaultPartySize: "4", saveRecentAnalyses: "on" }).saveRecentAnalyses, true);
   assert.equal(settingsFromForm({ defaultPartySize: "4" }).saveRecentAnalyses, false);
   assert.equal(settingsFromForm({ pilotAccessCode: "test-code" }).pilotAccessCode, "test-code");
+  assert.equal(settingsFromForm({ locale: "en" }).locale, "en");
 });
 
 test("removes legacy persistent access codes synchronously and recovers malformed settings", () => {

@@ -13,6 +13,8 @@ import { createCapabilitiesLoader } from "./capabilities.js";
 import { clipboardScreenshotFile, SCREENSHOT_ACCEPT, validateScreenshotFile } from "./image-input.js";
 import { sendEvent } from "./event-client.js";
 import { pathnameForView, viewFromPathname } from "./client-routes.js";
+import { SUPPORTED_LOCALES, localeNumberFormat, translate } from "./i18n.js";
+import { localizedLegalContent } from "./legal-content.js";
 
 const app = document.querySelector("#app");
 const toast = document.querySelector("#toast");
@@ -68,23 +70,24 @@ const state = {
 };
 
 let lastRenderedView = "";
+let lastRenderedLocale = "";
 
-const VIEW_LABELS = {
-  home: "ホーム",
-  extraction: "スクリーンショットの確認",
-  text_extraction: "入力内容の確認",
-  link_guidance: "リンクの確認方法",
-  candidates: "店舗候補",
-  candidate_confirmed: "確認した店舗",
-  loading: "確認中",
-  result: "店舗情報",
-  saved: "行きたいリスト",
-  history: "最近の確認",
-  queue: "あとで確認する店舗",
-  pilot: "テスト参加",
-  privacy: "プライバシーとデータ",
-  terms: "利用条件",
-  settings: "設定"
+const VIEW_LABEL_KEYS = {
+  home: "route.home",
+  extraction: "route.extraction",
+  text_extraction: "route.textExtraction",
+  link_guidance: "route.linkGuidance",
+  candidates: "route.candidates",
+  candidate_confirmed: "route.confirmed",
+  loading: "route.loading",
+  result: "route.result",
+  saved: "route.saved",
+  history: "route.history",
+  queue: "route.queue",
+  pilot: "route.pilot",
+  privacy: "route.privacy",
+  terms: "route.terms",
+  settings: "route.settings"
 };
 
 const icons = {
@@ -99,6 +102,46 @@ function esc(value = "") {
   return String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 }
 
+function t(key, variables = {}) {
+  return translate(state.settings.locale, key, variables);
+}
+
+function currentLocale() {
+  return state.settings.locale || "ja";
+}
+
+function syncShellLanguage() {
+  const locale = currentLocale();
+  document.documentElement.lang = locale;
+  document.querySelector('meta[name="description"]')?.setAttribute("content", t("meta.description"));
+  document.querySelector(".brand")?.setAttribute("aria-label", t("shell.home"));
+  const languageSelect = document.querySelector("#language-select");
+  if (languageSelect) {
+    languageSelect.value = locale;
+    languageSelect.setAttribute("aria-label", t("shell.language"));
+    languageSelect.closest("label")?.querySelector("span")?.replaceChildren(t("shell.language"));
+  }
+  const historyButton = document.querySelector('[data-action="history"]');
+  const savedButton = document.querySelector('[data-action="saved"]');
+  historyButton?.querySelector("span:first-child")?.replaceChildren(t("shell.history"));
+  savedButton?.querySelector("span:first-child")?.replaceChildren(t("shell.saved"));
+  document.querySelector(".top-actions")?.setAttribute("aria-label", `${t("shell.history")} / ${t("shell.saved")}`);
+  const footer = document.querySelector("footer");
+  if (footer) {
+    footer.children[1]?.replaceChildren(t("shell.promise"));
+    const labels = {
+      queue: t("shell.queue"), settings: t("shell.settings"), pilot: t("shell.pilot"),
+      privacy: t("shell.privacy"), terms: t("shell.terms")
+    };
+    for (const [action, label] of Object.entries(labels)) {
+      const element = footer.querySelector(`[data-action="${action}"]`);
+      if (!element) continue;
+      if (action === "queue") element.firstChild.textContent = `${label} `;
+      else element.textContent = label;
+    }
+  }
+}
+
 function showToast(message) {
   toast.textContent = message;
   toast.classList.add("visible");
@@ -108,14 +151,14 @@ function showToast(message) {
 function syncSaved() {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.saved));
   document.querySelector("#saved-count").textContent = state.saved.length;
-  document.querySelector('[data-action="saved"]')?.setAttribute("aria-label", `行きたいリスト ${state.saved.length}件`);
+  document.querySelector('[data-action="saved"]')?.setAttribute("aria-label", t("shell.count", { label: t("route.saved"), count: state.saved.length }));
 }
 
 function syncRecent() {
   localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(state.recent));
   const count = document.querySelector("#history-count");
   if (count) count.textContent = state.recent.length;
-  document.querySelector('[data-action="history"]')?.setAttribute("aria-label", `最近の確認 ${state.recent.length}件`);
+  document.querySelector('[data-action="history"]')?.setAttribute("aria-label", t("shell.count", { label: t("route.history"), count: state.recent.length }));
 }
 
 function syncSettings() {
@@ -131,6 +174,7 @@ function syncPending() {
 
 function render() {
   const viewChanged = state.view !== lastRenderedView;
+  const localeChanged = currentLocale() !== lastRenderedLocale;
   if (state.view !== "loading") app.removeAttribute("aria-busy");
   if (state.view === "home") renderHome();
   if (state.view === "extraction") renderExtraction();
@@ -147,17 +191,19 @@ function render() {
   if (state.view === "privacy") renderPrivacy();
   if (state.view === "terms") renderTerms();
   if (state.view === "settings") renderSettings();
+  syncShellLanguage();
   syncSaved();
   syncRecent();
   syncSettings();
   syncPending();
-  document.title = state.view === "pilot" ? "クローズドテスト参加 | TabiTabi" : state.view === "privacy" ? "プライバシーとデータ | TabiTabi" : state.view === "terms" ? "利用条件 | TabiTabi" : "TabiTabi | SNSで見つけた店を、次の行動へ";
+  document.title = state.view === "pilot" ? t("meta.pilotTitle") : state.view === "privacy" ? t("meta.privacyTitle") : state.view === "terms" ? t("meta.termsTitle") : t("meta.title");
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
-  if (viewChanged) {
-    routeStatus.textContent = `${VIEW_LABELS[state.view] || "新しいページ"}を開きました`;
-    if (lastRenderedView) requestAnimationFrame(() => app.focus({ preventScroll: true }));
+  if (viewChanged || localeChanged) {
+    routeStatus.textContent = t("route.opened", { label: VIEW_LABEL_KEYS[state.view] ? t(VIEW_LABEL_KEYS[state.view]) : t("route.new") });
+    if (viewChanged && lastRenderedView) requestAnimationFrame(() => app.focus({ preventScroll: true }));
     lastRenderedView = state.view;
+    lastRenderedLocale = currentLocale();
   }
 }
 
@@ -171,48 +217,49 @@ function renderHome() {
   app.innerHTML = `
     <section class="hero">
       <div class="hero-intro">
-        <div class="eyebrow">SNSから、お店の入口まで</div>
-        <h1>気になる店を、<br><em>次の行動へ。</em></h1>
-        <p class="hero-copy">リンク、店名、スクリーンショットから店舗を確認。予約・電話・来店の次の一歩を整理します。</p>
-        <div class="hero-route" aria-hidden="true"><span>SNS</span><i></i><span>店舗確認</span><i></i><span>行動</span></div>
+        <div class="eyebrow">${t("home.eyebrow")}</div>
+        <h1>${t("home.title")}</h1>
+        <p class="hero-copy">${t("home.copy")}</p>
+        <div class="hero-route" aria-hidden="true"><span>SNS</span><i></i><span>${t("home.routeIdentify")}</span><i></i><span>${t("home.routeAct")}</span></div>
       </div>
       <div class="hero-workbench">
-      ${state.sharedInputPending ? `<aside class="shared-input-banner"><strong>共有内容を受け取りました</strong><span>共有されたタイトル、文章、リンクを入力欄に反映しました。内容を確認してから開始してください。</span></aside>` : ""}
-      ${offline ? `<aside class="offline-banner"><strong>オフラインです</strong><span>保存済みのリストは確認できます。新しい画像解析、店舗検索、公式サイト確認にはインターネット接続が必要です。</span></aside>` : ""}
+      ${currentLocale() !== "ja" ? `<aside class="language-beta-note"><strong>${t("language.beta")}</strong><span>${t("result.originalLanguageNotice")}</span></aside>` : ""}
+      ${state.sharedInputPending ? `<aside class="shared-input-banner"><strong>${t("home.sharedTitle")}</strong><span>${t("home.sharedBody")}</span></aside>` : ""}
+      ${offline ? `<aside class="offline-banner"><strong>${t("home.offlineTitle")}</strong><span>${t("home.offlineBody")}</span></aside>` : ""}
       ${accessLocked ? `<form id="pilot-access-form" class="pilot-access-card" aria-labelledby="pilot-access-title">
-        <div class="pilot-access-copy"><span>クローズドテスト</span><strong id="pilot-access-title">招待アクセスコードを入力</strong><p id="pilot-access-help">管理者から案内されたコードです。このタブを閉じるまでだけ保持し、店舗確認を始めるときに本サービスへ送信します。</p></div>
-        <label for="pilot-access-code">招待アクセスコード</label>
-        <div class="pilot-access-controls"><input id="pilot-access-code" name="pilotAccessCode" type="password" maxlength="256" autocomplete="off" required aria-describedby="pilot-access-help" placeholder="アクセスコード"><button type="submit">このタブで使用</button></div>
+        <div class="pilot-access-copy"><span>${t("home.accessEyebrow")}</span><strong id="pilot-access-title">${t("home.accessTitle")}</strong><p id="pilot-access-help">${t("home.accessHelp")}</p></div>
+        <label for="pilot-access-code">${t("home.accessLabel")}</label>
+        <div class="pilot-access-controls"><input id="pilot-access-code" name="pilotAccessCode" type="password" maxlength="256" autocomplete="off" required aria-describedby="pilot-access-help" placeholder="${t("home.accessPlaceholder")}"><button type="submit">${t("home.accessSubmit")}</button></div>
       </form>` : ""}
       <form id="analyze-form" class="input-card">
-        <label for="clue">お店の手がかり</label>
-        <textarea id="clue" name="clue" rows="4" placeholder="Instagram / TikTok のリンク、または店名を入力…" ${state.analysisError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
-        <p class="supported-sources">Instagram・TikTok に最適化。YouTube Shorts・X、LINE で受け取ったリンクや文章にも対応します。</p>
+        <label for="clue">${t("home.clueLabel")}</label>
+        <textarea id="clue" name="clue" rows="4" placeholder="${t("home.cluePlaceholder")}" ${state.analysisError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
+        <p class="supported-sources">${t("home.sources")}</p>
         <div class="input-meta">
-          <button type="button" class="upload-button" id="upload-trigger">${icons.upload}<span>${state.uploadName ? esc(state.uploadName) : "スクリーンショットを追加"}</span></button>
+          <button type="button" class="upload-button" id="upload-trigger">${icons.upload}<span>${state.uploadName ? esc(state.uploadName) : t("home.addScreenshot")}</span></button>
           <input type="file" id="screenshot" hidden accept="${SCREENSHOT_ACCEPT}" />
-          ${state.uploadName ? '<button type="button" class="remove-upload" id="remove-upload">画像を外す</button>' : '<span class="privacy-note" id="upload-help">画像は店舗確認のためだけに使用します</span>'}
+          ${state.uploadName ? `<button type="button" class="remove-upload" id="remove-upload">${t("home.removeScreenshot")}</button>` : `<span class="privacy-note" id="upload-help">${t("home.imagePrivacy")}</span>`}
         </div>
-        ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="確認するスクリーンショット"><div><strong>画面全体を確認します</strong><span>店名、住所、価格、投稿者、本文、反応数を分けて扱います。</span></div></div>` : ""}
-        ${state.analysisError ? `<aside class="inline-error" id="analysis-error" role="alert"><strong>入力内容を確認できませんでした</strong><span>${esc(state.analysisError)}</span></aside>` : ""}
-        <button class="primary-button" type="submit" ${accessLocked ? 'disabled aria-describedby="pilot-access-help"' : ""}>確認をはじめる ${icons.arrow}</button>
+        ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="${t("home.previewAlt")}"><div><strong>${t("home.previewTitle")}</strong><span>${t("home.previewBody")}</span></div></div>` : ""}
+        ${state.analysisError ? `<aside class="inline-error" id="analysis-error" role="alert"><strong>${t("home.errorTitle")}</strong><span>${esc(state.analysisError)}</span></aside>` : ""}
+        <button class="primary-button" type="submit" ${accessLocked ? 'disabled aria-describedby="pilot-access-help"' : ""}>${t("home.start")} ${icons.arrow}</button>
       </form>
       <div class="examples">
-        <span>デモを試す：</span>
-        <button data-example="銀座 鮨 蒼月">予約が必要な寿司店</button>
-        <button data-example="新宿 麺処 灯 ラーメン">並んで入るラーメン店</button>
-        <button data-example="京都 喫茶 こもれび">情報が不足している喫茶店</button>
+        <span>${t("home.demo")}</span>
+        <button data-example="銀座 鮨 蒼月">${t("home.demoSushi")}</button>
+        <button data-example="新宿 麺処 灯 ラーメン">${t("home.demoRamen")}</button>
+        <button data-example="京都 喫茶 こもれび">${t("home.demoCafe")}</button>
       </div>
       </div>
     </section>
     ${state.pending.length ? `<section class="recent-preview queue-preview"><div><p class="overline">あとで確認</p><h2>画像内のほかの店舗を続けて確認</h2></div><div class="recent-preview-list">${state.pending.slice(0, 3).map((item) => `<button data-open-pending="${esc(item.id)}"><strong>${esc(item.clues.name)}</strong><span>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || "場所を要確認")}</span></button>`).join("")}</div><button class="text-button" data-action="queue">全 ${state.pending.length} 件を見る</button></section>` : ""}
     ${state.recent.length ? `<section class="recent-preview"><div><p class="overline">最近の確認</p><h2>前回の店舗をもう一度確認</h2></div><div class="recent-preview-list">${state.recent.slice(0, 3).map((item) => `<button data-open-recent="${esc(item.id)}"><strong>${esc(item.name)}</strong><span>${esc(item.area || "エリアを要確認")} · ${formatClientTime(item.analyzedAt)}</span></button>`).join("")}</div><button class="text-button" data-action="history">全 ${state.recent.length} 件を見る</button></section>` : ""}
     <section class="promise-grid">
-      <article><b>まず確認</b><h3>正しい店舗を選ぶ</h3><p>同名店や支店、表記ゆれを確認します。</p></article>
-      <article><b>根拠を確認</b><h3>情報源を分けて表示</h3><p>判断の根拠、取得時刻、確度を示します。</p></article>
-      <article><b>次に行動</b><h3>予約・電話・来店へ</h3><p>確認できた範囲で、次の行動を案内します。</p></article>
+      <article><b>${t("home.promise1Overline")}</b><h3>${t("home.promise1Title")}</h3><p>${t("home.promise1Body")}</p></article>
+      <article><b>${t("home.promise2Overline")}</b><h3>${t("home.promise2Title")}</h3><p>${t("home.promise2Body")}</p></article>
+      <article><b>${t("home.promise3Overline")}</b><h3>${t("home.promise3Title")}</h3><p>${t("home.promise3Body")}</p></article>
     </section>
-    <aside class="demo-banner ${visionLive ? "live" : ""}"><strong>${capabilitiesUnavailable ? "サービス状態を確認できません" : visionLive ? "スクリーンショット解析を利用できます" : "画像解析のデモモード"}</strong><span>${capabilitiesUnavailable ? "一時的な通信エラーを未設定とは判定しません。接続を確認して再試行してください。" : visionLive ? `${esc(visionModel)} で画面全体を確認します。${visionFallback ? "結果の品質が低い場合は予備モデルを使用します" : "予備モデルは未設定のため、確度が低い場合は手動確認が必要です"}。検索前に店名と住所を確認できます。` : "画像解析 API を設定すると任意のスクリーンショットを確認できます。現在はサンプル画像のみデモ解析できます。"}</span></aside>`;
+    <aside class="demo-banner ${visionLive ? "live" : ""}"><strong>${capabilitiesUnavailable ? t("home.serviceUnavailable") : visionLive ? t("home.visionReady") : t("home.visionDemo")}</strong><span>${capabilitiesUnavailable ? t("home.serviceUnavailableBody") : visionLive ? t("home.visionReadyBody", { model: esc(visionModel), fallback: visionFallback ? t("home.fallbackReady") : t("home.fallbackMissing") }) : t("home.visionDemoBody")}</span></aside>`;
 
   document.querySelector("#analyze-form").addEventListener("submit", handleAnalyze);
   document.querySelector("#pilot-access-form")?.addEventListener("submit", (event) => {
@@ -220,13 +267,13 @@ function renderHome() {
     const code = new FormData(event.currentTarget).get("pilotAccessCode");
     state.settings = normalizeSettings({ ...state.settings, pilotAccessCode: code });
     if (!state.settings.pilotAccessCode) {
-      showToast("招待アクセスコードを入力してください");
+      showToast(t("home.accessMissing"));
       document.querySelector("#pilot-access-code")?.focus();
       return;
     }
     syncSettings();
     state.analysisError = "";
-    showToast("アクセスコードを入力しました");
+    showToast(t("home.accessSaved"));
     renderHome();
     document.querySelector("#clue")?.focus();
   });
@@ -405,15 +452,15 @@ function renderTextExtraction() {
   const clues = parsed.clues;
   const parsedPlatformLabel = parsed.platformLabel || platformLabel(parsed.platform);
   app.innerHTML = `<section class="content-view narrow">
-    <button class="back-button" data-action="home">← 入力を修正</button>
-    <div class="section-heading"><span class="step-chip">入力内容の整理</span><h2>探す店舗を先に確認</h2><p>日付・時間・人数は予定に反映し、店舗検索のキーワードには混ぜません。</p></div>
+    <button class="back-button" data-action="home">${t("review.back")}</button>
+    <div class="section-heading"><span class="step-chip">${t("review.step")}</span><h2>${t("review.title")}</h2><p>${t("review.body")}</p></div>
     <section class="panel extracted-restaurant"><form id="text-extraction-form">
-      <div class="field-pair"><label>店名または検索語<input name="name" value="${esc(clues.name)}" required></label><label>支店名<input name="branch" value="${esc(clues.branch)}"></label></div>
-      <div class="field-pair"><label>エリア<input name="area" value="${esc(clues.area)}"></label><label>住所の補足<input name="address" value="${esc(clues.address)}"></label></div>
+      <div class="field-pair"><label>${t("review.name")}<input name="name" value="${esc(clues.name)}" required></label><label>${t("review.branch")}<input name="branch" value="${esc(clues.branch)}"></label></div>
+      <div class="field-pair"><label>${t("review.area")}<input name="area" value="${esc(clues.area)}"></label><label>${t("review.address")}<input name="address" value="${esc(clues.address)}"></label></div>
       ${clues.aliasExpanded ? `<aside class="alias-expansion"><strong>中国語の通称を正式名に置き換えました</strong><span>${esc(clues.originalName)} → ${esc(clues.name)}</span><p>検索には日本語の正式名を使います。エリア・住所・候補画面で支店を確認してください。</p></aside>` : ""}
-      <div class="plan-preview"><strong>読み取った予定</strong><span>${parsed.plan.planDate || "日付未定"} · ${parsed.plan.planTime || "時間未定"} · ${state.currentPlanIntent.partySize}名</span></div>
-      ${parsed.kind === "pending_analysis" ? `<aside class="link-capability"><strong>この端末の確認待ちリストから開きました</strong><p>店名・支店・場所の手掛かりだけを保存しています。実在する店舗をここから確認します。</p></aside>` : parsed.webpage ? `<aside class="link-capability"><strong>公開ページの手掛かりを確認 · 確度${esc(parsed.webpage.confidence === "high" ? "高" : parsed.webpage.confidence === "medium" ? "中" : "低")}</strong><p>${esc(parsed.webpage.warnings.join(" "))}</p><a href="${esc(safeExternalUrl(parsed.webpage.sourceUrl))}" target="_blank" rel="noreferrer">元ページを開いて確認</a></aside>` : parsed.links.length ? `<aside class="link-capability"><strong>${esc(parsedPlatformLabel)} のリンクも検出しました</strong><p>リンク横に入力された文章だけを店舗の手掛かりとして使います。第三者サイトの投稿本文は読み取らず、候補画面で支店を確認します。</p></aside>` : ""}
-      <button class="primary-button" type="submit">実在する店舗候補を検索 ${icons.arrow}</button>
+      <div class="plan-preview"><strong>${t("review.plan")}</strong><span>${parsed.plan.planDate || t("review.dateUnknown")} · ${parsed.plan.planTime || t("review.timeUnknown")} · ${t("review.people", { count: state.currentPlanIntent.partySize })}</span></div>
+      ${parsed.kind === "pending_analysis" ? `<aside class="link-capability"><p>${t("review.pendingNotice")}</p></aside>` : parsed.webpage ? `<aside class="link-capability"><p>${t("review.webNotice")}</p><a href="${esc(safeExternalUrl(parsed.webpage.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.sourceLanguage")}</a></aside>` : parsed.links.length ? `<aside class="link-capability"><strong>${esc(parsedPlatformLabel)}</strong><p>${t("review.linkNotice")}</p></aside>` : ""}
+      <button class="primary-button" type="submit">${t("review.search")} ${icons.arrow}</button>
     </form></section>
   </section>`;
   document.querySelector("#text-extraction-form").addEventListener("submit", async (event) => {
@@ -436,12 +483,12 @@ function renderLinkGuidance() {
   const parsedPlatformLabel = parsed.platformLabel || platformLabel(parsed.platform);
   const originalLink = parsed.links?.[0];
   app.innerHTML = `<section class="content-view narrow link-guidance-view">
-    <button class="back-button" data-action="home">← 手掛かりを追加</button>
-    <div class="section-heading"><span class="step-chip">${esc(parsedPlatformLabel)} のリンク</span><h2>${reservationPlatform ? "リンクは確認できましたが、店舗はまだ特定できません" : "リンクは確認できましたが、投稿内容は読み取っていません"}</h2><p>${reservationPlatform ? "第三者の店舗ページや予約ページだけでは、店舗の同一性や予約成立を判断しません。店名・住所・スクリーンショットを追加してください。" : "SNS 投稿はログインや動的表示が必要な場合があります。店名を推測しないため、次のどちらかを追加してください。"}</p></div>
-    ${reservationPlatform && originalLink ? `<aside class="link-capability"><strong>${originalLink.linkType === "booking_flow" ? "予約手続きに見える URL です" : "店舗ページまたは一覧ページの URL です"}</strong><p>ここでは URL の種類だけを判定し、空席、店名、料金、予約状況は読み取っていません。</p><a href="${esc(safeExternalUrl(originalLink.url))}" target="_blank" rel="noreferrer">元のリンクを開いて確認</a></aside>` : ""}
-    <div class="guidance-grid"><article><b>おすすめ</b><h3>${reservationPlatform ? "店舗のスクリーンショットを追加" : "投稿のスクリーンショットを追加"}</h3><p>画面全体の画像から店名、住所、見えている文章を確認します。</p></article><article><b>すばやく確認</b><h3>${reservationPlatform ? "リンクと一緒に店名を入力" : "本文または店名を貼り付け"}</h3><p>例：「Instagramで見た六歌仙 新宿本店。8月1日、4名」</p></article></div>
-    <aside class="extraction-warning"><strong>まだ確認していないこと</strong><ul>${parsed.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul></aside>
-    <button class="primary-button" data-action="home">画像または文章を追加</button>
+    <button class="back-button" data-action="home">${t("link.addClue")}</button>
+    <div class="section-heading"><span class="step-chip">${t("link.detected", { platform: esc(parsedPlatformLabel) })}</span><h2>${reservationPlatform ? t("link.bookingTitle") : t("link.postTitle")}</h2><p>${reservationPlatform ? t("link.bookingBody") : t("link.postBody")}</p></div>
+    ${reservationPlatform && originalLink ? `<aside class="link-capability"><p>${t("link.urlBoundary")}</p><a href="${esc(safeExternalUrl(originalLink.url))}" target="_blank" rel="noreferrer">${t("result.sourceLanguage")}</a></aside>` : ""}
+    <div class="guidance-grid"><article><b>${t("link.recommend")}</b><h3>${t("link.screenshot")}</h3><p>${t("link.screenshotBody")}</p></article><article><b>${t("link.quick")}</b><h3>${t("link.text")}</h3></article></div>
+    <aside class="extraction-warning"><strong>${t("link.notChecked")}</strong>${currentLocale() === "ja" ? `<ul>${parsed.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul>` : `<p>${reservationPlatform ? t("link.bookingBody") : t("link.postBody")}</p>`}</aside>
+    <button class="primary-button" data-action="home">${t("link.addInput")}</button>
   </section>`;
 }
 
@@ -457,15 +504,15 @@ function renderLoading() {
   app.setAttribute("aria-busy", "true");
   app.innerHTML = `<section class="loading-view" role="status" aria-live="polite">
     <div class="scanner" aria-hidden="true"><span></span><i>た</i></div>
-    <p class="eyebrow">${screenshotMode ? "画像全体を確認" : webpageMode ? "公開ページを確認" : detailsMode ? "実在する店舗を確認" : "店舗を検索"}</p>
-    <h2>${screenshotMode ? "スクリーンショットを読み取っています" : webpageMode ? "公開ページから店舗の手掛かりを探しています" : detailsMode ? "営業情報と次の行動を確認しています" : "実在する店舗を検索しています"}</h2>
+    <p class="eyebrow">${screenshotMode ? t("loading.screenshotOverline") : webpageMode ? t("loading.webOverline") : detailsMode ? t("loading.detailsOverline") : t("loading.searchOverline")}</p>
+    <h2>${screenshotMode ? t("loading.screenshotTitle") : webpageMode ? t("loading.webTitle") : detailsMode ? t("loading.detailsTitle") : t("loading.searchTitle")}</h2>
     <div class="loading-steps">${screenshotMode
-      ? '<span class="done">多言語の文字を認識</span><span class="active">事実と投稿者の感想を分離</span><span>店舗の手掛かりを整理</span>'
+      ? `<span class="done">${t("loading.stepRead")}</span><span class="active">${t("loading.stepSeparate")}</span><span>${t("loading.stepClues")}</span>`
       : webpageMode
-        ? '<span class="done">公開 URL を確認</span><span class="active">タイトルと店舗情報を整理</span><span>確認を待っています</span>'
+        ? `<span class="done">${t("loading.stepUrl")}</span><span class="active">${t("loading.stepPage")}</span><span>${t("loading.stepWait")}</span>`
       : detailsMode
-        ? '<span class="done">店舗を特定</span><span class="active">営業時間と電話を更新</span><span>根拠と次の行動を整理</span>'
-        : '<span class="done">店名と住所を送信</span><span class="active">Google Maps と照合</span><span>確認を待っています</span>'}</div>
+        ? `<span class="done">${t("loading.stepIdentity")}</span><span class="active">${t("loading.stepDetails")}</span><span>${t("loading.stepDecision")}</span>`
+        : `<span class="done">${t("loading.stepQuery")}</span><span class="active">${t("loading.stepPlaces")}</span><span>${t("loading.stepWait")}</span>`}</div>
   </section>`;
 }
 
@@ -487,27 +534,27 @@ function renderExtraction() {
   ].filter(([, value]) => Number.isFinite(value));
 
   app.innerHTML = `<section class="content-view extraction-view">
-    <button class="back-button" data-action="home">← 別の画像を選ぶ</button>
-    <div class="section-heading extraction-heading"><span class="step-chip">画像の確認 · ${state.extractionMode === "api" ? esc(meta?.model || "画像解析 API") : "端末内サンプル"}</span><h2>画像から読み取った内容</h2><p>店名と住所を確認してから、実在する店舗候補を探します。</p></div>
+    <button class="back-button" data-action="home">${t("extraction.back")}</button>
+    <div class="section-heading extraction-heading"><span class="step-chip">${t("extraction.step")} · ${state.extractionMode === "api" ? esc(meta?.model || "Vision API") : "Sample"}</span><h2>${t("extraction.title")}</h2><p>${t("extraction.body")}</p></div>
     <div class="extraction-layout">
       <aside class="screenshot-card"><img src="${state.uploadPreviewUrl}" alt="アップロードした SNS のスクリーンショット"><div><span>${esc(e.platform.toUpperCase())}</span><strong>${esc(e.creator.handle || "アカウント不明")}</strong></div></aside>
       <div class="extraction-content">
-        ${e.restaurants.length > 1 ? `<section class="panel extracted-restaurant-picker"><div><p class="overline">${e.restaurants.length} 店舗を検出</p><h3>確認する店舗を1つ選択</h3></div><div class="extracted-restaurant-options" role="group" aria-label="確認する店舗を選択">${e.restaurants.map((restaurant, index) => `<button type="button" data-extracted-restaurant="${index}" class="${restaurantKeyForView(restaurant) === restaurantKeyForView(r) ? "active" : ""}" aria-pressed="${restaurantKeyForView(restaurant) === restaurantKeyForView(r)}"><strong>${esc(restaurant.name || `店舗 ${index + 1}`)}</strong><span>${esc([restaurant.branch, restaurant.area || restaurant.address || restaurant.nearest_station].filter(Boolean).join(" · ") || "場所不明")}</span></button>`).join("")}</div><button type="button" class="queue-extracted" id="queue-extracted" ${queueableRestaurants.length ? "" : "disabled"}>${queueableRestaurants.length ? `ほかの ${queueableRestaurants.length} 店舗をあとで確認` : "ほかの店舗は確認待ちに追加済み"}</button><small class="queue-privacy">店舗の手掛かりだけをこのブラウザに保存し、画像は保存しません。</small></section>` : ""}
-        <section class="panel extracted-restaurant"><div class="fact-label"><span class="status-dot dark"></span>照合に使う店舗情報</div>
+        ${e.restaurants.length > 1 ? `<section class="panel extracted-restaurant-picker"><div><p class="overline">${e.restaurants.length}</p><h3>${t("extraction.multiTitle")}</h3></div><div class="extracted-restaurant-options" role="group" aria-label="${t("extraction.multiTitle")}">${e.restaurants.map((restaurant, index) => `<button type="button" data-extracted-restaurant="${index}" class="${restaurantKeyForView(restaurant) === restaurantKeyForView(r) ? "active" : ""}" aria-pressed="${restaurantKeyForView(restaurant) === restaurantKeyForView(r)}"><strong>${esc(restaurant.name || `${t("common.restaurant")} ${index + 1}`)}</strong><span>${esc([restaurant.branch, restaurant.area || restaurant.address || restaurant.nearest_station].filter(Boolean).join(" · ") || t("common.unknown"))}</span></button>`).join("")}</div><button type="button" class="queue-extracted" id="queue-extracted" ${queueableRestaurants.length ? "" : "disabled"}>${queueableRestaurants.length ? t("extraction.queueOther", { count: queueableRestaurants.length }) : t("extraction.queueDone")}</button><small class="queue-privacy">${t("extraction.queuePrivacy")}</small></section>` : ""}
+        <section class="panel extracted-restaurant"><div class="fact-label"><span class="status-dot dark"></span>${t("extraction.identity")}</div>
           <form id="extraction-form">
-            <div class="field-pair"><label>店名<input name="restaurant_name" value="${esc(r.name)}" required></label><label>支店名<input name="branch" value="${esc(r.branch)}"></label></div>
-            <div class="field-pair"><label>住所<input name="address" value="${esc(r.address)}"></label><label>最寄り駅<input name="nearest_station" value="${esc(r.nearest_station)}" placeholder="例：上野駅"></label></div>
+            <div class="field-pair"><label>${t("extraction.name")}<input name="restaurant_name" value="${esc(r.name)}" required></label><label>${t("extraction.branch")}<input name="branch" value="${esc(r.branch)}"></label></div>
+            <div class="field-pair"><label>${t("extraction.address")}<input name="address" value="${esc(r.address)}"></label><label>${t("extraction.station")}<input name="nearest_station" value="${esc(r.nearest_station)}"></label></div>
             <div class="extracted-chips"><span>${esc(r.category || "料理ジャンル不明")}</span><span>${formatBudget(r)}</span><span>${esc(r.area || "エリア不明")}</span></div>
-            ${review.requiresAcknowledgement ? '<label class="confidence-confirm"><input type="checkbox" name="confirm_extraction" value="yes"><span>画像を見ながら店名・支店・住所を確認しました。</span></label>' : ""}
-            <button class="primary-button" type="submit">この店舗を照合する ${icons.arrow}</button>
+            ${review.requiresAcknowledgement ? `<label class="confidence-confirm"><input type="checkbox" name="confirm_extraction" value="yes"><span>${t("extraction.confirm")}</span></label>` : ""}
+            <button class="primary-button" type="submit">${t("extraction.submit")} ${icons.arrow}</button>
           </form>
         </section>
         <div class="extraction-subgrid">
-        <section class="panel"><p class="overline">画面の文字と投稿者の説明</p><h3>表示内容・投稿上の主張・感想を分けて扱います</h3><div class="claim-list">${e.claims.length ? e.claims.map((claim) => `<p><span>${claim.kind === "opinion" ? "感想" : claim.kind === "visible_fact" ? "画面の文字" : "投稿の主張"}</span>${esc(claim.text)}</p>`).join("") : '<p class="muted">関連する説明は見つかりませんでした。</p>'}</div><p class="fine-print">「画面の文字」は画像に表示されていることだけを示します。営業・閉店・移転・予約状況を公式情報で確認したという意味ではありません。</p></section>
-          <section class="panel"><p class="overline">SNS の反応</p><h3>参考表示のみ。予約判断には使いません</h3><div class="engagement-grid">${engagement.length ? engagement.map(([label, value]) => `<div><strong>${new Intl.NumberFormat("ja-JP").format(value)}</strong><span>${label}</span></div>`).join("") : '<p class="muted">反応数は読み取れませんでした。</p>'}</div></section>
+        <section class="panel"><p class="overline">${t("extraction.claims")}</p><h3>${t("extraction.claimsTitle")}</h3><div class="claim-list">${e.claims.length ? e.claims.map((claim) => `<p><span>${claim.kind === "opinion" ? t("extraction.claimOpinion") : claim.kind === "visible_fact" ? t("extraction.claimVisible") : t("extraction.claimPost")}</span>${esc(claim.text)}</p>`).join("") : ""}</div><p class="fine-print">${t("extraction.sourceNotice")}</p></section>
+          <section class="panel"><p class="overline">${t("extraction.engagement")}</p><h3>${t("extraction.engagementTitle")}</h3><div class="engagement-grid">${engagement.length ? engagement.map(([label, value]) => `<div><strong>${localeNumberFormat(currentLocale()).format(value)}</strong><span>${label}</span></div>`).join("") : ""}</div></section>
         </div>
-        ${review.requiresAcknowledgement || !review.canContinue ? `<aside class="extraction-warning"><strong>${review.canContinue ? "手動確認が必要です" : "まだ店舗候補を検索できません"}</strong><p>${esc(review.message)}</p></aside>` : ""}
-        <aside class="source-readiness ${placesReady ? "ready" : "pending"}"><strong>${placesReady ? "Google Places で照合できます" : "次はデモ候補を表示します"}</strong><span>${placesReady ? "確認後に実在する店舗候補を検索します。電話や営業時間は、店舗を選んだ後または評価を開いた場合だけ取得します。" : "画像は読み取れますが Google Maps Key が未設定です。デモ候補を実在の検索結果として表示することはありません。"}</span></aside>
+        ${review.requiresAcknowledgement || !review.canContinue ? `<aside class="extraction-warning"><strong>${review.canContinue ? t("extraction.manualTitle") : t("extraction.blockedTitle")}</strong><p>${currentLocale() === "ja" ? esc(review.message) : t("extraction.sourceNotice")}</p></aside>` : ""}
+        <aside class="source-readiness ${placesReady ? "ready" : "pending"}"><strong>${placesReady ? t("extraction.liveTitle") : t("extraction.demoTitle")}</strong><span>${placesReady ? t("extraction.liveBody") : t("extraction.demoBody")}</span></aside>
         ${e.warnings.length ? `<aside class="extraction-warning"><strong>次に確認すること</strong><ul>${e.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul></aside>` : ""}
       </div>
     </div>
@@ -569,24 +616,24 @@ function renderCandidates() {
   const visible = visibleCandidates(state.candidates, state.rejectedCandidateIds);
   const rejectedCount = state.candidates.length - visible.length;
   const decision = candidateDecision(visible);
-  const decisionCopy = candidateDecisionCopy({ fallback, decision, candidateCount: visible.length, input: state.input });
+  const decisionCopy = localizedCandidateDecisionCopy({ fallback, decision, candidateCount: visible.length, input: state.input });
   app.innerHTML = `<section class="content-view narrow">
-    <button class="back-button" data-action="home">← 手掛かりを修正</button>
-    <div class="section-heading candidate-heading"><span class="step-chip">店舗を確認</span><h2>${esc(decisionCopy.heading)}</h2><p>${esc(decisionCopy.summary)}</p><aside class="identity-gate"><strong>店舗を特定してから詳細を取得</strong><span>ここでは検索結果だけで店舗を照合します。営業時間、電話、公式サイト、予約方法は確認後に取得します。</span></aside></div>
+    <button class="back-button" data-action="home">${t("common.backClues")}</button>
+    <div class="section-heading candidate-heading"><span class="step-chip">${t("candidate.step")}</span><h2>${esc(decisionCopy.heading)}</h2><p>${esc(decisionCopy.summary)}</p><aside class="identity-gate"><strong>${t("candidate.identityTitle")}</strong><span>${t("candidate.identityBody")}</span></aside></div>
     <div class="candidate-list">
       ${visible.map((restaurant, index) => {
         const preview = state.candidatePreviews[restaurant.placeId];
         const previewLoading = state.candidatePreviewLoadingId === restaurant.placeId;
         const isSystemLead = !fallback && decision.kind !== "ambiguous" && restaurant.id === decision.leadId;
-        const candidateLabel = isSystemLead ? "第一候補" : visible.length === 1 ? "確認してください" : `候補 ${index + 1}/${visible.length}`;
+        const candidateLabel = isSystemLead ? t("candidate.lead") : visible.length === 1 ? t("candidate.confirm") : t("candidate.position", { index: index + 1, count: visible.length });
         return `<article class="candidate-card${isSystemLead ? " system-lead" : ""}">
         <div class="restaurant-avatar">${(restaurant.category || "店").slice(0, 1)}</div>
-        <div class="candidate-copy"><span class="candidate-label${isSystemLead ? " lead-label" : ""}">${esc(candidateLabel)}</span><small class="candidate-meta">${esc(restaurant.category || "飲食店")}${restaurant.price ? ` · ${esc(restaurant.price)}` : ""}</small><h3>${esc(restaurant.name)}</h3><p>${esc(restaurant.address || [restaurant.area, restaurant.station].filter(Boolean).join(" · "))}</p><small class="business-status status-${esc(String(restaurant.businessStatus || "unknown").toLowerCase())}">${esc(businessStatusLabel(restaurant.businessStatus))}</small>${restaurant.matchReasons?.length ? `<div class="match-reasons">${restaurant.matchReasons.map((reason) => `<small>${esc(reason)}</small>`).join("")}</div>` : restaurant.matchScore ? `<small>入力した店名・場所との一致を確認</small>` : ""}${preview ? `<div class="candidate-rating"><strong>${Number.isFinite(preview.rating) ? `★ ${esc(preview.rating.toFixed(1))}` : "公開評価なし"}</strong>${Number.isInteger(preview.userRatingCount) ? `<span>Google のクチコミ ${esc(preview.userRatingCount.toLocaleString("ja-JP"))}件</span>` : ""}</div>` : ""}${restaurant.attributions?.length ? `<small class="provider-attribution">情報提供：${restaurant.attributions.map((item) => esc(item.provider)).join("、")}</small>` : ""}</div>
-        <div class="candidate-actions"><button class="select-button" data-restaurant="${restaurant.id}">この店舗で確認 ${icons.arrow}</button>${live && !preview ? `<button class="preview-button" data-preview-candidate="${restaurant.placeId}" ${previewLoading ? "disabled" : ""}>${previewLoading ? "確認中…" : "評価を確認"}</button>` : ""}<button class="reject-button" data-reject-candidate="${restaurant.id}" aria-label="${esc(restaurant.name)}を候補から外す">別の店舗です</button></div>
+        <div class="candidate-copy"><span class="candidate-label${isSystemLead ? " lead-label" : ""}">${esc(candidateLabel)}</span><small class="candidate-meta">${esc(restaurant.category || t("common.restaurant"))}${restaurant.price ? ` · ${esc(restaurant.price)}` : ""}</small><h3>${esc(restaurant.name)}</h3><p>${esc(restaurant.address || [restaurant.area, restaurant.station].filter(Boolean).join(" · "))}</p><small class="business-status status-${esc(String(restaurant.businessStatus || "unknown").toLowerCase())}">${esc(businessStatusLabel(restaurant.businessStatus))}</small>${restaurant.matchReasons?.length ? `<div class="match-reasons">${restaurant.matchReasons.map((reason) => `<small>${esc(reason)}</small>`).join("")}</div>` : restaurant.matchScore ? `<small>入力した店名・場所との一致を確認</small>` : ""}${preview ? `<div class="candidate-rating"><strong>${Number.isFinite(preview.rating) ? `★ ${esc(preview.rating.toFixed(1))}` : "公開評価なし"}</strong>${Number.isInteger(preview.userRatingCount) ? `<span>Google ${esc(localeNumberFormat(currentLocale()).format(preview.userRatingCount))}</span>` : ""}</div>` : ""}${restaurant.attributions?.length ? `<small class="provider-attribution">情報提供：${restaurant.attributions.map((item) => esc(item.provider)).join("、")}</small>` : ""}</div>
+        <div class="candidate-actions"><button class="select-button" data-restaurant="${restaurant.id}">${t("candidate.select")} ${icons.arrow}</button>${live && !preview ? `<button class="preview-button" data-preview-candidate="${restaurant.placeId}" ${previewLoading ? "disabled" : ""}>${previewLoading ? t("candidate.ratingLoading") : t("candidate.rating")}</button>` : ""}<button class="reject-button" data-reject-candidate="${restaurant.id}" aria-label="${esc(restaurant.name)}: ${t("candidate.reject")}">${t("candidate.reject")}</button></div>
       </article>`;
       }).join("")}
     </div>
-    ${visible.length ? `<div class="candidate-review-actions"><button data-action="home">どれも不明。検索条件を修正</button>${rejectedCount ? `<button data-restore-candidates>外した ${rejectedCount} 件を戻す</button>` : ""}</div>` : `<div class="empty-state candidate-empty"><span>?</span><h3>該当する店舗がありません</h3><p>候補を戻すか、支店・駅・住所を追加して検索し直してください。</p><div><button data-restore-candidates>すべての候補を戻す</button><button class="primary-button" data-action="home">検索条件を修正 ${icons.arrow}</button></div></div>`}
+    ${visible.length ? `<div class="candidate-review-actions"><button data-action="home">${t("candidate.edit")}</button>${rejectedCount ? `<button data-restore-candidates>${t("candidate.restore", { count: rejectedCount })}</button>` : ""}</div>` : `<div class="empty-state candidate-empty"><span>?</span><h3>${t("candidate.noneTitle")}</h3><p>${t("candidate.noneBody")}</p><div><button data-restore-candidates>${t("candidate.restoreAll")}</button><button class="primary-button" data-action="home">${t("candidate.searchEdit")} ${icons.arrow}</button></div></div>`}
     ${live ? '<p class="candidate-cost-note">店舗は自動選択せず、端末の位置情報も取得しません。場所は入力された住所やエリアから判断します。Google の評価は「評価を確認」を押した店舗だけ、営業時間・電話・予約方法は店舗確認後だけ取得します。</p><div class="google-attribution" translate="no">Google Maps</div>' : '<p class="fine-print">Google Places が未設定のため、明示した端末内デモ候補を表示しています。</p>'}
   </section>`;
   document.querySelectorAll("[data-preview-candidate]").forEach((button) => button.addEventListener("click", async () => {
@@ -612,6 +659,15 @@ function renderCandidates() {
   }));
 }
 
+function localizedCandidateDecisionCopy({ fallback = false, decision, candidateCount = 0, input = "" } = {}) {
+  if (currentLocale() === "ja") return candidateDecisionCopy({ fallback, decision, candidateCount, input });
+  if (fallback) return { heading: t("candidate.fallbackHeading"), summary: t("candidate.fallbackSummary") };
+  if (decision?.kind === "likely_single") return { heading: t("candidate.singleHeading"), summary: t("candidate.singleSummary", { input }) };
+  if (decision?.kind === "likely_with_alternatives") return { heading: t("candidate.leadHeading"), summary: t("candidate.leadSummary", { input }) };
+  if (candidateCount === 1) return { heading: t("candidate.uncertainHeading"), summary: t("candidate.uncertainSummary", { input }) };
+  return { heading: t("candidate.ambiguousHeading"), summary: t("candidate.ambiguousSummary", { input }) };
+}
+
 function renderCandidateConfirmed() {
   const candidate = state.confirmedCandidate;
   if (!candidate) {
@@ -620,14 +676,14 @@ function renderCandidateConfirmed() {
     return;
   }
   app.innerHTML = `<section class="content-view narrow confirmed-view">
-    <button class="back-button" data-back-to-candidates>← 候補に戻る</button>
-    <div class="section-heading"><span class="step-chip">次に確認する内容</span><h2>確認した店舗：${esc(candidate.name)}</h2><p>${esc(candidate.address || [candidate.area, candidate.station].filter(Boolean).join(" · "))}</p></div>
-    <aside class="confirmed-identity">${icons.check}<div><strong>この店舗で間違いないことを確認しました</strong><span>以降はこの店舗だけの最新情報を取得し、別支店の情報を混ぜません。</span></div></aside>
+    <button class="back-button" data-back-to-candidates>${t("confirmed.back")}</button>
+    <div class="section-heading"><span class="step-chip">${t("confirmed.step")}</span><h2>${t("confirmed.title", { name: esc(candidate.name) })}</h2><p>${esc(candidate.address || [candidate.area, candidate.station].filter(Boolean).join(" · "))}</p></div>
+    <aside class="confirmed-identity">${icons.check}<div><strong>${t("confirmed.identityTitle")}</strong><span>${t("confirmed.identityBody")}</span></div></aside>
     <div class="next-step-grid">
-      <button data-confirmed-action="details"><span>店舗情報を見る</span><strong>営業時間、住所、電話、公式情報</strong>${icons.arrow}</button>
-      <button data-confirmed-action="reservation"><span>予約方法を見る</span><strong>予約入口、条件、順番待ち、次の行動</strong>${icons.arrow}</button>
+      <button data-confirmed-action="details"><span>${t("confirmed.details")}</span><strong>${t("confirmed.detailsBody")}</strong>${icons.arrow}</button>
+      <button data-confirmed-action="reservation"><span>${t("confirmed.booking")}</span><strong>${t("confirmed.bookingBody")}</strong>${icons.arrow}</button>
     </div>
-    <p class="candidate-cost-note">どちらも同じ最新情報を確認し、最初に表示する場所だけが異なります。本サービスが予約を送信することはありません。</p>
+    <p class="candidate-cost-note">${t("confirmed.costNote")}</p>
   </section>`;
   document.querySelector("[data-back-to-candidates]").addEventListener("click", () => {
     state.view = "candidates";
@@ -669,47 +725,47 @@ function renderResult() {
   const reservationOptions = Array.isArray(r.reservationOptions) ? r.reservationOptions : [];
   const savedPlan = state.saved.find((item) => item.id === r.id);
   app.innerHTML = `<section class="content-view result-view">
-    <button class="back-button" data-action="home">← 別の店舗を確認</button>
+    <button class="back-button" data-action="home">${t("result.back")}</button>
+    ${currentLocale() !== "ja" ? `<aside class="language-beta-note result-language-note"><strong>${t("language.beta")}</strong><span>${t("result.dynamicNotice")}</span></aside>` : ""}
     ${state.pending.length ? `<aside class="result-queue"><div><strong>あと ${state.pending.length} 店舗を確認できます</strong><span>同じ画像やリストにある店舗を続けて確認します。</span></div><button id="continue-pending">次の店舗へ ${icons.arrow}</button></aside>` : ""}
     <div class="result-title"><div><span class="category-line">${[r.category, r.price].filter(Boolean).map(esc).join(" · ")}</span><h1>${esc(r.name)}</h1><p>${[r.reading, r.area].filter(Boolean).map(esc).join(" · ")}</p></div><span class="demo-pill">${r.dataLabel || "デモ情報"}</span></div>
     <div class="decision-grid">
       <article class="decision-card ${esc(r.recommendation)}">
-        <div class="status-row"><span class="status-dot"></span><span>${confidenceLabel(r.confidence)}</span></div>
-        <p class="overline">確認結果</p><h2>${esc(recommendationLabel(r.recommendation))}</h2><p>${esc(r.summary)}</p>
-        <div class="reason-list">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div>
+        <div class="status-row"><span class="status-dot"></span><span>${localizedConfidenceLabel(r.confidence)}</span></div>
+        <p class="overline">${t("result.checkResult")}</p><h2>${esc(localizedRecommendationLabel(r.recommendation))}</h2>${currentLocale() === "ja" ? `<p>${esc(r.summary)}</p><div class="reason-list">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div>` : `<p>${t("result.dynamicNotice")}</p><details class="source-language-details"><summary>${t("result.decisionDetails")}</summary><p lang="ja">${esc(r.summary)}</p><div class="reason-list" lang="ja">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div></details>`}
         ${r.planAdvisory ? `<aside class="plan-advisory"><strong>入力した予定について</strong><p>${esc(r.planAdvisory)}</p></aside>` : ""}
         ${r.decisionEvidence?.length ? `<div class="decision-boundary"><strong>判断できる範囲</strong>${r.decisionEvidence.map((item) => `<p>${esc(item.claim)} · 確度${esc(item.certainty === "high" ? "高" : item.certainty === "medium" ? "中" : "低")}<br><small>${esc(item.limitation)}</small></p>`).join("")}</div>` : ""}
       </article>
-      <article class="action-card"><p class="overline">次にすること</p><h3>${esc(r.nextAction)}</h3>
-        ${primaryAction ? `<a class="primary-button" id="primary-action" data-action-type="${esc(primaryAction.type || "external")}" href="${esc(actionHref(primaryAction))}" ${primaryAction.type === "phone" ? "" : 'target="_blank" rel="noreferrer"'}>${esc(primaryAction.label)} ${primaryAction.type === "phone" ? icons.phone : icons.arrow}</a>` : r.phone ? `<a class="primary-button" id="primary-action" data-action-type="phone" href="tel:${esc(r.phone)}">${icons.phone} 電話で確認</a>` : `<a class="primary-button" id="primary-action" data-action-type="map" href="${esc(safeExternalUrl(r.mapSearchUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address}`)}`))}" target="_blank" rel="noreferrer">地図で店舗を確認 ${icons.arrow}</a>`}
-        ${r.phone && primaryAction?.type !== "phone" ? `<a class="secondary-button" id="phone-action" href="tel:${esc(r.phone)}">${icons.phone} ${esc(r.phone)} · 電話で確認</a>` : ""}
-        <button class="secondary-button" id="share-result">この結果を共有</button>
-        <button class="secondary-button" id="save-button">${icons.bookmark} ${saved ? "来店予定を編集" : "保存して予定を追加"}</button>
+      <article class="action-card"><p class="overline">${t("result.next")}</p><h3>${currentLocale() === "ja" ? esc(r.nextAction) : t(primaryAction?.type === "phone" ? "result.actionPhone" : primaryAction ? "result.actionBooking" : "result.actionMap")}</h3>
+        ${primaryAction ? `<a class="primary-button" id="primary-action" data-action-type="${esc(primaryAction.type || "external")}" href="${esc(actionHref(primaryAction))}" ${primaryAction.type === "phone" ? "" : 'target="_blank" rel="noreferrer"'}>${currentLocale() === "ja" ? esc(primaryAction.label) : t(primaryAction.type === "phone" ? "result.actionPhone" : "result.actionBooking")} ${primaryAction.type === "phone" ? icons.phone : icons.arrow}</a>` : r.phone ? `<a class="primary-button" id="primary-action" data-action-type="phone" href="tel:${esc(r.phone)}">${icons.phone} ${t("result.actionPhone")}</a>` : `<a class="primary-button" id="primary-action" data-action-type="map" href="${esc(safeExternalUrl(r.mapSearchUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address}`)}`))}" target="_blank" rel="noreferrer">${t("result.actionMap")} ${icons.arrow}</a>`}
+        ${r.phone && primaryAction?.type !== "phone" ? `<a class="secondary-button" id="phone-action" href="tel:${esc(r.phone)}">${icons.phone} ${esc(r.phone)} · ${t("result.phone")}</a>` : ""}
+        <button class="secondary-button" id="share-result">${t("result.share")}</button>
+        <button class="secondary-button" id="save-button">${icons.bookmark} ${saved ? t("result.editPlan") : t("result.savePlan")}</button>
         ${state.planEditorOpen ? renderPlanForm(savedPlan, r) : ""}
       </article>
     </div>
-    ${r.conflict ? `<aside class="conflict"><strong>${esc(r.conflictTitle || "情報が一致していません")}</strong><p>${esc(r.conflict)}</p></aside>` : ""}
+    ${r.conflict ? `<aside class="conflict"><strong>${currentLocale() === "ja" ? esc(r.conflictTitle || "情報が一致していません") : t("result.conflict")}</strong><p lang="ja">${esc(r.conflict)}</p></aside>` : ""}
     ${r.reservationGuidance ? `<section class="panel reservation-guidance"><div><p class="overline">公式サイトの予約条件</p><h2>${esc(r.reservationGuidance.label)}</h2><p>${esc(r.reservationGuidance.excerpt)}</p><small>条件への適合、空席、予約成立は、利用日のページ表示または店舗からの回答をご確認ください。</small></div><a href="${esc(safeExternalUrl(r.reservationGuidance.sourceUrl))}" target="_blank" rel="noreferrer">公式サイトの原文を開く ${icons.arrow}</a></section>` : ""}
     ${reservationOptions.length ? `<section class="panel reservation-options"><div class="panel-heading"><div><p class="overline">予約・確認先</p><h2>信頼できる入口から確認</h2></div><span>予約、予約リクエスト、順番待ち、店舗ページを区別しています</span></div><div class="reservation-option-grid">${reservationOptions.map((option) => `<a class="reservation-option ${reservationOptionClass(option)}" href="${esc(option.url)}" ${option.actionType === "phone" ? "" : 'target="_blank" rel="noreferrer"'} data-reservation-provider="${esc(option.provider)}" data-action-type="${esc(option.actionType)}"><span>${reservationOptionBadge(option)}</span><strong>${esc(option.label)}</strong><small>${esc(option.capability?.label || reservationModeLabel(option.bookingMode))}</small>${option.capability?.confirmation ? `<em>${esc(option.capability.confirmation)}</em>` : ""}${option.feeNote ? `<p>${esc(option.feeNote)}</p>` : ""}</a>`).join("")}</div></section>` : ""}
     ${r.queueGuidance ? `<section class="panel queue-guidance"><div><p class="overline">公式サイトの順番待ちルール</p><h2>${esc(r.queueGuidance.label)}</h2><p>${esc(r.queueGuidance.excerpt)}</p><small>公式サイトで公開された方法だけを示します。現在の空席や待ち時間を示すものではありません。</small></div><a href="${esc(safeExternalUrl(r.queueGuidance.sourceUrl))}" target="_blank" rel="noreferrer">公式サイトの原文を開く ${icons.arrow}</a></section>` : ""}
     ${r.attentionNotices?.length ? `<section class="panel attention-panel"><div class="panel-heading"><div><p class="overline">来店時の注意</p><h2>公式サイトに明記されたルール</h2></div><span>予約送信前にもう一度確認</span></div><div class="attention-grid">${r.attentionNotices.map((notice) => `<article><strong>${esc(notice.label)}</strong><p>${esc(notice.excerpt)}</p><a href="${esc(safeExternalUrl(notice.sourceUrl))}" target="_blank" rel="noreferrer">公式サイトの原文を開く</a></article>`).join("")}</div></section>` : ""}
     <div class="detail-grid single-panel">
-      <section class="panel"><div class="panel-heading"><div><p class="overline">店舗情報</p><h2>行く前に確認</h2></div><span class="queue-chip">${esc(r.queue)}</span></div>
-        <dl class="facts">${Number.isFinite(r.rating) ? `<div><dt>Google の評価</dt><dd>${esc(r.rating)} / 5${Number.isInteger(r.userRatingCount) ? ` · クチコミ ${esc(r.userRatingCount.toLocaleString("ja-JP"))}件` : ""}</dd></div>` : ""}<div><dt>住所</dt><dd>${esc(r.address)}</dd></div>${r.phone ? `<div><dt>電話</dt><dd><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a></dd></div>` : ""}${r.officialInstagramUrl ? `<div><dt>公式 Instagram</dt><dd><a href="${esc(safeExternalUrl(r.officialInstagramUrl))}" target="_blank" rel="noreferrer">公式アカウントを開く</a></dd></div>` : ""}<div><dt>最寄り駅</dt><dd>${esc(r.station)}</dd></div><div><dt>営業時間</dt><dd>${esc(r.hours)}</dd></div><div><dt>定休日</dt><dd>${esc(r.closed)}</dd></div></dl>
+      <section class="panel"><div class="panel-heading"><div><p class="overline">${t("result.restaurantInfo")}</p><h2>${t("result.beforeVisit")}</h2></div><span class="queue-chip">${esc(r.queue)}</span></div>
+        <dl class="facts">${Number.isFinite(r.rating) ? `<div><dt>Google</dt><dd>${esc(r.rating)} / 5${Number.isInteger(r.userRatingCount) ? ` · ${esc(localeNumberFormat(currentLocale()).format(r.userRatingCount))}` : ""}</dd></div>` : ""}<div><dt>${t("result.address")}</dt><dd>${esc(r.address)}</dd></div>${r.phone ? `<div><dt>${t("result.phoneLabel")}</dt><dd><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a></dd></div>` : ""}${r.officialInstagramUrl ? `<div><dt>Instagram</dt><dd><a href="${esc(safeExternalUrl(r.officialInstagramUrl))}" target="_blank" rel="noreferrer">Instagram</a></dd></div>` : ""}<div><dt>${t("result.station")}</dt><dd>${esc(r.station)}</dd></div><div><dt>${t("result.hours")}</dt><dd>${esc(r.hours)}</dd></div><div><dt>${t("result.closed")}</dt><dd>${esc(r.closed)}</dd></div></dl>
       </section>
     </div>
-    <section class="panel sources"><div class="panel-heading"><div><p class="overline">情報の根拠</p><h2>この案内の出典</h2></div><span>${r.sourceContext || "確認直後 · デモ"}</span></div>
-      ${r.sources.map((source) => `<div class="source-row"><div>${source.url ? `<a href="${esc(safeExternalUrl(source.url))}" target="_blank" rel="noreferrer"><strong>${esc(source.name)}</strong></a>` : `<strong>${esc(source.name)}</strong>`}${source.official ? '<span class="official">公式</span>' : ""}<p>${esc(source.note)}${source.retrievedAt ? ` · ${formatClientTime(source.retrievedAt)}` : ""}</p>${source.attribution ? `<small class="source-attribution" translate="no">${esc(source.attribution)}</small>` : ""}</div><span class="confidence-${["高", "high"].includes(source.confidence) ? "high" : ["中", "medium"].includes(source.confidence) ? "medium" : "low"}">確度${esc(source.confidence === "high" ? "高" : source.confidence === "medium" ? "中" : source.confidence === "low" ? "低" : source.confidence)}</span></div>`).join("")}
+    <section class="panel sources"><div class="panel-heading"><div><p class="overline">${t("result.sources")}</p><h2>${t("result.sourcesTitle")}</h2></div><span>${r.sourceContext || "確認直後 · デモ"}</span></div>
+      ${r.sources.map((source) => `<div class="source-row"><div>${source.url ? `<a href="${esc(safeExternalUrl(source.url))}" target="_blank" rel="noreferrer"><strong>${esc(source.name)}</strong></a>` : `<strong>${esc(source.name)}</strong>`}${source.official ? `<span class="official">${t("result.official")}</span>` : ""}<p lang="ja">${esc(source.note)}${source.retrievedAt ? ` · ${formatClientTime(source.retrievedAt)}` : ""}</p>${source.attribution ? `<small class="source-attribution" translate="no">${esc(source.attribution)}</small>` : ""}</div><span class="confidence-${["高", "high"].includes(source.confidence) ? "high" : ["中", "medium"].includes(source.confidence) ? "medium" : "low"}">${t("result.confidence", { level: localizedConfidenceLevel(source.confidence) })}</span></div>`).join("")}
       ${r.sources.some((source) => ["Hot Pepper", "ホットペッパーグルメ"].includes(source.name)) ? '<a class="hotpepper-credit" href="https://webservice.recruit.co.jp/" target="_blank" rel="noreferrer"><img src="https://webservice.recruit.co.jp/banner/hotpepper-s.gif" alt="ホットペッパーグルメ Webサービス" width="135" height="17"></a>' : ""}
       <p class="source-disclaimer">外部情報は必要なときに更新します。保存するのは場所の識別子とユーザー自身の手掛かりだけです。</p>
     </section>
-    <section class="feedback-card" id="feedback-card"><div><p class="overline">結果について教えてください</p><h3>次の行動に役立ちましたか？</h3><p>入力した回答だけを送信します。元の画像や検索文は含みません。</p></div><form id="feedback-form" class="feedback-form">
-      <fieldset><legend>役に立ちましたか？</legend><label><input type="radio" name="helpful" value="yes" required> はい</label><label><input type="radio" name="helpful" value="no"> いいえ</label></fieldset>
-      <fieldset><legend>予約できましたか？</legend><label><input type="radio" name="bookingOutcome" value="succeeded" required> 予約できた</label><label><input type="radio" name="bookingOutcome" value="not_succeeded"> 予約できなかった</label><label><input type="radio" name="bookingOutcome" value="not_tried"> まだ試していない</label></fieldset>
-      <fieldset><legend>情報は正確でしたか？</legend><label><input type="radio" name="accuracy" value="accurate" required> 正確</label><label><input type="radio" name="accuracy" value="partly_wrong"> 一部違った</label><label><input type="radio" name="accuracy" value="wrong"> 違っていた</label></fieldset>
-      <fieldset><legend>このサービスへの支払いを検討しますか？（任意）</legend><label><input type="radio" name="willingnessToPay" value="consider"> 検討する</label><label><input type="radio" name="willingnessToPay" value="depends_on_price"> 価格による</label><label><input type="radio" name="willingnessToPay" value="would_not"> 検討しない</label><label><input type="radio" name="willingnessToPay" value="unsure"> わからない</label></fieldset>
-      <label class="feedback-text">改善してほしい点（任意）<textarea name="feedbackText" maxlength="500" rows="3" placeholder="例：営業時間が変わっていた"></textarea></label>
-      <button type="submit">回答を送信</button>
+    <section class="feedback-card" id="feedback-card"><div><p class="overline">${t("feedback.overline")}</p><h3>${t("feedback.title")}</h3><p>${t("feedback.privacy")}</p></div><form id="feedback-form" class="feedback-form">
+      <fieldset><legend>${t("feedback.helpful")}</legend><label><input type="radio" name="helpful" value="yes" required> ${t("feedback.yes")}</label><label><input type="radio" name="helpful" value="no"> ${t("feedback.no")}</label></fieldset>
+      <fieldset><legend>${t("feedback.booking")}</legend><label><input type="radio" name="bookingOutcome" value="succeeded" required> ${t("feedback.succeeded")}</label><label><input type="radio" name="bookingOutcome" value="not_succeeded"> ${t("feedback.notSucceeded")}</label><label><input type="radio" name="bookingOutcome" value="not_tried"> ${t("feedback.notTried")}</label></fieldset>
+      <fieldset><legend>${t("feedback.accuracy")}</legend><label><input type="radio" name="accuracy" value="accurate" required> ${t("feedback.accurate")}</label><label><input type="radio" name="accuracy" value="partly_wrong"> ${t("feedback.partlyWrong")}</label><label><input type="radio" name="accuracy" value="wrong"> ${t("feedback.wrong")}</label></fieldset>
+      <fieldset><legend>${t("feedback.pay")}</legend><label><input type="radio" name="willingnessToPay" value="consider"> ${t("feedback.consider")}</label><label><input type="radio" name="willingnessToPay" value="depends_on_price"> ${t("feedback.depends")}</label><label><input type="radio" name="willingnessToPay" value="would_not"> ${t("feedback.wouldNot")}</label><label><input type="radio" name="willingnessToPay" value="unsure"> ${t("feedback.unsure")}</label></fieldset>
+      <label class="feedback-text">${t("feedback.comment")}<textarea name="feedbackText" maxlength="500" rows="3" placeholder="${t("feedback.placeholder")}"></textarea></label>
+      <button type="submit">${t("feedback.submit")}</button>
     </form></section>
   </section>`;
   document.querySelector("#save-button").addEventListener("click", toggleSaved);
@@ -739,7 +795,7 @@ function renderResult() {
     const button = form.querySelector('button[type="submit"]');
     const values = Object.fromEntries(new FormData(form));
     button.disabled = true;
-    button.textContent = "送信中…";
+    button.textContent = t("feedback.sending");
     const accepted = await postEvent("feedback_submitted", {
       helpful: values.helpful === "yes",
       bookingOutcome: values.bookingOutcome,
@@ -749,12 +805,12 @@ function renderResult() {
     });
     if (!accepted) {
       button.disabled = false;
-      button.textContent = "もう一度送信";
-      showToast("送信できませんでした。接続を確認して再試行してください");
+      button.textContent = t("feedback.retry");
+      showToast(t("feedback.failed"));
       return;
     }
-    form.replaceWith(Object.assign(document.createElement("p"), { className: "feedback-thanks", textContent: "ありがとうございます。回答を受け付けました。" }));
-    showToast("ご回答ありがとうございます。案内の改善に活用します");
+    form.replaceWith(Object.assign(document.createElement("p"), { className: "feedback-thanks", textContent: t("feedback.accepted") }));
+    showToast(t("feedback.accepted"));
   });
 }
 
@@ -765,7 +821,32 @@ function focusResultSection() {
 }
 
 function reservationModeLabel(value) {
+  if (currentLocale() === "en") return { phone: "Confirm by phone", instant: "Instant booking", request: "Booking request", instant_or_request: "Instant booking or request", provider_determined: "Confirmed by the booking service", waitlist: "Waitlist", unknown: "Check the method on the linked page" }[value] || "Check the method on the linked page";
+  if (currentLocale() === "zh-CN") return { phone: "电话确认", instant: "即时预约", request: "预约申请", instant_or_request: "即时预约或申请", provider_determined: "由预约平台确认", waitlist: "候位登记", unknown: "请在链接页面确认方式" }[value] || "请在链接页面确认方式";
   return { phone: "電話で確認", instant: "即時予約", request: "予約リクエスト", instant_or_request: "即時予約またはリクエスト", provider_determined: "予約サービス側で確定", waitlist: "順番待ち受付", unknown: "リンク先で予約方法を確認" }[value] || "リンク先で予約方法を確認";
+}
+
+function localizedRecommendationLabel(value) {
+  if (currentLocale() === "ja") return recommendationLabel(value);
+  return {
+    strongly_recommended: t("result.recommendStrong"),
+    recommended: t("result.recommend"),
+    walk_in_ok: t("result.walkIn"),
+    temporarily_unavailable: t("result.unavailable"),
+    unknown: t("result.unknown")
+  }[value] || t("result.unknown");
+}
+
+function localizedConfidenceLabel(value) {
+  if (currentLocale() === "ja") return confidenceLabel(value);
+  return { high: t("result.confidenceHigh"), medium: t("result.confidenceMedium"), low: t("result.confidenceLow") }[value] || t("result.confidenceLow");
+}
+
+function localizedConfidenceLevel(value) {
+  const normalized = ["高", "high"].includes(value) ? "high" : ["中", "medium"].includes(value) ? "medium" : "low";
+  if (currentLocale() === "en") return { high: "high", medium: "medium", low: "low" }[normalized];
+  if (currentLocale() === "zh-CN") return { high: "高", medium: "中", low: "低" }[normalized];
+  return { high: "高", medium: "中", low: "低" }[normalized];
 }
 
 function reservationOptionClass(option) {
@@ -780,6 +861,23 @@ function reservationOptionClass(option) {
 
 function reservationOptionBadge(option) {
   const kind = option.capability?.kind;
+  if (currentLocale() !== "ja") {
+    const labels = currentLocale() === "en"
+      ? { input: "User-provided link", unverified: "Unverified", discovery: "Search only", booking: "Booking flow", managed: "Confirmed after submission", waitlist: "Waitlist", listing: "Restaurant page", phone: "Phone", map: "Map", official: "Official site", external: "External site", verified: "Verified" }
+      : { input: "用户提供的链接", unverified: "未核实", discovery: "仅搜索", booking: "预约入口", managed: "提交后确认", waitlist: "候位", listing: "店铺页面", phone: "电话", map: "地图", official: "官网", external: "外部网站", verified: "已核实" };
+    if (option.officiality === "user_provided_external") return labels.input;
+    if (option.status === "unverified_link") return labels.unverified;
+    if (option.status === "discovery_only") return labels.discovery;
+    if (kind === "online_reservation_flow") return labels.booking;
+    if (kind === "provider_booking_flow") return labels.managed;
+    if (kind === "waitlist_flow") return labels.waitlist;
+    if (kind === "platform_listing") return labels.listing;
+    if (kind === "phone_confirmation") return labels.phone;
+    if (kind === "map") return labels.map;
+    if (option.officiality === "restaurant_official") return labels.official;
+    if (option.officiality === "google_listed_external") return labels.external;
+    return labels.verified;
+  }
   if (option.officiality === "user_provided_external") return "入力されたリンク";
   if (option.status === "unverified_link") return "未確認";
   if (option.status === "discovery_only") return "検索のみ";
@@ -1268,6 +1366,22 @@ function renderPrivacy() {
   const operator = publicInfo.operatorName || "正式公開前に掲載します";
   const contact = publicInfo.contactEmail || "正式公開前に掲載します";
   const local = summarizeLocalData(state.saved, state.recent, state.pending);
+  const localized = localizedLegalContent(currentLocale())?.privacy;
+  if (localized) {
+    const counts = [local.savedPlanCount, local.pendingAnalysisCount, local.recentAnalysisCount, 0];
+    app.innerHTML = `<section class="content-view narrow privacy-view">
+      <button class="back-button" data-action="home">${t("common.backHome")}</button>
+      <div class="section-heading"><span class="step-chip">${localized.step}</span><h1>${localized.title}</h1><p>${localized.intro.replace("{date}", TERMS_EFFECTIVE_DATE)}</p></div>
+      <div class="privacy-summary">${localized.cards.map((card, index) => `<article><span>${counts[index]}</span><strong>${card[0]}</strong><p>${card[1]}</p></article>`).join("")}</div>
+      <section class="panel privacy-section"><p class="overline">${localizedLegalContent(currentLocale()).terms.operator}</p><h2>${esc(publicInfo.operatorName || "Ren")}</h2><p>${publicInfo.contactEmail ? `<a href="mailto:${esc(publicInfo.contactEmail)}">${esc(publicInfo.contactEmail)}</a>` : "—"}</p></section>
+      <section class="panel privacy-section"><h2>${localized.localTitle}</h2><p>${localized.localBody}</p></section>
+      <section class="panel privacy-section"><h2>${localized.providersTitle}</h2><p>${localized.providersBody}</p></section>
+      <section class="panel privacy-section"><h2>${localized.metricsTitle}</h2><p>${localized.metricsBody}</p></section>
+      <section class="danger-zone"><div><h2>${localized.deleteTitle}</h2><p>${localized.deleteBody}</p></div>${state.deleteConfirmOpen ? `<div class="delete-confirm"><strong>${localized.confirm}</strong><button id="cancel-delete">${localized.cancel}</button><button id="confirm-delete">${localized.deleteAll}</button></div>` : `<button id="start-delete" class="danger-button">${localized.deleteButton}</button>`}</section>
+    </section>`;
+    attachPrivacyDeleteHandlers();
+    return;
+  }
   app.innerHTML = `<section class="content-view narrow privacy-view">
     <button class="back-button" data-action="home">← ホームへ</button>
     <div class="section-heading"><span class="step-chip">プライバシーとデータ</span><h1>この端末のデータを管理できます</h1><p>更新日：${esc(TERMS_EFFECTIVE_DATE)} · 招待制テストが扱うデータと、削除できる範囲を説明します。</p></div>
@@ -1278,6 +1392,10 @@ function renderPrivacy() {
     <section class="panel privacy-section"><p class="overline">サービス運用記録</p><h2>匿名イベント、回答、技術指標</h2><p>入力の種類、候補確認、評価表示、行動ボタン、保存状況、API の成功状態、店舗確認から結果表示までの時間、token 使用量を記録します。表示した評価点そのものは記録しません。回答を送信した場合は、役立ち度、予約結果、正確性、最大500文字の改善コメントも記録します。画像、元の検索文、具体的な来店日、API Key は記録しません。現在はアカウントがないため、端末データの削除から集計済み運用記録を特定・削除することはできません。</p></section>
     <section class="danger-zone"><div><p class="overline">この端末のデータを削除</p><h2>予定、確認待ち、履歴、設定を消去</h2><p>行きたい予定 ${local.savedPlanCount} 件、確認待ち ${local.pendingAnalysisCount} 件、最近の確認 ${local.recentAnalysisCount} 件、人数などの端末設定を削除します。Google、ホットペッパーグルメ、Qwen、OpenAI、予約サービス側のデータには影響しません。</p></div>${state.deleteConfirmOpen ? `<div class="delete-confirm"><strong>この端末のデータをすべて完全に削除しますか？</strong><button id="cancel-delete">キャンセル</button><button id="confirm-delete">すべて削除</button></div>` : '<button id="start-delete" class="danger-button">この端末のデータを削除</button>'}</section>
   </section>`;
+  attachPrivacyDeleteHandlers();
+}
+
+function attachPrivacyDeleteHandlers() {
   document.querySelector("#start-delete")?.addEventListener("click", () => { state.deleteConfirmOpen = true; renderPrivacy(); });
   document.querySelector("#cancel-delete")?.addEventListener("click", () => { state.deleteConfirmOpen = false; renderPrivacy(); });
   document.querySelector("#confirm-delete")?.addEventListener("click", () => {
@@ -1290,7 +1408,7 @@ function renderPrivacy() {
     state.deleteConfirmOpen = false;
     document.querySelector("#saved-count").textContent = "0";
     postEvent("local_data_deleted", { analysisRunId: null });
-    showToast("この端末の予定、確認待ち、履歴、設定を削除しました");
+    showToast(currentLocale() === "en" ? "Data on this device was deleted" : currentLocale() === "zh-CN" ? "当前设备的数据已删除" : "この端末の予定、確認待ち、履歴、設定を削除しました");
     renderPrivacy();
   });
 }
@@ -1298,6 +1416,21 @@ function renderPrivacy() {
 function renderPilot() {
   const publicInfo = state.capabilities?.publicInfo || {};
   const contact = publicInfo.contactEmail || "";
+  const localized = localizedLegalContent(currentLocale())?.pilot;
+  if (localized) {
+    const subject = encodeURIComponent(currentLocale() === "en" ? "TabiTabi pilot participation" : "申请参加 TabiTabi 测试");
+    const body = encodeURIComponent(currentLocale() === "en" ? "I would like to join the TabiTabi pilot.\n\nSNS I use:\nDevice: iPhone / Android\n" : "我希望参加 TabiTabi 测试。\n\n常用 SNS：\n设备：iPhone / Android\n");
+    const mailto = contact ? `mailto:${encodeURIComponent(contact)}?subject=${subject}&body=${body}` : "";
+    app.innerHTML = `<section class="content-view narrow pilot-view">
+      <button class="back-button" data-action="home">${t("common.backHome")}</button>
+      <div class="pilot-hero"><span class="step-chip">${localized.step}</span><h1>${localized.title}</h1><p>${localized.intro}</p></div>
+      <section class="pilot-criteria">${localized.criteria.map((item, index) => `<article><span>0${index + 1}</span><strong>${item[0]}</strong><p>${item[1]}</p></article>`).join("")}</section>
+      <section class="panel pilot-task"><h2>${localized.taskTitle}</h2><ol>${localized.tasks.map((item) => `<li>${item}</li>`).join("")}</ol></section>
+      <aside class="pilot-safety"><strong>${localized.safetyTitle}</strong><p>${localized.safetyBody}</p></aside>
+      <section class="panel pilot-join"><div><h2>${localized.joinTitle}</h2><p>${localized.joinBody}</p></div><div class="pilot-actions">${mailto ? `<a class="primary-button" href="${esc(mailto)}">${localized.email} ${icons.arrow}</a>` : ""}<a class="secondary-button" href="/" data-action="home">${localized.haveCode}</a></div></section>
+    </section>`;
+    return;
+  }
   const subject = encodeURIComponent("TabiTabi クローズドテスト参加希望");
   const body = encodeURIComponent("TabiTabi クローズドテストへの参加を希望します。\n\n普段使うSNS：\n端末：iPhone / Android\n");
   const mailto = contact ? `mailto:${encodeURIComponent(contact)}?subject=${subject}&body=${body}` : "";
@@ -1343,14 +1476,16 @@ function renderSettings() {
     { label: "公開ページの手掛かり", ready: Boolean(capabilities.webpageExtraction), detail: capabilities.webpageExtraction ? "制限付き HTML 取得を利用できます" : "未設定" }
   ];
   app.innerHTML = `<section class="content-view narrow settings-view">
-    <button class="back-button" data-action="home">← ホームへ</button>
-    <div class="section-heading"><span class="step-chip">設定</span><h2>この端末の設定</h2><p>通常の設定値は現在のブラウザに保存します。招待アクセスコードだけは現在のタブ内に一時保持し、保護されたリクエストの認証ヘッダーとして本サービスへ送信します。</p></div>
-    <section class="panel"><p class="overline">来店時の既定値</p><h2>毎回の入力を減らす</h2><form id="settings-form" class="settings-form">
-      <label>既定の人数<input type="number" name="defaultPartySize" min="1" max="20" value="${esc(state.settings.defaultPartySize)}"></label>
-      <label>招待アクセスコード${capabilities.pilotAccessRequired ? "（必須）" : "（任意）"}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="管理者から案内されたコード"><small>${capabilities.pilotAccessRequired ? "このタブを閉じるまでだけ保持し、保護されたリクエストに送信します。" : "現在は不要です。入力してもこのタブを閉じると消去されます。"}</small></label>
-      ${state.settings.pilotAccessCode ? '<button type="button" class="text-button clear-access-code" id="clear-access-code">招待アクセスコードを消去</button>' : ""}
-      <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>最近の確認を保存</strong><small>最大10件。実在店舗は Place ID、入力した手掛かり、予定だけを保存します。</small></span></label>
-      <button type="submit" class="primary-button">この端末に保存</button>
+    <button class="back-button" data-action="home">${t("common.backHome")}</button>
+    <div class="section-heading"><span class="step-chip">${t("settings.step")}</span><h2>${t("settings.title")}</h2><p>${t("settings.intro")}</p></div>
+    <section class="panel language-settings"><p class="overline">${t("settings.languageOverline")}</p><h2>${t("settings.languageTitle")}</h2><label>${t("settings.languageLabel")}<select id="settings-language-select">${SUPPORTED_LOCALES.map((item) => `<option value="${item.value}" ${item.value === currentLocale() ? "selected" : ""}>${item.label}</option>`).join("")}</select></label><aside><strong>${t("settings.translationTitle")}</strong><span>${t("settings.translationBody")}</span></aside></section>
+    <section class="panel"><p class="overline">${t("settings.defaults")}</p><h2>${t("settings.reduceInput")}</h2><form id="settings-form" class="settings-form">
+      <input type="hidden" name="locale" value="${esc(currentLocale())}">
+      <label>${t("settings.party")}<input type="number" name="defaultPartySize" min="1" max="20" value="${esc(state.settings.defaultPartySize)}"></label>
+      <label>${t("settings.access")}${capabilities.pilotAccessRequired ? t("settings.required") : t("settings.optional")}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="${t("home.accessHelp")}"><small>${capabilities.pilotAccessRequired ? "このタブを閉じるまでだけ保持し、保護されたリクエストに送信します。" : "現在は不要です。入力してもこのタブを閉じると消去されます。"}</small></label>
+      ${state.settings.pilotAccessCode ? `<button type="button" class="text-button clear-access-code" id="clear-access-code">${t("settings.clearAccess")}</button>` : ""}
+      <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>${t("settings.history")}</strong><small>${t("settings.historyHelp")}</small></span></label>
+      <button type="submit" class="primary-button">${t("settings.submit")}</button>
     </form></section>
     ${providerStopped ? `<aside class="inline-error"><strong>外部 API を安全停止しています</strong><span>${esc(providerStopMessage)} 再開予定：${esc(providerStopUntil)}</span></aside>` : ""}
     <section class="panel capability-panel"><div class="panel-heading"><div><p class="overline">現在利用できる機能</p><h2>API と情報源の状態</h2></div><button type="button" class="text-button" id="refresh-capabilities">状態を更新</button></div>${capabilitiesUnavailable ? '<aside class="inline-error"><strong>サービス状態を取得できません</strong><span>不明な状態を「未設定」とは表示しません。接続後に更新してください。</span></aside>' : `<div class="capability-grid">${providers.map((item) => `<article class="${item.ready ? "ready" : "pending"}"><span>${item.ready ? "利用可能" : "未設定"}</span><strong>${esc(item.label)}</strong><p>${esc(item.detail)}</p></article>`).join("")}</div>`}<p class="source-disclaimer">API Key は表示・返却しません。</p></section>
@@ -1360,8 +1495,14 @@ function renderSettings() {
     event.preventDefault();
     state.settings = settingsFromForm(Object.fromEntries(new FormData(event.currentTarget)));
     syncSettings();
-    showToast("設定を保存しました");
+    showToast(t("settings.saved"));
     renderSettings();
+  });
+  document.querySelector("#settings-language-select")?.addEventListener("change", (event) => {
+    state.settings = normalizeSettings({ ...state.settings, locale: event.currentTarget.value });
+    syncSettings();
+    render();
+    showToast(t("settings.localeSaved"));
   });
   document.querySelector("#clear-access-code")?.addEventListener("click", () => {
     state.settings = { ...state.settings, pilotAccessCode: "" };
@@ -1391,6 +1532,18 @@ function renderDailyBudget(budget = {}) {
 
 function renderTerms() {
   const publicInfo = state.capabilities?.publicInfo || {};
+  const localized = localizedLegalContent(currentLocale())?.terms;
+  if (localized) {
+    app.innerHTML = `<section class="content-view narrow terms-view">
+      <button class="back-button" data-action="home">${t("common.backHome")}</button>
+      <div class="section-heading"><span class="step-chip">${localized.step}</span><h1>${localized.title}</h1><p>${localized.intro.replace("{date}", TERMS_EFFECTIVE_DATE)}</p></div>
+      <aside class="terms-highlight"><strong>${localized.highlightTitle}</strong><p>${localized.highlightBody}</p></aside>
+      <div class="terms-list">${localized.sections.map((section, index) => `<section class="panel terms-section"><span>${String(index + 1).padStart(2, "0")}</span><div><h3>${section[0]}</h3><p>${section[1]}</p></div></section>`).join("")}</div>
+      <p class="terms-footer-note">${localized.operator}: ${esc(publicInfo.operatorName || "Ren")} · ${localized.contact}: ${publicInfo.contactEmail ? `<a href="mailto:${esc(publicInfo.contactEmail)}">${esc(publicInfo.contactEmail)}</a>` : "—"}</p>
+      <p class="terms-footer-note">${localized.continue}</p>
+    </section>`;
+    return;
+  }
   app.innerHTML = `<section class="content-view narrow terms-view">
     <button class="back-button" data-action="home">← ホームへ</button>
     <div class="section-heading"><span class="step-chip">利用条件</span><h1>サービスの範囲と責任</h1><p>適用日：${esc(TERMS_EFFECTIVE_DATE)} · 現在の TabiTabi 招待制テストに適用されます。</p></div>
@@ -1418,6 +1571,13 @@ document.addEventListener("click", (event) => {
   if (window.location.pathname !== nextPath) history.pushState(null, "", nextPath);
   render();
   if (action === "settings") getCapabilities({ force: true }).then(() => { if (state.view === "settings") renderSettings(); });
+});
+
+document.querySelector("#language-select")?.addEventListener("change", (event) => {
+  state.settings = normalizeSettings({ ...state.settings, locale: event.currentTarget.value });
+  syncSettings();
+  render();
+  showToast(t("settings.localeSaved"));
 });
 
 window.addEventListener("popstate", () => {

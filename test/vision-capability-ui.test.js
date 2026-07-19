@@ -3,12 +3,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
+const i18nSource = await readFile(new URL("../src/i18n.js", import.meta.url), "utf8");
 
 test("shows whether screenshot fallback is actually configured", () => {
   assert.match(appSource, /capabilities\?\.fallbackAvailable/);
-  assert.match(appSource, /予備モデルは未設定/);
-  assert.match(appSource, /予備モデルを使用します/);
-  assert.match(appSource, /確度が低い場合は手動確認が必要/);
+  assert.match(appSource, /home\.fallbackMissing/);
+  assert.match(i18nSource, /予備モデルは未設定/);
+  assert.match(i18nSource, /予備モデルを使用します/);
+  assert.match(i18nSource, /確度が低い場合は手動確認が必要/);
 });
 
 test("confirms capability state before recording a new analysis mode", () => {
