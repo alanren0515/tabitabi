@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
+import { translate } from "../src/i18n.js";
 
 test("pre-caches only the static app shell and bypasses API requests", async () => {
   const source = await readFile(new URL("../sw.js", import.meta.url), "utf8");
@@ -29,5 +30,6 @@ test("the client registers the service worker and blocks new analysis while offl
   const source = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
   assert.match(source, /navigator\.serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(source, /navigator\.onLine === false/);
-  assert.match(source, /オフラインです。接続後にもう一度お試しください/);
+  assert.match(source, /t\("error\.offline"\)/);
+  assert.equal(translate("ja", "error.offline"), "オフラインです。接続後にもう一度お試しください");
 });

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { translate } from "../src/i18n.js";
 
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
 
@@ -21,5 +22,6 @@ test("a rejected code clears the session value and returns focus to the homepage
   assert.match(appSource, /recoverFromPilotAccessError\(error\)/);
   assert.match(appSource, /settingsWithoutPilotAccess\(state\.settings\)/);
   assert.match(appSource, /document\.querySelector\("#pilot-access-code"\)\?\.focus\(\)/);
-  assert.match(appSource, /アクセスコードが正しくありません/);
+  assert.match(appSource, /t\("error\.accessInvalid"\)/);
+  assert.match(translate("ja", "error.accessInvalidBody"), /アクセスコードが正しくありません/);
 });

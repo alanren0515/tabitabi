@@ -1,6 +1,6 @@
 import { confidenceLabel, findCandidates, recommendationLabel } from "./analyzer.js";
 import { buildRestaurantQuery, extractionReviewState, formatBudget, isKnownSampleScreenshot, mergeScreenshotSupplemental, normalizeExtraction, sampleTikTokExtraction, selectExtractedRestaurant } from "./screenshot-extraction.js";
-import { createSavedPlan, normalizeSavedPlans, PLAN_STATUSES, planStatusLabel, sortSavedPlansByUrgency, updateSavedPlan } from "./saved-plans.js";
+import { createSavedPlan, normalizeSavedPlans, PLAN_STATUSES, sortSavedPlansByUrgency, updateSavedPlan } from "./saved-plans.js";
 import { deleteLocalData, LOCAL_STORAGE_KEY, summarizeLocalData, VISIT_STORAGE_KEY } from "./privacy-data.js";
 import { candidateDecision, candidateDecisionCopy, rejectCandidate, restoreCandidates, visibleCandidates } from "./candidate-selection.js";
 import { TERMS_EFFECTIVE_DATE, TERMS_SECTIONS } from "./terms-data.js";
@@ -108,6 +108,16 @@ function t(key, variables = {}) {
 
 function currentLocale() {
   return state.settings.locale || "ja";
+}
+
+function localizedPlanStatus(value) {
+  return t({
+    needs_reservation: "plan.needsReservation",
+    reserved: "plan.reserved",
+    walk_in: "plan.walkIn",
+    information_needed: "plan.infoNeeded",
+    not_recommended: "plan.skip"
+  }[value] || "plan.infoNeeded");
 }
 
 function syncShellLanguage() {
@@ -252,8 +262,8 @@ function renderHome() {
       </div>
       </div>
     </section>
-    ${state.pending.length ? `<section class="recent-preview queue-preview"><div><p class="overline">あとで確認</p><h2>画像内のほかの店舗を続けて確認</h2></div><div class="recent-preview-list">${state.pending.slice(0, 3).map((item) => `<button data-open-pending="${esc(item.id)}"><strong>${esc(item.clues.name)}</strong><span>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || "場所を要確認")}</span></button>`).join("")}</div><button class="text-button" data-action="queue">全 ${state.pending.length} 件を見る</button></section>` : ""}
-    ${state.recent.length ? `<section class="recent-preview"><div><p class="overline">最近の確認</p><h2>前回の店舗をもう一度確認</h2></div><div class="recent-preview-list">${state.recent.slice(0, 3).map((item) => `<button data-open-recent="${esc(item.id)}"><strong>${esc(item.name)}</strong><span>${esc(item.area || "エリアを要確認")} · ${formatClientTime(item.analyzedAt)}</span></button>`).join("")}</div><button class="text-button" data-action="history">全 ${state.recent.length} 件を見る</button></section>` : ""}
+    ${state.pending.length ? `<section class="recent-preview queue-preview"><div><p class="overline">${t("home.queueOverline")}</p><h2>${t("home.queueTitle")}</h2></div><div class="recent-preview-list">${state.pending.slice(0, 3).map((item) => `<button data-open-pending="${esc(item.id)}"><strong>${esc(item.clues.name)}</strong><span>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || t("queue.locationUnknown"))}</span></button>`).join("")}</div><button class="text-button" data-action="queue">${t("home.viewAll", { count: state.pending.length })}</button></section>` : ""}
+    ${state.recent.length ? `<section class="recent-preview"><div><p class="overline">${t("home.recentOverline")}</p><h2>${t("home.recentTitle")}</h2></div><div class="recent-preview-list">${state.recent.slice(0, 3).map((item) => `<button data-open-recent="${esc(item.id)}"><strong>${esc(item.name)}</strong><span>${esc(item.area || t("history.areaUnknown"))} · ${formatClientTime(item.analyzedAt)}</span></button>`).join("")}</div><button class="text-button" data-action="history">${t("home.viewAll", { count: state.recent.length })}</button></section>` : ""}
     <section class="promise-grid">
       <article><b>${t("home.promise1Overline")}</b><h3>${t("home.promise1Title")}</h3><p>${t("home.promise1Body")}</p></article>
       <article><b>${t("home.promise2Overline")}</b><h3>${t("home.promise2Title")}</h3><p>${t("home.promise2Body")}</p></article>
@@ -305,17 +315,17 @@ function attachScreenshotFile(file, { pasted = false } = {}) {
   state.exampleInput = false;
   const validation = validateScreenshotFile(file);
   if (!validation.ok) {
-    state.analysisError = validation.error;
-    showToast("この画像形式またはサイズには対応していません");
+    state.analysisError = currentLocale() === "ja" ? validation.error : t("error.imageUnsupported");
+    showToast(t("error.imageUnsupported"));
     renderHome();
     return;
   }
   if (state.uploadPreviewUrl) URL.revokeObjectURL(state.uploadPreviewUrl);
   state.uploadFile = file;
-  state.uploadName = file.name || (pasted ? "貼り付けた画像" : "スクリーンショット");
+  state.uploadName = file.name || (pasted ? t("upload.pastedName") : t("upload.screenshotName"));
   state.uploadPreviewUrl = URL.createObjectURL(file);
   state.analysisError = "";
-  showToast(pasted ? "クリップボードの画像を追加しました" : "スクリーンショットを追加しました");
+  showToast(pasted ? t("error.imagePasted") : t("error.imageAdded"));
   renderHome();
 }
 
@@ -323,16 +333,16 @@ async function handleAnalyze(event) {
   event.preventDefault();
   const value = new FormData(event.currentTarget).get("clue").trim();
   if (!value && !state.uploadFile) {
-    showToast("店名、リンク、またはスクリーンショットを追加してください");
+    showToast(t("error.inputRequired"));
     return;
   }
   if (navigator.onLine === false) {
-    showToast("オフラインです。接続後にもう一度お試しください");
+    showToast(t("error.offline"));
     return;
   }
   const capabilities = await getCapabilities();
   if (capabilities.capabilitiesUnavailable) {
-    state.analysisError = "サービス状態を確認できません。通信環境を確認して再試行してください。";
+    state.analysisError = t("error.service");
     renderHome();
     return;
   }
@@ -341,7 +351,7 @@ async function handleAnalyze(event) {
     state.analysisError = "";
     renderHome();
     document.querySelector("#pilot-access-code")?.focus();
-    showToast("先に招待アクセスコードを入力してください");
+    showToast(t("error.accessFirst"));
     return;
   }
   state.input = value || state.uploadName;
@@ -376,7 +386,7 @@ async function handleAnalyze(event) {
       state.view = "extraction";
       render();
     } catch (error) {
-      state.analysisError = error.message || "しばらくしてから再試行するか、店名を入力してください。";
+      state.analysisError = error.message || t("error.retryOrName");
       state.loadingMode = "";
       state.view = "home";
       render();
@@ -419,7 +429,7 @@ async function handleAnalyze(event) {
     render();
   } catch (error) {
     if (recoverFromPilotAccessError(error)) return;
-    state.analysisError = error.message || "店舗検索を一時的に利用できません。";
+    state.analysisError = error.message || t("error.searchUnavailable");
     state.view = "home";
     render();
   }
@@ -432,7 +442,7 @@ async function extractTextInput(text) {
     body: JSON.stringify({ text })
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "入力内容を確認できませんでした。");
+  if (!response.ok) throw apiResponseError(payload, t("error.inputCheck"));
   return payload;
 }
 
@@ -443,7 +453,7 @@ async function extractWebpageInput(url) {
     body: JSON.stringify({ url })
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw apiResponseError(payload, "公開ページから店舗情報を確認できませんでした。店名を入力するか、スクリーンショットを追加してください。");
+  if (!response.ok) throw apiResponseError(payload, t("error.webpage"));
   return payload;
 }
 
@@ -457,7 +467,7 @@ function renderTextExtraction() {
     <section class="panel extracted-restaurant"><form id="text-extraction-form">
       <div class="field-pair"><label>${t("review.name")}<input name="name" value="${esc(clues.name)}" required></label><label>${t("review.branch")}<input name="branch" value="${esc(clues.branch)}"></label></div>
       <div class="field-pair"><label>${t("review.area")}<input name="area" value="${esc(clues.area)}"></label><label>${t("review.address")}<input name="address" value="${esc(clues.address)}"></label></div>
-      ${clues.aliasExpanded ? `<aside class="alias-expansion"><strong>中国語の通称を正式名に置き換えました</strong><span>${esc(clues.originalName)} → ${esc(clues.name)}</span><p>検索には日本語の正式名を使います。エリア・住所・候補画面で支店を確認してください。</p></aside>` : ""}
+      ${clues.aliasExpanded ? `<aside class="alias-expansion"><strong>${t("review.aliasTitle")}</strong><span>${esc(clues.originalName)} → ${esc(clues.name)}</span><p>${t("review.aliasBody")}</p></aside>` : ""}
       <div class="plan-preview"><strong>${t("review.plan")}</strong><span>${parsed.plan.planDate || t("review.dateUnknown")} · ${parsed.plan.planTime || t("review.timeUnknown")} · ${t("review.people", { count: state.currentPlanIntent.partySize })}</span></div>
       ${parsed.kind === "pending_analysis" ? `<aside class="link-capability"><p>${t("review.pendingNotice")}</p></aside>` : parsed.webpage ? `<aside class="link-capability"><p>${t("review.webNotice")}</p><a href="${esc(safeExternalUrl(parsed.webpage.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.sourceLanguage")}</a></aside>` : parsed.links.length ? `<aside class="link-capability"><strong>${esc(parsedPlatformLabel)}</strong><p>${t("review.linkNotice")}</p></aside>` : ""}
       <button class="primary-button" type="submit">${t("review.search")} ${icons.arrow}</button>
@@ -471,7 +481,7 @@ function renderTextExtraction() {
     catch (error) {
       if (recoverFromPilotAccessError(error)) return;
       state.view = "text_extraction";
-      showToast(error.message || "店舗検索を一時的に利用できません");
+      showToast(error.message || t("error.searchUnavailable"));
       render();
     }
   });
@@ -527,24 +537,24 @@ function renderExtraction() {
   const queuedKeys = new Set(state.pending.map((item) => restaurantClueKey(item.clues)));
   const queueableRestaurants = e.restaurants.filter((restaurant) => restaurantClueKey(restaurant) !== currentKey && !queuedKeys.has(restaurantClueKey(restaurant)) && restaurant.name);
   const engagement = [
-    ["いいね", e.engagement.likes],
-    ["コメント", e.engagement.comments],
-    ["保存", e.engagement.saves],
-    ["シェア", e.engagement.shares]
+    [t("extraction.likes"), e.engagement.likes],
+    [t("extraction.comments"), e.engagement.comments],
+    [t("extraction.saves"), e.engagement.saves],
+    [t("extraction.shares"), e.engagement.shares]
   ].filter(([, value]) => Number.isFinite(value));
 
   app.innerHTML = `<section class="content-view extraction-view">
     <button class="back-button" data-action="home">${t("extraction.back")}</button>
     <div class="section-heading extraction-heading"><span class="step-chip">${t("extraction.step")} · ${state.extractionMode === "api" ? esc(meta?.model || "Vision API") : "Sample"}</span><h2>${t("extraction.title")}</h2><p>${t("extraction.body")}</p></div>
     <div class="extraction-layout">
-      <aside class="screenshot-card"><img src="${state.uploadPreviewUrl}" alt="アップロードした SNS のスクリーンショット"><div><span>${esc(e.platform.toUpperCase())}</span><strong>${esc(e.creator.handle || "アカウント不明")}</strong></div></aside>
+      <aside class="screenshot-card"><img src="${state.uploadPreviewUrl}" alt="${t("extraction.imageAlt")}"><div><span>${esc(e.platform.toUpperCase())}</span><strong>${esc(e.creator.handle || t("extraction.accountUnknown"))}</strong></div></aside>
       <div class="extraction-content">
         ${e.restaurants.length > 1 ? `<section class="panel extracted-restaurant-picker"><div><p class="overline">${e.restaurants.length}</p><h3>${t("extraction.multiTitle")}</h3></div><div class="extracted-restaurant-options" role="group" aria-label="${t("extraction.multiTitle")}">${e.restaurants.map((restaurant, index) => `<button type="button" data-extracted-restaurant="${index}" class="${restaurantKeyForView(restaurant) === restaurantKeyForView(r) ? "active" : ""}" aria-pressed="${restaurantKeyForView(restaurant) === restaurantKeyForView(r)}"><strong>${esc(restaurant.name || `${t("common.restaurant")} ${index + 1}`)}</strong><span>${esc([restaurant.branch, restaurant.area || restaurant.address || restaurant.nearest_station].filter(Boolean).join(" · ") || t("common.unknown"))}</span></button>`).join("")}</div><button type="button" class="queue-extracted" id="queue-extracted" ${queueableRestaurants.length ? "" : "disabled"}>${queueableRestaurants.length ? t("extraction.queueOther", { count: queueableRestaurants.length }) : t("extraction.queueDone")}</button><small class="queue-privacy">${t("extraction.queuePrivacy")}</small></section>` : ""}
         <section class="panel extracted-restaurant"><div class="fact-label"><span class="status-dot dark"></span>${t("extraction.identity")}</div>
           <form id="extraction-form">
             <div class="field-pair"><label>${t("extraction.name")}<input name="restaurant_name" value="${esc(r.name)}" required></label><label>${t("extraction.branch")}<input name="branch" value="${esc(r.branch)}"></label></div>
             <div class="field-pair"><label>${t("extraction.address")}<input name="address" value="${esc(r.address)}"></label><label>${t("extraction.station")}<input name="nearest_station" value="${esc(r.nearest_station)}"></label></div>
-            <div class="extracted-chips"><span>${esc(r.category || "料理ジャンル不明")}</span><span>${formatBudget(r)}</span><span>${esc(r.area || "エリア不明")}</span></div>
+            <div class="extracted-chips"><span>${esc(r.category || t("extraction.categoryUnknown"))}</span><span>${formatBudget(r)}</span><span>${esc(r.area || t("extraction.areaUnknown"))}</span></div>
             ${review.requiresAcknowledgement ? `<label class="confidence-confirm"><input type="checkbox" name="confirm_extraction" value="yes"><span>${t("extraction.confirm")}</span></label>` : ""}
             <button class="primary-button" type="submit">${t("extraction.submit")} ${icons.arrow}</button>
           </form>
@@ -555,7 +565,7 @@ function renderExtraction() {
         </div>
         ${review.requiresAcknowledgement || !review.canContinue ? `<aside class="extraction-warning"><strong>${review.canContinue ? t("extraction.manualTitle") : t("extraction.blockedTitle")}</strong><p>${currentLocale() === "ja" ? esc(review.message) : t("extraction.sourceNotice")}</p></aside>` : ""}
         <aside class="source-readiness ${placesReady ? "ready" : "pending"}"><strong>${placesReady ? t("extraction.liveTitle") : t("extraction.demoTitle")}</strong><span>${placesReady ? t("extraction.liveBody") : t("extraction.demoBody")}</span></aside>
-        ${e.warnings.length ? `<aside class="extraction-warning"><strong>次に確認すること</strong><ul>${e.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul></aside>` : ""}
+        ${e.warnings.length ? `<aside class="extraction-warning"><strong>${t("extraction.nextCheck")}</strong>${currentLocale() === "ja" ? `<ul>${e.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul>` : `<p>${t("extraction.sourceNotice")}</p>`}</aside>` : ""}
       </div>
     </div>
   </section>`;
@@ -577,14 +587,14 @@ function renderExtraction() {
       return;
     }
     if (submittedReview.requiresAcknowledgement && form.get("confirm_extraction") !== "yes") {
-      showToast("画像を見ながら店名と住所を確認してください");
+      showToast(t("error.confirmImage"));
       return;
     }
     state.input = [clues.name, clues.branch, clues.address || clues.area || clues.nearest_station].filter(Boolean).join(" ");
     try {
       await searchCandidates(state.input, clues);
     } catch (error) {
-      state.analysisError = error.message || "店舗検索を一時的に利用できません。";
+      state.analysisError = error.message || t("error.searchUnavailable");
       state.view = "extraction";
       showToast(state.analysisError);
       render();
@@ -602,7 +612,7 @@ function renderExtraction() {
     syncPending();
     postEvent("pending_queue_added", { queueCount: state.pending.length });
     renderExtraction();
-    showToast(added ? `${added} 店舗を「あとで確認」に追加しました` : "これらの店舗はすでに追加済みです");
+    showToast(added ? t("queue.addedOther", { count: added }) : t("queue.duplicateOther"));
   });
 }
 
@@ -628,13 +638,13 @@ function renderCandidates() {
         const candidateLabel = isSystemLead ? t("candidate.lead") : visible.length === 1 ? t("candidate.confirm") : t("candidate.position", { index: index + 1, count: visible.length });
         return `<article class="candidate-card${isSystemLead ? " system-lead" : ""}">
         <div class="restaurant-avatar">${(restaurant.category || "店").slice(0, 1)}</div>
-        <div class="candidate-copy"><span class="candidate-label${isSystemLead ? " lead-label" : ""}">${esc(candidateLabel)}</span><small class="candidate-meta">${esc(restaurant.category || t("common.restaurant"))}${restaurant.price ? ` · ${esc(restaurant.price)}` : ""}</small><h3>${esc(restaurant.name)}</h3><p>${esc(restaurant.address || [restaurant.area, restaurant.station].filter(Boolean).join(" · "))}</p><small class="business-status status-${esc(String(restaurant.businessStatus || "unknown").toLowerCase())}">${esc(businessStatusLabel(restaurant.businessStatus))}</small>${restaurant.matchReasons?.length ? `<div class="match-reasons">${restaurant.matchReasons.map((reason) => `<small>${esc(reason)}</small>`).join("")}</div>` : restaurant.matchScore ? `<small>入力した店名・場所との一致を確認</small>` : ""}${preview ? `<div class="candidate-rating"><strong>${Number.isFinite(preview.rating) ? `★ ${esc(preview.rating.toFixed(1))}` : "公開評価なし"}</strong>${Number.isInteger(preview.userRatingCount) ? `<span>Google ${esc(localeNumberFormat(currentLocale()).format(preview.userRatingCount))}</span>` : ""}</div>` : ""}${restaurant.attributions?.length ? `<small class="provider-attribution">情報提供：${restaurant.attributions.map((item) => esc(item.provider)).join("、")}</small>` : ""}</div>
+        <div class="candidate-copy"><span class="candidate-label${isSystemLead ? " lead-label" : ""}">${esc(candidateLabel)}</span><small class="candidate-meta">${esc(restaurant.category || t("common.restaurant"))}${restaurant.price ? ` · ${esc(restaurant.price)}` : ""}</small><h3>${esc(restaurant.name)}</h3><p>${esc(restaurant.address || [restaurant.area, restaurant.station].filter(Boolean).join(" · "))}</p><small class="business-status status-${esc(String(restaurant.businessStatus || "unknown").toLowerCase())}">${esc(businessStatusLabel(restaurant.businessStatus))}</small>${restaurant.matchReasons?.length && currentLocale() === "ja" ? `<div class="match-reasons">${restaurant.matchReasons.map((reason) => `<small>${esc(reason)}</small>`).join("")}</div>` : restaurant.matchScore ? `<small>${t("candidate.match")}</small>` : ""}${preview ? `<div class="candidate-rating"><strong>${Number.isFinite(preview.rating) ? `★ ${esc(preview.rating.toFixed(1))}` : t("candidate.noRating")}</strong>${Number.isInteger(preview.userRatingCount) ? `<span>Google ${esc(localeNumberFormat(currentLocale()).format(preview.userRatingCount))}</span>` : ""}</div>` : ""}${restaurant.attributions?.length ? `<small class="provider-attribution">${t("candidate.attribution", { providers: restaurant.attributions.map((item) => esc(item.provider)).join(", ") })}</small>` : ""}</div>
         <div class="candidate-actions"><button class="select-button" data-restaurant="${restaurant.id}">${t("candidate.select")} ${icons.arrow}</button>${live && !preview ? `<button class="preview-button" data-preview-candidate="${restaurant.placeId}" ${previewLoading ? "disabled" : ""}>${previewLoading ? t("candidate.ratingLoading") : t("candidate.rating")}</button>` : ""}<button class="reject-button" data-reject-candidate="${restaurant.id}" aria-label="${esc(restaurant.name)}: ${t("candidate.reject")}">${t("candidate.reject")}</button></div>
       </article>`;
       }).join("")}
     </div>
     ${visible.length ? `<div class="candidate-review-actions"><button data-action="home">${t("candidate.edit")}</button>${rejectedCount ? `<button data-restore-candidates>${t("candidate.restore", { count: rejectedCount })}</button>` : ""}</div>` : `<div class="empty-state candidate-empty"><span>?</span><h3>${t("candidate.noneTitle")}</h3><p>${t("candidate.noneBody")}</p><div><button data-restore-candidates>${t("candidate.restoreAll")}</button><button class="primary-button" data-action="home">${t("candidate.searchEdit")} ${icons.arrow}</button></div></div>`}
-    ${live ? '<p class="candidate-cost-note">店舗は自動選択せず、端末の位置情報も取得しません。場所は入力された住所やエリアから判断します。Google の評価は「評価を確認」を押した店舗だけ、営業時間・電話・予約方法は店舗確認後だけ取得します。</p><div class="google-attribution" translate="no">Google Maps</div>' : '<p class="fine-print">Google Places が未設定のため、明示した端末内デモ候補を表示しています。</p>'}
+    ${live ? `<p class="candidate-cost-note">${t("candidate.liveCost")}</p><div class="google-attribution" translate="no">Google Maps</div>` : `<p class="fine-print">${t("candidate.demoNote")}</p>`}
   </section>`;
   document.querySelectorAll("[data-preview-candidate]").forEach((button) => button.addEventListener("click", async () => {
     await loadCandidatePreview(button.dataset.previewCandidate);
@@ -727,14 +737,14 @@ function renderResult() {
   app.innerHTML = `<section class="content-view result-view">
     <button class="back-button" data-action="home">${t("result.back")}</button>
     ${currentLocale() !== "ja" ? `<aside class="language-beta-note result-language-note"><strong>${t("language.beta")}</strong><span>${t("result.dynamicNotice")}</span></aside>` : ""}
-    ${state.pending.length ? `<aside class="result-queue"><div><strong>あと ${state.pending.length} 店舗を確認できます</strong><span>同じ画像やリストにある店舗を続けて確認します。</span></div><button id="continue-pending">次の店舗へ ${icons.arrow}</button></aside>` : ""}
-    <div class="result-title"><div><span class="category-line">${[r.category, r.price].filter(Boolean).map(esc).join(" · ")}</span><h1>${esc(r.name)}</h1><p>${[r.reading, r.area].filter(Boolean).map(esc).join(" · ")}</p></div><span class="demo-pill">${r.dataLabel || "デモ情報"}</span></div>
+    ${state.pending.length ? `<aside class="result-queue"><div><strong>${t("result.moreQueue", { count: state.pending.length })}</strong><span>${t("result.moreQueueBody")}</span></div><button id="continue-pending">${t("result.nextQueue")} ${icons.arrow}</button></aside>` : ""}
+    <div class="result-title"><div><span class="category-line">${[r.category, r.price].filter(Boolean).map(esc).join(" · ")}</span><h1>${esc(r.name)}</h1><p>${[r.reading, r.area].filter(Boolean).map(esc).join(" · ")}</p></div><span class="demo-pill">${currentLocale() === "ja" ? esc(r.dataLabel || t("result.demoLabel")) : t("result.demoLabel")}</span></div>
     <div class="decision-grid">
       <article class="decision-card ${esc(r.recommendation)}">
         <div class="status-row"><span class="status-dot"></span><span>${localizedConfidenceLabel(r.confidence)}</span></div>
         <p class="overline">${t("result.checkResult")}</p><h2>${esc(localizedRecommendationLabel(r.recommendation))}</h2>${currentLocale() === "ja" ? `<p>${esc(r.summary)}</p><div class="reason-list">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div>` : `<p>${t("result.dynamicNotice")}</p><details class="source-language-details"><summary>${t("result.decisionDetails")}</summary><p lang="ja">${esc(r.summary)}</p><div class="reason-list" lang="ja">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div></details>`}
-        ${r.planAdvisory ? `<aside class="plan-advisory"><strong>入力した予定について</strong><p>${esc(r.planAdvisory)}</p></aside>` : ""}
-        ${r.decisionEvidence?.length ? `<div class="decision-boundary"><strong>判断できる範囲</strong>${r.decisionEvidence.map((item) => `<p>${esc(item.claim)} · 確度${esc(item.certainty === "high" ? "高" : item.certainty === "medium" ? "中" : "低")}<br><small>${esc(item.limitation)}</small></p>`).join("")}</div>` : ""}
+        ${r.planAdvisory ? `<aside class="plan-advisory"><strong>${t("result.planAdvisory")}</strong><p lang="ja">${esc(r.planAdvisory)}</p></aside>` : ""}
+        ${r.decisionEvidence?.length ? `<div class="decision-boundary"><strong>${t("result.boundary")}</strong>${r.decisionEvidence.map((item) => `<p lang="ja">${esc(item.claim)} · ${t("result.confidence", { level: localizedConfidenceLevel(item.certainty) })}<br><small>${esc(item.limitation)}</small></p>`).join("")}</div>` : ""}
       </article>
       <article class="action-card"><p class="overline">${t("result.next")}</p><h3>${currentLocale() === "ja" ? esc(r.nextAction) : t(primaryAction?.type === "phone" ? "result.actionPhone" : primaryAction ? "result.actionBooking" : "result.actionMap")}</h3>
         ${primaryAction ? `<a class="primary-button" id="primary-action" data-action-type="${esc(primaryAction.type || "external")}" href="${esc(actionHref(primaryAction))}" ${primaryAction.type === "phone" ? "" : 'target="_blank" rel="noreferrer"'}>${currentLocale() === "ja" ? esc(primaryAction.label) : t(primaryAction.type === "phone" ? "result.actionPhone" : "result.actionBooking")} ${primaryAction.type === "phone" ? icons.phone : icons.arrow}</a>` : r.phone ? `<a class="primary-button" id="primary-action" data-action-type="phone" href="tel:${esc(r.phone)}">${icons.phone} ${t("result.actionPhone")}</a>` : `<a class="primary-button" id="primary-action" data-action-type="map" href="${esc(safeExternalUrl(r.mapSearchUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address}`)}`))}" target="_blank" rel="noreferrer">${t("result.actionMap")} ${icons.arrow}</a>`}
@@ -745,19 +755,19 @@ function renderResult() {
       </article>
     </div>
     ${r.conflict ? `<aside class="conflict"><strong>${currentLocale() === "ja" ? esc(r.conflictTitle || "情報が一致していません") : t("result.conflict")}</strong><p lang="ja">${esc(r.conflict)}</p></aside>` : ""}
-    ${r.reservationGuidance ? `<section class="panel reservation-guidance"><div><p class="overline">公式サイトの予約条件</p><h2>${esc(r.reservationGuidance.label)}</h2><p>${esc(r.reservationGuidance.excerpt)}</p><small>条件への適合、空席、予約成立は、利用日のページ表示または店舗からの回答をご確認ください。</small></div><a href="${esc(safeExternalUrl(r.reservationGuidance.sourceUrl))}" target="_blank" rel="noreferrer">公式サイトの原文を開く ${icons.arrow}</a></section>` : ""}
-    ${reservationOptions.length ? `<section class="panel reservation-options"><div class="panel-heading"><div><p class="overline">予約・確認先</p><h2>信頼できる入口から確認</h2></div><span>予約、予約リクエスト、順番待ち、店舗ページを区別しています</span></div><div class="reservation-option-grid">${reservationOptions.map((option) => `<a class="reservation-option ${reservationOptionClass(option)}" href="${esc(option.url)}" ${option.actionType === "phone" ? "" : 'target="_blank" rel="noreferrer"'} data-reservation-provider="${esc(option.provider)}" data-action-type="${esc(option.actionType)}"><span>${reservationOptionBadge(option)}</span><strong>${esc(option.label)}</strong><small>${esc(option.capability?.label || reservationModeLabel(option.bookingMode))}</small>${option.capability?.confirmation ? `<em>${esc(option.capability.confirmation)}</em>` : ""}${option.feeNote ? `<p>${esc(option.feeNote)}</p>` : ""}</a>`).join("")}</div></section>` : ""}
-    ${r.queueGuidance ? `<section class="panel queue-guidance"><div><p class="overline">公式サイトの順番待ちルール</p><h2>${esc(r.queueGuidance.label)}</h2><p>${esc(r.queueGuidance.excerpt)}</p><small>公式サイトで公開された方法だけを示します。現在の空席や待ち時間を示すものではありません。</small></div><a href="${esc(safeExternalUrl(r.queueGuidance.sourceUrl))}" target="_blank" rel="noreferrer">公式サイトの原文を開く ${icons.arrow}</a></section>` : ""}
-    ${r.attentionNotices?.length ? `<section class="panel attention-panel"><div class="panel-heading"><div><p class="overline">来店時の注意</p><h2>公式サイトに明記されたルール</h2></div><span>予約送信前にもう一度確認</span></div><div class="attention-grid">${r.attentionNotices.map((notice) => `<article><strong>${esc(notice.label)}</strong><p>${esc(notice.excerpt)}</p><a href="${esc(safeExternalUrl(notice.sourceUrl))}" target="_blank" rel="noreferrer">公式サイトの原文を開く</a></article>`).join("")}</div></section>` : ""}
+    ${r.reservationGuidance ? `<section class="panel reservation-guidance"><div><p class="overline">${t("result.reservationRules")}</p><h2 lang="ja">${esc(r.reservationGuidance.label)}</h2><p lang="ja">${esc(r.reservationGuidance.excerpt)}</p><small>${t("result.ruleBoundary")}</small></div><a href="${esc(safeExternalUrl(r.reservationGuidance.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.openOriginal")} ${icons.arrow}</a></section>` : ""}
+    ${reservationOptions.length ? `<section class="panel reservation-options"><div class="panel-heading"><div><p class="overline">${t("result.options")}</p><h2>${t("result.optionsTitle")}</h2></div><span>${t("result.optionsBody")}</span></div><div class="reservation-option-grid">${reservationOptions.map((option) => `<a class="reservation-option ${reservationOptionClass(option)}" href="${esc(option.url)}" ${option.actionType === "phone" ? "" : 'target="_blank" rel="noreferrer"'} data-reservation-provider="${esc(option.provider)}" data-action-type="${esc(option.actionType)}"><span>${reservationOptionBadge(option)}</span><strong>${esc(option.label)}</strong><small>${esc(currentLocale() === "ja" ? option.capability?.label || reservationModeLabel(option.bookingMode) : reservationModeLabel(option.bookingMode))}</small>${option.capability?.confirmation ? `<em lang="ja">${esc(option.capability.confirmation)}</em>` : ""}${option.feeNote ? `<p lang="ja">${esc(option.feeNote)}</p>` : ""}</a>`).join("")}</div></section>` : ""}
+    ${r.queueGuidance ? `<section class="panel queue-guidance"><div><p class="overline">${t("result.queueRules")}</p><h2 lang="ja">${esc(r.queueGuidance.label)}</h2><p lang="ja">${esc(r.queueGuidance.excerpt)}</p><small>${t("result.queueBoundary")}</small></div><a href="${esc(safeExternalUrl(r.queueGuidance.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.openOriginal")} ${icons.arrow}</a></section>` : ""}
+    ${r.attentionNotices?.length ? `<section class="panel attention-panel"><div class="panel-heading"><div><p class="overline">${t("result.attention")}</p><h2>${t("result.attentionTitle")}</h2></div><span>${t("result.attentionBody")}</span></div><div class="attention-grid">${r.attentionNotices.map((notice) => `<article lang="ja"><strong>${esc(notice.label)}</strong><p>${esc(notice.excerpt)}</p><a href="${esc(safeExternalUrl(notice.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.openOriginal")}</a></article>`).join("")}</div></section>` : ""}
     <div class="detail-grid single-panel">
       <section class="panel"><div class="panel-heading"><div><p class="overline">${t("result.restaurantInfo")}</p><h2>${t("result.beforeVisit")}</h2></div><span class="queue-chip">${esc(r.queue)}</span></div>
         <dl class="facts">${Number.isFinite(r.rating) ? `<div><dt>Google</dt><dd>${esc(r.rating)} / 5${Number.isInteger(r.userRatingCount) ? ` · ${esc(localeNumberFormat(currentLocale()).format(r.userRatingCount))}` : ""}</dd></div>` : ""}<div><dt>${t("result.address")}</dt><dd>${esc(r.address)}</dd></div>${r.phone ? `<div><dt>${t("result.phoneLabel")}</dt><dd><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a></dd></div>` : ""}${r.officialInstagramUrl ? `<div><dt>Instagram</dt><dd><a href="${esc(safeExternalUrl(r.officialInstagramUrl))}" target="_blank" rel="noreferrer">Instagram</a></dd></div>` : ""}<div><dt>${t("result.station")}</dt><dd>${esc(r.station)}</dd></div><div><dt>${t("result.hours")}</dt><dd>${esc(r.hours)}</dd></div><div><dt>${t("result.closed")}</dt><dd>${esc(r.closed)}</dd></div></dl>
       </section>
     </div>
-    <section class="panel sources"><div class="panel-heading"><div><p class="overline">${t("result.sources")}</p><h2>${t("result.sourcesTitle")}</h2></div><span>${r.sourceContext || "確認直後 · デモ"}</span></div>
+    <section class="panel sources"><div class="panel-heading"><div><p class="overline">${t("result.sources")}</p><h2>${t("result.sourcesTitle")}</h2></div><span>${currentLocale() === "ja" ? esc(r.sourceContext || t("result.sourceContext")) : t("result.sourceContext")}</span></div>
       ${r.sources.map((source) => `<div class="source-row"><div>${source.url ? `<a href="${esc(safeExternalUrl(source.url))}" target="_blank" rel="noreferrer"><strong>${esc(source.name)}</strong></a>` : `<strong>${esc(source.name)}</strong>`}${source.official ? `<span class="official">${t("result.official")}</span>` : ""}<p lang="ja">${esc(source.note)}${source.retrievedAt ? ` · ${formatClientTime(source.retrievedAt)}` : ""}</p>${source.attribution ? `<small class="source-attribution" translate="no">${esc(source.attribution)}</small>` : ""}</div><span class="confidence-${["高", "high"].includes(source.confidence) ? "high" : ["中", "medium"].includes(source.confidence) ? "medium" : "low"}">${t("result.confidence", { level: localizedConfidenceLevel(source.confidence) })}</span></div>`).join("")}
       ${r.sources.some((source) => ["Hot Pepper", "ホットペッパーグルメ"].includes(source.name)) ? '<a class="hotpepper-credit" href="https://webservice.recruit.co.jp/" target="_blank" rel="noreferrer"><img src="https://webservice.recruit.co.jp/banner/hotpepper-s.gif" alt="ホットペッパーグルメ Webサービス" width="135" height="17"></a>' : ""}
-      <p class="source-disclaimer">外部情報は必要なときに更新します。保存するのは場所の識別子とユーザー自身の手掛かりだけです。</p>
+      <p class="source-disclaimer">${t("result.sourceDisclaimer")}</p>
     </section>
     <section class="feedback-card" id="feedback-card"><div><p class="overline">${t("feedback.overline")}</p><h3>${t("feedback.title")}</h3><p>${t("feedback.privacy")}</p></div><form id="feedback-form" class="feedback-form">
       <fieldset><legend>${t("feedback.helpful")}</legend><label><input type="radio" name="helpful" value="yes" required> ${t("feedback.yes")}</label><label><input type="radio" name="helpful" value="no"> ${t("feedback.no")}</label></fieldset>
@@ -902,7 +912,7 @@ function renderPlanForm(savedPlan, restaurant) {
   const time = savedPlan?.planTime || state.currentPlanIntent.planTime || "";
   const party = savedPlan?.partySize || state.currentPlanIntent.partySize || state.settings.defaultPartySize;
   const status = savedPlan?.planStatus || createSavedPlan({ restaurant }).planStatus;
-  return `<form id="plan-form" class="plan-form"><strong>${savedPlan ? "来店予定を編集" : "予定を追加して保存"}</strong><div class="plan-fields"><label>日付<input type="date" name="planDate" value="${esc(date)}"></label><label>時間<input type="time" name="planTime" value="${esc(time)}"></label><label>人数<input type="number" name="partySize" min="1" max="20" value="${esc(party)}"></label><label>状況<select name="planStatus">${PLAN_STATUSES.map((item) => `<option value="${item.value}" ${item.value === status ? "selected" : ""}>${item.label}</option>`).join("")}</select></label></div><div class="plan-actions"><button type="button" id="cancel-plan">キャンセル</button><button type="submit">${savedPlan ? "変更を保存" : "行きたいリストへ"}</button></div></form>`;
+  return `<form id="plan-form" class="plan-form"><strong>${savedPlan ? t("plan.edit") : t("plan.add")}</strong><div class="plan-fields"><label>${t("plan.date")}<input type="date" name="planDate" value="${esc(date)}"></label><label>${t("plan.time")}<input type="time" name="planTime" value="${esc(time)}"></label><label>${t("plan.party")}<input type="number" name="partySize" min="1" max="20" value="${esc(party)}"></label><label>${t("plan.status")}<select name="planStatus">${PLAN_STATUSES.map((item) => `<option value="${item.value}" ${item.value === status ? "selected" : ""}>${localizedPlanStatus(item.value)}</option>`).join("")}</select></label></div><div class="plan-actions"><button type="button" id="cancel-plan">${t("plan.cancel")}</button><button type="submit">${savedPlan ? t("plan.saveChanges") : t("plan.addSaved")}</button></div></form>`;
 }
 
 function savePlanFromForm(event) {
@@ -915,7 +925,7 @@ function savePlanFromForm(event) {
   state.saved = existing ? state.saved.map((saved) => saved.id === item.id ? item : saved) : [...state.saved, item];
   state.planEditorOpen = false;
   postEvent(existing ? "saved_plan_updated" : "saved_to_list", { planStatus: item.planStatus, hasDate: Boolean(item.planDate) });
-  showToast(existing ? "来店予定を更新しました" : "行きたいリストに保存しました");
+  showToast(existing ? t("plan.updated") : t("plan.saved"));
   render();
 }
 
@@ -934,14 +944,14 @@ function clearUpload() {
 async function extractScreenshot(file) {
   const capabilities = await getCapabilities();
   if (capabilities.capabilitiesUnavailable && !isKnownSampleScreenshot(file)) {
-    throw new Error("画像解析サービスの状態を確認できません。接続を確認して再試行してください。");
+    throw new Error(t("error.visionState"));
   }
   if (!capabilities.visionExtraction) {
     if (isKnownSampleScreenshot(file)) {
       await new Promise((resolve) => setTimeout(resolve, 650));
       return { extraction: sampleTikTokExtraction, mode: "sample" };
     }
-    throw new Error("画像解析 API が未設定です。DASHSCOPE_API_KEY を設定するか、サンプル画像を使用してください。");
+    throw new Error(t("error.visionMissing"));
   }
 
   const imageDataUrl = await readFileAsDataUrl(file);
@@ -973,17 +983,17 @@ async function extractScreenshot(file) {
     await new Promise((resolve) => setTimeout(resolve, 650));
     return { extraction: sampleTikTokExtraction, mode: "sample" };
   }
-  throw new Error("画像解析 API が未設定です。DASHSCOPE_API_KEY を設定するか、サンプル画像を使用してください。");
+  throw new Error(t("error.visionMissing"));
 }
 
 function visionErrorMessage(payload = {}) {
   return {
-    VISION_TIMEOUT: "画像解析がタイムアウトしました。初回は時間がかかる場合があります。もう一度お試しください。",
-    VISION_RATE_LIMITED: "画像解析が混み合っています。しばらくしてからお試しください。",
-    VISION_AUTH_ERROR: "画像解析サービスの認証設定を確認してください。",
-    INVALID_IMAGE: "有効な PNG、JPEG、WebP 画像を選んでください。",
-    INVALID_MODEL_OUTPUT: "画像は読み取れましたが、結果を安定して整理できませんでした。再試行するか店名を入力してください。"
-  }[payload.code] || payload.error || "画像解析サービスを一時的に利用できません。";
+    VISION_TIMEOUT: t("error.visionTimeout"),
+    VISION_RATE_LIMITED: t("error.visionBusy"),
+    VISION_AUTH_ERROR: t("error.visionAuth"),
+    INVALID_IMAGE: t("error.invalidImage"),
+    INVALID_MODEL_OUTPUT: t("error.invalidModel")
+  }[payload.code] || (currentLocale() === "ja" ? payload.error : "") || t("error.visionTemporary");
 }
 
 async function getCapabilities({ force = false } = {}) {
@@ -1004,7 +1014,7 @@ async function searchCandidates(query, clues = {}) {
   state.view = "loading";
   render();
   const capabilities = await getCapabilities();
-  if (capabilities.capabilitiesUnavailable) throw new Error("店舗検索サービスの状態を確認できません。接続を確認して再試行してください。");
+  if (capabilities.capabilitiesUnavailable) throw new Error(t("error.searchState"));
   if (!capabilities.placesSearch) {
     await new Promise((resolve) => setTimeout(resolve, 450));
     state.candidates = findCandidates(query);
@@ -1015,7 +1025,7 @@ async function searchCandidates(query, clues = {}) {
     state.resultFocus = "";
     state.candidateMode = "demo";
     state.view = "candidates";
-    showToast("Google Places が未設定のためデモ候補を表示します");
+    showToast(t("error.demoCandidates"));
     render();
     return;
   }
@@ -1026,8 +1036,8 @@ async function searchCandidates(query, clues = {}) {
     body: JSON.stringify({ query, clues })
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw apiResponseError(payload, "実在する店舗を検索できませんでした。");
-  if (!payload.candidates?.length) throw new Error("確認できる店舗が見つかりません。店名やエリアを追加してください。");
+  if (!response.ok) throw apiResponseError(payload, t("error.realSearch"));
+  if (!payload.candidates?.length) throw new Error(t("error.noCandidates"));
   state.candidates = payload.candidates;
   state.candidatePreviews = {};
   state.candidatePreviewLoadingId = "";
@@ -1051,12 +1061,12 @@ async function loadCandidatePreview(placeId) {
       body: JSON.stringify({ placeId })
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw apiResponseError(payload, "評価を取得できませんでした。店舗の確認はそのまま続けられます。");
+    if (!response.ok) throw apiResponseError(payload, t("error.rating"));
     state.candidatePreviews = { ...state.candidatePreviews, [placeId]: payload.preview };
     postEvent("candidate_preview_loaded", { placeId, sourceMode: state.analysisSourceMode || "live", cacheStatus: payload.cacheStatus });
   } catch (error) {
     if (recoverFromPilotAccessError(error)) return;
-    showToast(error.message || "評価を取得できませんでした");
+    showToast(error.message || t("error.ratingShort"));
   } finally {
     state.candidatePreviewLoadingId = "";
     if (state.view === "candidates") renderCandidates();
@@ -1076,7 +1086,7 @@ async function loadRestaurantDetails(candidate, selection = {}) {
       body: JSON.stringify({ placeId: candidate.placeId, clues: state.currentClues, plan: state.currentPlanIntent, userProvidedLinks: state.userProvidedReservationLinks })
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw apiResponseError(payload, "店舗情報を確認できませんでした。");
+    if (!response.ok) throw apiResponseError(payload, t("error.details"));
     if (selection.recordConfirmation !== false) postEvent("candidate_confirmed", { placeId: candidate.placeId, sourceMode: state.analysisSourceMode || "live", selectedRank: selection.selectedRank || null, candidateCount: selection.candidateCount || null });
     state.restaurant = payload.restaurant;
     if (state.restaurant.conflict) postEvent("source_conflict_seen");
@@ -1093,13 +1103,13 @@ async function loadRestaurantDetails(candidate, selection = {}) {
     if (recordsNewAnalysis) state.analysisStartedAt = null;
     if (recoverFromPilotAccessError(error)) return;
     state.view = selection.returnView || "candidates";
-    showToast(error.message || "店舗情報を確認できませんでした");
+    showToast(error.message || t("error.detailsShort"));
     render();
   }
 }
 
 function apiResponseError(payload = {}, fallbackMessage) {
-  const error = new Error(payload.error || fallbackMessage);
+  const error = new Error(currentLocale() === "ja" ? payload.error || fallbackMessage : fallbackMessage);
   error.code = typeof payload.code === "string" ? payload.code : "";
   return error;
 }
@@ -1108,25 +1118,30 @@ function recoverFromPilotAccessError(error) {
   if (!pilotAccessRejected(error)) return false;
   state.settings = settingsWithoutPilotAccess(state.settings);
   state.loadingMode = "";
-  state.analysisError = "アクセスコードが正しくありません。管理者から案内されたコードをもう一度入力してください。";
+  state.analysisError = t("error.accessInvalidBody");
   state.view = "home";
   syncSettings();
   render();
   requestAnimationFrame(() => document.querySelector("#pilot-access-code")?.focus());
-  showToast("アクセスコードが正しくありません");
+  showToast(t("error.accessInvalid"));
   return true;
 }
 
 function formatClientTime(value) {
   try {
-    return new Intl.DateTimeFormat("zh-CN", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+    return new Intl.DateTimeFormat(currentLocale(), { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
   } catch {
     return value;
   }
 }
 
 function businessStatusLabel(value) {
-  return { OPERATIONAL: "Google Maps：営業中", CLOSED_TEMPORARILY: "Google Maps：臨時休業", CLOSED_PERMANENTLY: "Google Maps：閉業" }[value] || "Google Maps：営業状況を要確認";
+  const labels = currentLocale() === "en"
+    ? { OPERATIONAL: "Google Maps: Open", CLOSED_TEMPORARILY: "Google Maps: Temporarily closed", CLOSED_PERMANENTLY: "Google Maps: Permanently closed", unknown: "Google Maps: Check operating status" }
+    : currentLocale() === "zh-CN"
+      ? { OPERATIONAL: "Google Maps：营业中", CLOSED_TEMPORARILY: "Google Maps：临时停业", CLOSED_PERMANENTLY: "Google Maps：已停业", unknown: "Google Maps：营业状态待确认" }
+      : { OPERATIONAL: "Google Maps：営業中", CLOSED_TEMPORARILY: "Google Maps：臨時休業", CLOSED_PERMANENTLY: "Google Maps：閉業", unknown: "Google Maps：営業状況を要確認" };
+  return labels[value] || labels.unknown;
 }
 
 async function shareCurrentResult() {
@@ -1135,14 +1150,14 @@ async function shareCurrentResult() {
     if (typeof navigator.share === "function") {
       await navigator.share(payload);
       postEvent("share_result_clicked", { actionType: "native_share" });
-      showToast("共有画面を開きました");
+      showToast(t("share.opened"));
       return;
     }
     await navigator.clipboard.writeText(payload.text);
     postEvent("share_result_clicked", { actionType: "clipboard" });
-    showToast("結果をコピーしました。貼り付けて共有できます");
+    showToast(t("share.copied"));
   } catch (error) {
-    if (error?.name !== "AbortError") showToast("共有できませんでした。もう一度お試しください");
+    if (error?.name !== "AbortError") showToast(t("share.failed"));
   }
 }
 
@@ -1212,7 +1227,7 @@ function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("この画像を読み取れませんでした。"));
+    reader.onerror = () => reject(new Error(t("error.fileUnreadable")));
     reader.readAsDataURL(file);
   });
 }
@@ -1220,9 +1235,9 @@ function readFileAsDataUrl(file) {
 function renderSaved() {
   const savedPlans = sortSavedPlansByUrgency(state.saved);
   app.innerHTML = `<section class="content-view narrow saved-view">
-    <button class="back-button" data-action="home">← ホームへ</button>
-    <div class="section-heading"><span class="step-chip">行きたいリスト</span><h2>来店予定の店舗</h2><p>予約が必要な店舗から確認して、当日の行き違いを減らします。</p></div>
-    ${state.saved.length ? `<div class="saved-list">${savedPlans.map((r) => `<article><div class="saved-main"><span class="plan-status status-${esc(r.planStatus)}">${esc(planStatusLabel(r.planStatus))}</span><h3>${esc(r.name)}</h3><p>${r.planDate ? `${esc(r.planDate)}${r.planTime ? ` · ${esc(r.planTime)}` : ""} · ${esc(r.partySize)}名` : `日付未定 · ${esc(r.partySize)}名`}</p><small>最終確認：${r.lastAnalyzedAt ? formatClientTime(r.lastAnalyzedAt) : "記録なし"}</small></div><div class="saved-controls"><select data-plan-status="${esc(r.id)}" aria-label="${esc(r.name)}の状況を更新">${PLAN_STATUSES.map((item) => `<option value="${item.value}" ${item.value === r.planStatus ? "selected" : ""}>${item.label}</option>`).join("")}</select><button data-open-saved="${esc(r.id)}" aria-label="${esc(r.name)}を再確認">${icons.arrow}</button><button class="delete-plan" data-delete-saved="${esc(r.id)}" aria-label="${esc(r.name)}をリストから削除">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>た</span><h3>まだ保存した店舗はありません</h3><p>店舗を確認して保存すると、ここに表示されます。</p><button class="primary-button" data-action="home">店舗を確認する ${icons.arrow}</button></div>`}
+    <button class="back-button" data-action="home">${t("common.backHome")}</button>
+    <div class="section-heading"><span class="step-chip">${t("saved.step")}</span><h2>${t("saved.title")}</h2><p>${t("saved.body")}</p></div>
+    ${state.saved.length ? `<div class="saved-list">${savedPlans.map((r) => `<article><div class="saved-main"><span class="plan-status status-${esc(r.planStatus)}">${esc(localizedPlanStatus(r.planStatus))}</span><h3>${esc(r.name)}</h3><p>${r.planDate ? `${esc(r.planDate)}${r.planTime ? ` · ${esc(r.planTime)}` : ""} · ${t("saved.people", { count: esc(r.partySize) })}` : `${t("saved.dateUnknown")} · ${t("saved.people", { count: esc(r.partySize) })}`}</p><small>${t("saved.lastCheck", { time: r.lastAnalyzedAt ? formatClientTime(r.lastAnalyzedAt) : t("saved.noRecord") })}</small></div><div class="saved-controls"><select data-plan-status="${esc(r.id)}" aria-label="${t("saved.updateAria", { name: esc(r.name) })}">${PLAN_STATUSES.map((item) => `<option value="${item.value}" ${item.value === r.planStatus ? "selected" : ""}>${localizedPlanStatus(item.value)}</option>`).join("")}</select><button data-open-saved="${esc(r.id)}" aria-label="${t("saved.recheckAria", { name: esc(r.name) })}">${icons.arrow}</button><button class="delete-plan" data-delete-saved="${esc(r.id)}" aria-label="${t("saved.deleteAria", { name: esc(r.name) })}">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>た</span><h3>${t("saved.emptyTitle")}</h3><p>${t("saved.emptyBody")}</p><button class="primary-button" data-action="home">${t("saved.start")} ${icons.arrow}</button></div>`}
   </section>`;
   document.querySelectorAll("[data-open-saved]").forEach((button) => button.addEventListener("click", async () => {
     const item = state.saved.find((saved) => saved.id === button.dataset.openSaved);
@@ -1243,12 +1258,12 @@ function renderSaved() {
     syncSaved();
     postEvent("saved_plan_status_changed", { planStatus: select.value, analysisRunId: null });
     renderSaved();
-    showToast("状況を更新しました");
+    showToast(t("saved.statusUpdated"));
   }));
   document.querySelectorAll("[data-delete-saved]").forEach((button) => button.addEventListener("click", () => {
     state.saved = state.saved.filter((item) => item.id !== button.dataset.deleteSaved);
     postEvent("removed_from_list", { analysisRunId: null });
-    showToast("リストから削除しました");
+    showToast(t("saved.removed"));
     renderSaved();
     syncSaved();
   }));
@@ -1256,31 +1271,31 @@ function renderSaved() {
 
 function renderHistory() {
   app.innerHTML = `<section class="content-view narrow saved-view">
-    <button class="back-button" data-action="home">← ホームへ</button>
-    <div class="section-heading"><span class="step-chip">最近の確認</span><h2>前回の続きを確認</h2><p>この端末に最大10件保存します。実在店舗は Place ID、入力した手掛かり、予定だけを保存し、開くたびに外部情報を更新します。</p></div>
-    ${state.recent.length ? `<div class="saved-list">${state.recent.map((item) => `<article><div class="saved-main"><span class="plan-status">${item.sourceMode === "live" ? "最新情報を取得" : "デモ"}</span><h3>${esc(item.name)}</h3><p>${esc(item.area || "エリアを要確認")}${item.planDate ? ` · ${esc(item.planDate)}${item.planTime ? ` ${esc(item.planTime)}` : ""} · ${esc(item.partySize)}名` : ""}</p><small>確認日時：${formatClientTime(item.analyzedAt)}</small></div><div class="saved-controls history-controls"><button data-open-recent="${esc(item.id)}" aria-label="${esc(item.name)}をもう一度開く">${icons.arrow}</button><button class="delete-plan" data-delete-recent="${esc(item.id)}" aria-label="${esc(item.name)}の履歴を削除">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>た</span><h3>まだ確認履歴はありません</h3><p>確認を終えた店舗がここに表示されます。</p><button class="primary-button" data-action="home">店舗を確認する ${icons.arrow}</button></div>`}
+    <button class="back-button" data-action="home">${t("common.backHome")}</button>
+    <div class="section-heading"><span class="step-chip">${t("history.step")}</span><h2>${t("history.title")}</h2><p>${t("history.body")}</p></div>
+    ${state.recent.length ? `<div class="saved-list">${state.recent.map((item) => `<article><div class="saved-main"><span class="plan-status">${item.sourceMode === "live" ? t("history.live") : t("history.demo")}</span><h3>${esc(item.name)}</h3><p>${esc(item.area || t("history.areaUnknown"))}${item.planDate ? ` · ${esc(item.planDate)}${item.planTime ? ` ${esc(item.planTime)}` : ""} · ${t("saved.people", { count: esc(item.partySize) })}` : ""}</p><small>${t("history.checkedAt", { time: formatClientTime(item.analyzedAt) })}</small></div><div class="saved-controls history-controls"><button data-open-recent="${esc(item.id)}" aria-label="${t("history.openAria", { name: esc(item.name) })}">${icons.arrow}</button><button class="delete-plan" data-delete-recent="${esc(item.id)}" aria-label="${t("history.deleteAria", { name: esc(item.name) })}">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>た</span><h3>${t("history.emptyTitle")}</h3><p>${t("history.emptyBody")}</p><button class="primary-button" data-action="home">${t("saved.start")} ${icons.arrow}</button></div>`}
   </section>`;
   document.querySelectorAll("[data-open-recent]").forEach((button) => button.addEventListener("click", () => openRecentAnalysis(button.dataset.openRecent)));
   document.querySelectorAll("[data-delete-recent]").forEach((button) => button.addEventListener("click", () => {
     state.recent = state.recent.filter((item) => item.id !== button.dataset.deleteRecent);
     syncRecent();
-    showToast("履歴を削除しました");
+    showToast(t("history.removed"));
     renderHistory();
   }));
 }
 
 function renderQueue() {
   app.innerHTML = `<section class="content-view narrow saved-view">
-    <button class="back-button" data-action="home">← ホームへ</button>
-    <div class="section-heading"><span class="step-chip">確認待ち</span><h2>店舗を1件ずつ確認</h2><p>複数店舗の画像や行きたい店リストから残した手掛かりです。確認を終えた店舗は自動的にここから外れます。</p></div>
-    <section class="panel batch-queue-panel"><p class="overline">まとめて準備</p><h3>複数の店舗を一度に追加</h3><p>1行に1店舗。「店名｜支店｜エリアまたは住所」でも入力できます。ここでは端末内のリストだけを作り、店舗を開いたときに初めて API を呼び出します。</p><form id="batch-queue-form"><textarea name="restaurants" rows="6" maxlength="10000" placeholder="一蘭 渋谷店&#10;AFURI｜原宿｜東京都渋谷区千駄ヶ谷3-63-1&#10;すし大｜本館｜築地"></textarea><div><small>最大30件。重複する手掛かりは自動でまとめます。</small><button type="submit">確認待ちに追加</button></div></form></section>
-    ${state.pending.length ? `<div class="saved-list queue-list">${state.pending.map((item) => `<article><div class="saved-main"><span class="plan-status">${esc(platformLabel(item.sourcePlatform))}</span><h3>${esc(item.clues.name)}</h3><p>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || "場所を要確認")}</p><small>追加日時：${formatClientTime(item.addedAt)}</small></div><div class="saved-controls history-controls"><button data-open-pending="${esc(item.id)}" aria-label="${esc(item.clues.name)}を確認">${icons.arrow}</button><button class="delete-plan" data-delete-pending="${esc(item.id)}" aria-label="${esc(item.clues.name)}の手掛かりを削除">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>✓</span><h3>確認待ちの店舗はありません</h3><p>1枚の画像に複数の店舗がある場合、残りの店舗をここに保存して順番に確認できます。</p><button class="primary-button" data-action="home">画像を追加する ${icons.arrow}</button></div>`}
+    <button class="back-button" data-action="home">${t("common.backHome")}</button>
+    <div class="section-heading"><span class="step-chip">${t("queue.step")}</span><h2>${t("queue.title")}</h2><p>${t("queue.body")}</p></div>
+    <section class="panel batch-queue-panel"><p class="overline">${t("queue.batch")}</p><h3>${t("queue.batchTitle")}</h3><p>${t("queue.batchBody")}</p><form id="batch-queue-form"><textarea name="restaurants" rows="6" maxlength="10000" placeholder="${esc(t("queue.placeholder"))}"></textarea><div><small>${t("queue.limit")}</small><button type="submit">${t("queue.add")}</button></div></form></section>
+    ${state.pending.length ? `<div class="saved-list queue-list">${state.pending.map((item) => `<article><div class="saved-main"><span class="plan-status">${esc(platformLabel(item.sourcePlatform))}</span><h3>${esc(item.clues.name)}</h3><p>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || t("queue.locationUnknown"))}</p><small>${t("queue.addedAt", { time: formatClientTime(item.addedAt) })}</small></div><div class="saved-controls history-controls"><button data-open-pending="${esc(item.id)}" aria-label="${t("queue.openAria", { name: esc(item.clues.name) })}">${icons.arrow}</button><button class="delete-plan" data-delete-pending="${esc(item.id)}" aria-label="${t("queue.deleteAria", { name: esc(item.clues.name) })}">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>✓</span><h3>${t("queue.emptyTitle")}</h3><p>${t("queue.emptyBody")}</p><button class="primary-button" data-action="home">${t("queue.addImage")} ${icons.arrow}</button></div>`}
   </section>`;
   document.querySelector("#batch-queue-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const parsed = parseBatchRestaurantLines(new FormData(event.currentTarget).get("restaurants"));
     if (!parsed.restaurants.length) {
-      showToast("店舗を1件以上入力してください");
+      showToast(t("queue.inputRequired"));
       return;
     }
     const before = state.pending.length;
@@ -1289,7 +1304,7 @@ function renderQueue() {
     syncPending();
     postEvent("pending_queue_added", { queueCount: state.pending.length, analysisRunId: null });
     renderQueue();
-    showToast(parsed.truncated ? `先頭30行を読み取り、${added}件追加しました` : added ? `${added}件を確認待ちに追加しました` : "すでに追加済みか、確認待ちリストが上限です");
+    showToast(parsed.truncated ? t("queue.addedTruncated", { count: added }) : added ? t("queue.added", { count: added }) : t("queue.duplicate"));
   });
   document.querySelectorAll("[data-open-pending]").forEach((button) => button.addEventListener("click", () => openPendingAnalysis(button.dataset.openPending)));
   document.querySelectorAll("[data-delete-pending]").forEach((button) => button.addEventListener("click", () => {
@@ -1297,7 +1312,7 @@ function renderQueue() {
     syncPending();
     postEvent("pending_queue_removed", { queueCount: state.pending.length, analysisRunId: null });
     renderQueue();
-    showToast("確認待ちの手掛かりを削除しました");
+    showToast(t("queue.removed"));
   }));
 }
 
@@ -1306,7 +1321,7 @@ async function openPendingAnalysis(id) {
   if (!item) return;
   const capabilities = await getCapabilities();
   if (capabilities.capabilitiesUnavailable) {
-    showToast("解析サービスの状態を確認できません。接続を確認して再試行してください");
+    showToast(t("error.service"));
     return;
   }
   const parsed = pendingAnalysisToTextExtraction(item, state.settings.defaultPartySize);
@@ -1465,15 +1480,15 @@ function renderSettings() {
   const budget = capabilities.dailyBudget || {};
   const capabilitiesUnavailable = Boolean(capabilities.capabilitiesUnavailable);
   const providerStopped = Boolean(capabilities.emergencyStop || capabilities.providerCircuit?.open);
-  const providerStopUntil = capabilities.providerCircuit?.openUntil ? new Date(capabilities.providerCircuit.openUntil).toLocaleString("ja-JP") : "管理者が再開するまで";
-  const degradedProviders = Array.isArray(capabilities.providerCircuit?.degradedProviders) ? capabilities.providerCircuit.degradedProviders.map((item) => item.provider).join("、") : "";
-  const providerStopMessage = capabilities.emergencyStop ? "すべての外部 API を管理者が緊急停止しています。" : `${degradedProviders || "一部の外部 API"} を自動停止しています。ほかの機能は引き続き利用できます。`;
+  const providerStopUntil = capabilities.providerCircuit?.openUntil ? new Date(capabilities.providerCircuit.openUntil).toLocaleString(currentLocale()) : t("settings.untilAdmin");
+  const degradedProviders = Array.isArray(capabilities.providerCircuit?.degradedProviders) ? capabilities.providerCircuit.degradedProviders.map((item) => item.provider).join(", ") : "";
+  const providerStopMessage = capabilities.emergencyStop ? t("settings.allStopped") : t("settings.someStopped", { providers: degradedProviders || t("settings.someProviders") });
   const providers = [
-    { label: "スクリーンショット解析", ready: Boolean(capabilities.visionExtraction), detail: capabilities.models?.map((item) => `${item.provider}: ${item.model}`).join(" → ") || "未設定" },
-    { label: "画像解析の予備モデル", ready: Boolean(capabilities.fallbackAvailable), detail: capabilities.fallbackAvailable ? "主モデルの失敗・無効な出力・低確度時に自動使用" : "現在は画像モデルが1つです。確度が低い場合は手動確認が必要です" },
-    { label: "Google Places", ready: Boolean(capabilities.placesSearch), detail: capabilities.placesSearch ? "実在する候補と店舗情報を取得できます" : "デモ候補を使用" },
-    { label: "ホットペッパーグルメ", ready: Boolean(capabilities.hotPepper), detail: capabilities.hotPepper ? "店舗情報の補足を利用できます" : "任意の補足情報は未設定" },
-    { label: "公開ページの手掛かり", ready: Boolean(capabilities.webpageExtraction), detail: capabilities.webpageExtraction ? "制限付き HTML 取得を利用できます" : "未設定" }
+    { label: t("settings.vision"), ready: Boolean(capabilities.visionExtraction), detail: capabilities.models?.map((item) => `${item.provider}: ${item.model}`).join(" → ") || t("settings.modelNotSet") },
+    { label: t("settings.fallback"), ready: Boolean(capabilities.fallbackAvailable), detail: capabilities.fallbackAvailable ? t("settings.fallbackReady") : t("settings.fallbackMissing") },
+    { label: t("settings.places"), ready: Boolean(capabilities.placesSearch), detail: capabilities.placesSearch ? t("settings.availableDetails") : t("settings.demoCandidates") },
+    { label: t("settings.hotpepper"), ready: Boolean(capabilities.hotPepper), detail: capabilities.hotPepper ? t("settings.availableEnrichment") : t("settings.noEnrichment") },
+    { label: t("settings.webpage"), ready: Boolean(capabilities.webpageExtraction), detail: capabilities.webpageExtraction ? t("settings.webReady") : t("settings.notSet") }
   ];
   app.innerHTML = `<section class="content-view narrow settings-view">
     <button class="back-button" data-action="home">${t("common.backHome")}</button>
@@ -1482,13 +1497,13 @@ function renderSettings() {
     <section class="panel"><p class="overline">${t("settings.defaults")}</p><h2>${t("settings.reduceInput")}</h2><form id="settings-form" class="settings-form">
       <input type="hidden" name="locale" value="${esc(currentLocale())}">
       <label>${t("settings.party")}<input type="number" name="defaultPartySize" min="1" max="20" value="${esc(state.settings.defaultPartySize)}"></label>
-      <label>${t("settings.access")}${capabilities.pilotAccessRequired ? t("settings.required") : t("settings.optional")}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="${t("home.accessHelp")}"><small>${capabilities.pilotAccessRequired ? "このタブを閉じるまでだけ保持し、保護されたリクエストに送信します。" : "現在は不要です。入力してもこのタブを閉じると消去されます。"}</small></label>
+      <label>${t("settings.access")}${capabilities.pilotAccessRequired ? t("settings.required") : t("settings.optional")}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="${t("home.accessHelp")}"><small>${capabilities.pilotAccessRequired ? t("settings.accessRequiredHelp") : t("settings.accessOptionalHelp")}</small></label>
       ${state.settings.pilotAccessCode ? `<button type="button" class="text-button clear-access-code" id="clear-access-code">${t("settings.clearAccess")}</button>` : ""}
       <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>${t("settings.history")}</strong><small>${t("settings.historyHelp")}</small></span></label>
       <button type="submit" class="primary-button">${t("settings.submit")}</button>
     </form></section>
-    ${providerStopped ? `<aside class="inline-error"><strong>外部 API を安全停止しています</strong><span>${esc(providerStopMessage)} 再開予定：${esc(providerStopUntil)}</span></aside>` : ""}
-    <section class="panel capability-panel"><div class="panel-heading"><div><p class="overline">現在利用できる機能</p><h2>API と情報源の状態</h2></div><button type="button" class="text-button" id="refresh-capabilities">状態を更新</button></div>${capabilitiesUnavailable ? '<aside class="inline-error"><strong>サービス状態を取得できません</strong><span>不明な状態を「未設定」とは表示しません。接続後に更新してください。</span></aside>' : `<div class="capability-grid">${providers.map((item) => `<article class="${item.ready ? "ready" : "pending"}"><span>${item.ready ? "利用可能" : "未設定"}</span><strong>${esc(item.label)}</strong><p>${esc(item.detail)}</p></article>`).join("")}</div>`}<p class="source-disclaimer">API Key は表示・返却しません。</p></section>
+    ${providerStopped ? `<aside class="inline-error"><strong>${t("settings.apiStopped")}</strong><span>${esc(providerStopMessage)} ${t("settings.resume", { time: esc(providerStopUntil) })}</span></aside>` : ""}
+    <section class="panel capability-panel"><div class="panel-heading"><div><p class="overline">${t("settings.capabilities")}</p><h2>${t("settings.apiStatus")}</h2></div><button type="button" class="text-button" id="refresh-capabilities">${t("settings.refresh")}</button></div>${capabilitiesUnavailable ? `<aside class="inline-error"><strong>${t("settings.unavailable")}</strong><span>${t("settings.unavailableBody")}</span></aside>` : `<div class="capability-grid">${providers.map((item) => `<article class="${item.ready ? "ready" : "pending"}"><span>${item.ready ? t("settings.ready") : t("settings.notSet")}</span><strong>${esc(item.label)}</strong><p>${esc(item.detail)}</p></article>`).join("")}</div>`}<p class="source-disclaimer">${t("settings.keysHidden")}</p></section>
     ${renderDailyBudget(budget)}
   </section>`;
   document.querySelector("#settings-form").addEventListener("submit", (event) => {
@@ -1507,27 +1522,27 @@ function renderSettings() {
   document.querySelector("#clear-access-code")?.addEventListener("click", () => {
     state.settings = { ...state.settings, pilotAccessCode: "" };
     syncSettings();
-    showToast("招待アクセスコードを消去しました");
+    showToast(t("settings.accessCleared"));
     renderSettings();
   });
   document.querySelector("#refresh-capabilities")?.addEventListener("click", async (event) => {
     event.currentTarget.disabled = true;
     const latest = await getCapabilities({ force: true });
-    showToast(latest.capabilitiesUnavailable ? "サービス状態を取得できません" : "サービス状態を更新しました");
+    showToast(latest.capabilitiesUnavailable ? t("settings.unavailable") : t("settings.refreshed"));
     renderSettings();
   });
 }
 
 function renderDailyBudget(budget = {}) {
-  const labels = { vision_requests: "画像解析の総受付枠", vision_qwen_attempts: "Qwen 実呼び出し", vision_openai_fallback_attempts: "OpenAI 予備呼び出し", places_search: "店舗候補の検索", places_details: "店舗情報の取得" };
+  const labels = { vision_requests: t("settings.bucketVision"), vision_qwen_attempts: t("settings.bucketQwen"), vision_openai_fallback_attempts: t("settings.bucketOpenAI"), places_search: t("settings.bucketSearch"), places_details: t("settings.bucketDetails") };
   const rows = Object.entries(budget.buckets || {}).map(([key, item]) => {
     const limit = Number(item?.limit) || 0;
     const used = Number(item?.used) || 0;
     const remaining = Math.max(Number(item?.remaining) || 0, 0);
-    return `<article><div><strong>${esc(labels[key] || key)}</strong><span>本日 ${esc(used)} / ${esc(limit)} 回使用 · 残り ${esc(remaining)} 回</span></div><progress value="${esc(used)}" max="${esc(limit || 1)}"></progress></article>`;
+    return `<article><div><strong>${esc(labels[key] || key)}</strong><span>${t("settings.budgetRow", { used: esc(used), limit: esc(limit), remaining: esc(remaining) })}</span></div><progress value="${esc(used)}" max="${esc(limit || 1)}"></progress></article>`;
   }).join("");
   if (!rows) return "";
-  return `<section class="panel budget-panel"><p class="overline">利用上限</p><h2>本日の API 利用枠</h2><p>日本時間 ${esc(budget.date || "本日")} の集計です。新しい画像解析は総受付枠と実際に使ったモデルの両方に数えられるため、各行を合計しないでください。キャッシュ利用は加算しません。上限に達した機能は翌日まで新規呼び出しを停止します。</p><div class="budget-grid">${rows}</div></section>`;
+  return `<section class="panel budget-panel"><p class="overline">${t("settings.budget")}</p><h2>${t("settings.budgetTitle")}</h2><p>${t("settings.budgetBody", { date: esc(budget.date || new Date().toLocaleDateString(currentLocale())) })}</p><div class="budget-grid">${rows}</div></section>`;
 }
 
 function renderTerms() {
