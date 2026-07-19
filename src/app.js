@@ -1534,7 +1534,7 @@ function renderSettings() {
 }
 
 function renderDailyBudget(budget = {}) {
-  const labels = { vision_requests: t("settings.bucketVision"), vision_qwen_attempts: t("settings.bucketQwen"), vision_openai_fallback_attempts: t("settings.bucketOpenAI"), places_search: t("settings.bucketSearch"), places_details: t("settings.bucketDetails") };
+  const labels = { vision_requests: t("settings.bucketVision"), vision_qwen_attempts: t("settings.bucketQwen"), vision_openai_fallback_attempts: t("settings.bucketOpenAI"), places_search: t("settings.bucketSearch"), places_details: t("settings.bucketDetails"), hotpepper_attempts: t("settings.bucketHotPepper") };
   const rows = Object.entries(budget.buckets || {}).map(([key, item]) => {
     const limit = Number(item?.limit) || 0;
     const used = Number(item?.used) || 0;
