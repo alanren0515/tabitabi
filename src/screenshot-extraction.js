@@ -132,7 +132,10 @@ export function extractionReviewState(extraction, meta = {}) {
   const lowConfidence = normalized.overall_confidence !== "high" || Boolean(meta.requiresUserConfirmation);
   return {
     canContinue: hasName,
-    requiresAcknowledgement: hasName && lowConfidence,
+    // A screenshot result always needs comparison with its source image. This
+    // must not disappear merely because a model reports high confidence.
+    requiresAcknowledgement: true,
+    needsAttention: !hasName || lowConfidence,
     message: !hasName
       ? "店舗名を確実に読み取れませんでした。画像を見て店名を補足してください。"
       : lowConfidence

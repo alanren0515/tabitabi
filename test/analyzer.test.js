@@ -80,14 +80,23 @@ test("keeps multiple screenshot restaurants distinct and lets the user choose on
   assert.deepEqual(selected.restaurants.map((item) => item.name), ["一蘭", "AFURI"]);
 });
 
-test("blocks a missing restaurant name and requires acknowledgement for low confidence", () => {
+test("blocks a missing restaurant name and always keeps screenshot acknowledgement visible", () => {
   const missing = extractionReviewState({ restaurant: { name: "", area: "新宿" }, overall_confidence: "low" }, { requiresUserConfirmation: true });
   assert.equal(missing.canContinue, false);
-  assert.equal(missing.requiresAcknowledgement, false);
+  assert.equal(missing.requiresAcknowledgement, true);
+  assert.equal(missing.needsAttention, true);
   assert.match(missing.message, /店名を補足/);
 
   const low = extractionReviewState({ restaurant: { name: "候选店", area: "新宿" }, overall_confidence: "low" }, { requiresUserConfirmation: true });
   assert.equal(low.canContinue, true);
   assert.equal(low.requiresAcknowledgement, true);
+  assert.equal(low.needsAttention, true);
   assert.match(low.message, /確認してください/);
+});
+
+test("requires screenshot acknowledgement even for a high-confidence extraction", () => {
+  const high = extractionReviewState({ restaurant: { name: "400℃ PIZZA", nearest_station: "神楽坂" }, overall_confidence: "high" });
+  assert.equal(high.canContinue, true);
+  assert.equal(high.requiresAcknowledgement, true);
+  assert.equal(high.needsAttention, false);
 });

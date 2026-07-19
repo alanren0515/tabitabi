@@ -530,7 +530,6 @@ function renderExtraction() {
   const e = state.extraction;
   const r = e.restaurant;
   const meta = state.extractionMeta;
-  const needsConfirmation = Boolean(meta?.requiresUserConfirmation);
   const review = extractionReviewState(e, meta);
   const placesReady = Boolean(state.capabilities?.placesSearch);
   const currentKey = restaurantClueKey(r);
@@ -563,7 +562,7 @@ function renderExtraction() {
         <section class="panel"><p class="overline">${t("extraction.claims")}</p><h3>${t("extraction.claimsTitle")}</h3><div class="claim-list">${e.claims.length ? e.claims.map((claim) => `<p><span>${claim.kind === "opinion" ? t("extraction.claimOpinion") : claim.kind === "visible_fact" ? t("extraction.claimVisible") : t("extraction.claimPost")}</span>${esc(claim.text)}</p>`).join("") : ""}</div><p class="fine-print">${t("extraction.sourceNotice")}</p></section>
           <section class="panel"><p class="overline">${t("extraction.engagement")}</p><h3>${t("extraction.engagementTitle")}</h3><div class="engagement-grid">${engagement.length ? engagement.map(([label, value]) => `<div><strong>${localeNumberFormat(currentLocale()).format(value)}</strong><span>${label}</span></div>`).join("") : ""}</div></section>
         </div>
-        ${review.requiresAcknowledgement || !review.canContinue ? `<aside class="extraction-warning"><strong>${review.canContinue ? t("extraction.manualTitle") : t("extraction.blockedTitle")}</strong><p>${currentLocale() === "ja" ? esc(review.message) : t("extraction.sourceNotice")}</p></aside>` : ""}
+        ${review.needsAttention ? `<aside class="extraction-warning"><strong>${review.canContinue ? t("extraction.manualTitle") : t("extraction.blockedTitle")}</strong><p>${currentLocale() === "ja" ? esc(review.message) : t("extraction.sourceNotice")}</p></aside>` : ""}
         <aside class="source-readiness ${placesReady ? "ready" : "pending"}"><strong>${placesReady ? t("extraction.liveTitle") : t("extraction.demoTitle")}</strong><span>${placesReady ? t("extraction.liveBody") : t("extraction.demoBody")}</span></aside>
         ${e.warnings.length ? `<aside class="extraction-warning"><strong>${t("extraction.nextCheck")}</strong>${currentLocale() === "ja" ? `<ul>${e.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul>` : `<p>${t("extraction.sourceNotice")}</p>`}</aside>` : ""}
       </div>
