@@ -242,15 +242,21 @@ function renderHome() {
         <div class="pilot-access-controls"><input id="pilot-access-code" name="pilotAccessCode" type="password" maxlength="256" autocomplete="off" required aria-describedby="pilot-access-help" placeholder="${t("home.accessPlaceholder")}"><button type="submit">${t("home.accessSubmit")}</button></div>
       </form>` : ""}
       <form id="analyze-form" class="input-card">
-        <label for="clue">${t("home.clueLabel")}</label>
-        <textarea id="clue" name="clue" rows="4" placeholder="${t("home.cluePlaceholder")}" ${state.analysisError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
-        <p class="supported-sources">${t("home.sources")}</p>
-        <div class="input-meta">
-          <button type="button" class="upload-button" id="upload-trigger">${icons.upload}<span>${state.uploadName ? esc(state.uploadName) : t("home.addScreenshot")}</span></button>
-          <input type="file" id="screenshot" hidden accept="${SCREENSHOT_ACCEPT}" />
-          ${state.uploadName ? `<button type="button" class="remove-upload" id="remove-upload">${t("home.removeScreenshot")}</button>` : `<span class="privacy-note" id="upload-help">${t("home.imagePrivacy")}</span>`}
+        <div class="input-intro"><strong>${t("home.clueLabel")}</strong><span>${t("home.methodHelp")}</span></div>
+        <div class="input-method-grid">
+          <label class="input-method-card text-method" for="clue">
+            <span class="input-method-heading"><b aria-hidden="true">Aa</b><span><strong>${t("home.textMethod")}</strong><small>${t("home.textMethodHint")}</small></span></span>
+            <textarea id="clue" name="clue" rows="4" placeholder="${t("home.cluePlaceholder")}" ${state.analysisError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
+          </label>
+          <section class="input-method-card image-method" aria-labelledby="image-method-title">
+            <div class="input-method-heading"><b aria-hidden="true">▧</b><span><strong id="image-method-title">${t("home.imageMethod")}</strong><small>${t("home.imageMethodHint")}</small></span></div>
+            <button type="button" class="upload-button" id="upload-trigger">${icons.upload}<span>${state.uploadName ? t("home.replaceScreenshot") : t("home.addScreenshot")}</span></button>
+            <input type="file" id="screenshot" hidden accept="${SCREENSHOT_ACCEPT}" />
+            ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="${t("home.previewAlt")}"><div><strong>${esc(state.uploadName)}</strong><span>${t("home.previewTitle")}</span></div></div>` : ""}
+            <div class="image-method-footer">${state.uploadName ? `<button type="button" class="remove-upload" id="remove-upload">${t("home.removeScreenshot")}</button>` : `<span class="privacy-note" id="upload-help">${t("home.imagePrivacy")}</span>`}</div>
+          </section>
         </div>
-        ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="${t("home.previewAlt")}"><div><strong>${t("home.previewTitle")}</strong><span>${t("home.previewBody")}</span></div></div>` : ""}
+        <p class="supported-sources">${t("home.sources")}</p>
         ${state.analysisError ? `<aside class="inline-error" id="analysis-error" role="alert"><strong>${t("home.errorTitle")}</strong><span>${esc(state.analysisError)}</span></aside>` : ""}
         <button class="primary-button" type="submit" ${accessLocked ? 'disabled aria-describedby="pilot-access-help"' : ""}>${t("home.start")} ${icons.arrow}</button>
       </form>
