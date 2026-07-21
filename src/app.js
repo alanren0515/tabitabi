@@ -133,8 +133,8 @@ function syncShellLanguage() {
   }
   const historyButton = document.querySelector('[data-action="history"]');
   const savedButton = document.querySelector('[data-action="saved"]');
-  historyButton?.querySelector("span:first-child")?.replaceChildren(t("shell.history"));
-  savedButton?.querySelector("span:first-child")?.replaceChildren(t("shell.saved"));
+  historyButton?.querySelector(".saved-label")?.replaceChildren(t("shell.history"));
+  savedButton?.querySelector(".saved-label")?.replaceChildren(t("shell.saved"));
   document.querySelector(".top-actions")?.setAttribute("aria-label", `${t("shell.history")} / ${t("shell.saved")}`);
   const footer = document.querySelector("footer");
   if (footer) {
@@ -233,7 +233,6 @@ function renderHome() {
         <div class="hero-route" aria-hidden="true"><span>SNS</span><i></i><span>${t("home.routeIdentify")}</span><i></i><span>${t("home.routeAct")}</span></div>
       </div>
       <div class="hero-workbench">
-      ${currentLocale() !== "ja" ? `<aside class="language-beta-note"><strong>${t("language.beta")}</strong><span>${t("result.originalLanguageNotice")}</span></aside>` : ""}
       ${state.sharedInputPending ? `<aside class="shared-input-banner"><strong>${t("home.sharedTitle")}</strong><span>${t("home.sharedBody")}</span></aside>` : ""}
       ${offline ? `<aside class="offline-banner"><strong>${t("home.offlineTitle")}</strong><span>${t("home.offlineBody")}</span></aside>` : ""}
       ${accessLocked ? `<form id="pilot-access-form" class="pilot-access-card" aria-labelledby="pilot-access-title">
@@ -260,12 +259,15 @@ function renderHome() {
         ${state.analysisError ? `<aside class="inline-error" id="analysis-error" role="alert"><strong>${t("home.errorTitle")}</strong><span>${esc(state.analysisError)}</span></aside>` : ""}
         <button class="primary-button" type="submit" ${accessLocked ? 'disabled aria-describedby="pilot-access-help"' : ""}>${t("home.start")} ${icons.arrow}</button>
       </form>
-      <div class="examples">
-        <span>${t("home.demo")}</span>
-        <button data-example="銀座 鮨 蒼月">${t("home.demoSushi")}</button>
-        <button data-example="新宿 麺処 灯 ラーメン">${t("home.demoRamen")}</button>
-        <button data-example="京都 喫茶 こもれび">${t("home.demoCafe")}</button>
-      </div>
+      ${currentLocale() !== "ja" ? `<aside class="language-beta-note"><strong>${t("language.beta")}</strong><span>${t("result.originalLanguageNotice")}</span></aside>` : ""}
+      <details class="examples">
+        <summary>${t("home.demo")}</summary>
+        <div>
+          <button data-example="銀座 鮨 蒼月">${t("home.demoSushi")}</button>
+          <button data-example="新宿 麺処 灯 ラーメン">${t("home.demoRamen")}</button>
+          <button data-example="京都 喫茶 こもれび">${t("home.demoCafe")}</button>
+        </div>
+      </details>
       </div>
     </section>
     ${state.pending.length ? `<section class="recent-preview queue-preview"><div><p class="overline">${t("home.queueOverline")}</p><h2>${t("home.queueTitle")}</h2></div><div class="recent-preview-list">${state.pending.slice(0, 3).map((item) => `<button data-open-pending="${esc(item.id)}"><strong>${esc(item.clues.name)}</strong><span>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || t("queue.locationUnknown"))}</span></button>`).join("")}</div><button class="text-button" data-action="queue">${t("home.viewAll", { count: state.pending.length })}</button></section>` : ""}
