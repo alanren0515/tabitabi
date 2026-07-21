@@ -129,7 +129,7 @@ export function selectExtractedRestaurant(extraction, index) {
 export function extractionReviewState(extraction, meta = {}) {
   const normalized = normalizeExtraction(extraction);
   const hasName = Boolean(normalized.restaurant.name.trim());
-  const lowConfidence = normalized.overall_confidence !== "high" || Boolean(meta.requiresUserConfirmation);
+  const lowConfidence = normalized.overall_confidence !== "high" || Boolean(meta?.requiresUserConfirmation);
   return {
     canContinue: hasName,
     // A screenshot result always needs comparison with its source image. This

@@ -100,3 +100,10 @@ test("requires screenshot acknowledgement even for a high-confidence extraction"
   assert.equal(high.requiresAcknowledgement, true);
   assert.equal(high.needsAttention, false);
 });
+
+test("renders the screenshot review safely when demo metadata is absent", () => {
+  const review = extractionReviewState(sampleTikTokExtraction, null);
+  assert.equal(review.canContinue, true);
+  assert.equal(review.requiresAcknowledgement, true);
+  assert.equal(review.needsAttention, false);
+});

@@ -541,32 +541,48 @@ function renderExtraction() {
     [t("extraction.saves"), e.engagement.saves],
     [t("extraction.shares"), e.engagement.shares]
   ].filter(([, value]) => Number.isFinite(value));
+  const locationSummary = [r.branch, r.address || r.area || r.nearest_station].filter(Boolean).join(" · ") || t("extraction.locationUnknown");
+  const { identity: identityWarnings, secondary: secondaryWarnings } = partitionExtractionWarnings(e.warnings);
+  const secondaryDetailCount = e.claims.length + engagement.length + secondaryWarnings.length;
 
   app.innerHTML = `<section class="content-view extraction-view">
     <button class="back-button" data-action="home">${t("extraction.back")}</button>
-    <div class="section-heading extraction-heading"><span class="step-chip">${t("extraction.step")} · ${state.extractionMode === "api" ? esc(meta?.model || "Vision API") : "Sample"}</span><h2>${t("extraction.title")}</h2><p>${t("extraction.body")}</p></div>
+    <div class="section-heading extraction-heading"><span class="step-chip">${t("extraction.step")}</span><h2>${t("extraction.title")}</h2><p>${t("extraction.body")}</p></div>
     <div class="extraction-layout">
-      <aside class="screenshot-card"><img src="${state.uploadPreviewUrl}" alt="${t("extraction.imageAlt")}"><div><span>${esc(e.platform.toUpperCase())}</span><strong>${esc(e.creator.handle || t("extraction.accountUnknown"))}</strong></div></aside>
+      <aside class="screenshot-card"><button type="button" class="screenshot-image-button" data-view-screenshot aria-label="${t("extraction.viewImage")}"><img src="${state.uploadPreviewUrl}" alt="${t("extraction.imageAlt")}"><span>${t("extraction.viewImage")}</span></button><div><span>${esc(e.platform.toUpperCase())}</span><strong>${esc(e.creator.handle || t("extraction.accountUnknown"))}</strong></div></aside>
       <div class="extraction-content">
-        ${e.restaurants.length > 1 ? `<section class="panel extracted-restaurant-picker"><div><p class="overline">${e.restaurants.length}</p><h3>${t("extraction.multiTitle")}</h3></div><div class="extracted-restaurant-options" role="group" aria-label="${t("extraction.multiTitle")}">${e.restaurants.map((restaurant, index) => `<button type="button" data-extracted-restaurant="${index}" class="${restaurantKeyForView(restaurant) === restaurantKeyForView(r) ? "active" : ""}" aria-pressed="${restaurantKeyForView(restaurant) === restaurantKeyForView(r)}"><strong>${esc(restaurant.name || `${t("common.restaurant")} ${index + 1}`)}</strong><span>${esc([restaurant.branch, restaurant.area || restaurant.address || restaurant.nearest_station].filter(Boolean).join(" · ") || t("common.unknown"))}</span></button>`).join("")}</div><button type="button" class="queue-extracted" id="queue-extracted" ${queueableRestaurants.length ? "" : "disabled"}>${queueableRestaurants.length ? t("extraction.queueOther", { count: queueableRestaurants.length }) : t("extraction.queueDone")}</button><small class="queue-privacy">${t("extraction.queuePrivacy")}</small></section>` : ""}
+        ${e.restaurants.length > 1 ? `<details class="panel extracted-restaurant-picker"><summary><span><strong>${t("extraction.multiFound", { count: e.restaurants.length })}</strong><small>${t("extraction.multiSelected", { name: r.name || t("common.unknown") })}</small></span><b>${t("extraction.multiChange")}</b></summary><div class="extracted-restaurant-picker-body"><div class="extracted-restaurant-options" role="group" aria-label="${t("extraction.multiTitle")}">${e.restaurants.map((restaurant, index) => `<button type="button" data-extracted-restaurant="${index}" class="${restaurantKeyForView(restaurant) === restaurantKeyForView(r) ? "active" : ""}" aria-pressed="${restaurantKeyForView(restaurant) === restaurantKeyForView(r)}"><strong>${esc(restaurant.name || `${t("common.restaurant")} ${index + 1}`)}</strong><span>${esc([restaurant.branch, restaurant.area || restaurant.address || restaurant.nearest_station].filter(Boolean).join(" · ") || t("common.unknown"))}</span></button>`).join("")}</div><button type="button" class="queue-extracted" id="queue-extracted" ${queueableRestaurants.length ? "" : "disabled"}>${queueableRestaurants.length ? t("extraction.queueOther", { count: queueableRestaurants.length }) : t("extraction.queueDone")}</button><small class="queue-privacy">${t("extraction.queuePrivacy")}</small></div></details>` : ""}
         <section class="panel extracted-restaurant"><div class="fact-label"><span class="status-dot dark"></span>${t("extraction.identity")}</div>
-          <form id="extraction-form">
-            <div class="field-pair"><label>${t("extraction.name")}<input name="restaurant_name" value="${esc(r.name)}" required></label><label>${t("extraction.branch")}<input name="branch" value="${esc(r.branch)}"></label></div>
-            <div class="field-pair"><label>${t("extraction.address")}<input name="address" value="${esc(r.address)}"></label><label>${t("extraction.station")}<input name="nearest_station" value="${esc(r.nearest_station)}"></label></div>
-            <div class="extracted-chips"><span>${esc(r.category || t("extraction.categoryUnknown"))}</span><span>${formatBudget(r)}</span><span>${esc(r.area || t("extraction.areaUnknown"))}</span></div>
-            ${review.requiresAcknowledgement ? `<label class="confidence-confirm"><input type="checkbox" name="confirm_extraction" value="yes"><span>${t("extraction.confirm")}</span></label>` : ""}
+          <form id="extraction-form" novalidate>
+            <div class="identity-summary" aria-label="${t("extraction.identity")}"><strong>${esc(r.name || t("extraction.nameUnknown"))}</strong><span>${esc(locationSummary)}</span></div>
+            <details class="identity-editor" ${review.needsAttention ? "open" : ""}>
+              <summary>${t("extraction.editIdentity")}</summary>
+              <div class="identity-fields">
+                <div class="field-pair"><label>${t("extraction.name")}<input name="restaurant_name" value="${esc(r.name)}" required></label><label>${t("extraction.branch")}<input name="branch" value="${esc(r.branch)}"></label></div>
+                <div class="field-pair"><label>${t("extraction.address")}<input name="address" value="${esc(r.address)}"></label><label>${t("extraction.station")}<input name="nearest_station" value="${esc(r.nearest_station)}"></label></div>
+              </div>
+            </details>
+            ${review.needsAttention ? `<aside class="extraction-warning extraction-warning-critical"><strong>${review.canContinue ? t("extraction.manualTitle") : t("extraction.blockedTitle")}</strong><p>${currentLocale() === "ja" ? esc(review.message) : t("extraction.sourceNotice")}</p></aside>` : ""}
+            ${identityWarnings.length ? `<aside class="identity-warning"><strong>${t("extraction.identityWarning")}</strong><ul>${identityWarnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul></aside>` : ""}
+            ${review.requiresAcknowledgement ? `<label class="confidence-confirm"><input type="checkbox" name="confirm_extraction" value="yes" required aria-describedby="confirm-extraction-error"><span>${t("extraction.confirm")}</span></label><small class="confirmation-error" id="confirm-extraction-error" hidden>${t("error.confirmImage")}</small>` : ""}
             <button class="primary-button" type="submit">${t("extraction.submit")} ${icons.arrow}</button>
+            <small class="match-next-step">${placesReady ? t("extraction.matchNext") : t("extraction.demoBody")}</small>
           </form>
         </section>
-        <div class="extraction-subgrid">
-        <section class="panel"><p class="overline">${t("extraction.claims")}</p><h3>${t("extraction.claimsTitle")}</h3><div class="claim-list">${e.claims.length ? e.claims.map((claim) => `<p><span>${claim.kind === "opinion" ? t("extraction.claimOpinion") : claim.kind === "visible_fact" ? t("extraction.claimVisible") : t("extraction.claimPost")}</span>${esc(claim.text)}</p>`).join("") : ""}</div><p class="fine-print">${t("extraction.sourceNotice")}</p></section>
-          <section class="panel"><p class="overline">${t("extraction.engagement")}</p><h3>${t("extraction.engagementTitle")}</h3><div class="engagement-grid">${engagement.length ? engagement.map(([label, value]) => `<div><strong>${localeNumberFormat(currentLocale()).format(value)}</strong><span>${label}</span></div>`).join("") : ""}</div></section>
-        </div>
-        ${review.needsAttention ? `<aside class="extraction-warning"><strong>${review.canContinue ? t("extraction.manualTitle") : t("extraction.blockedTitle")}</strong><p>${currentLocale() === "ja" ? esc(review.message) : t("extraction.sourceNotice")}</p></aside>` : ""}
-        <aside class="source-readiness ${placesReady ? "ready" : "pending"}"><strong>${placesReady ? t("extraction.liveTitle") : t("extraction.demoTitle")}</strong><span>${placesReady ? t("extraction.liveBody") : t("extraction.demoBody")}</span></aside>
-        ${e.warnings.length ? `<aside class="extraction-warning"><strong>${t("extraction.nextCheck")}</strong>${currentLocale() === "ja" ? `<ul>${e.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul>` : `<p>${t("extraction.sourceNotice")}</p>`}</aside>` : ""}
+        <details class="extraction-details">
+          <summary><span>${t("extraction.details")}</span><small>${t("extraction.detailsSummary", { count: secondaryDetailCount })}</small></summary>
+          <div class="extraction-details-body">
+            <div class="extracted-chips"><span>${esc(r.category || t("extraction.categoryUnknown"))}</span><span>${formatBudget(r)}</span><span>${esc(r.area || t("extraction.areaUnknown"))}</span></div>
+            ${e.claims.length ? `<section><p class="overline">${t("extraction.claims")}</p><div class="claim-list">${e.claims.map((claim) => `<p><span>${claim.kind === "opinion" ? t("extraction.claimOpinion") : claim.kind === "visible_fact" ? t("extraction.claimVisible") : t("extraction.claimPost")}</span>${esc(claim.text)}</p>`).join("")}</div></section>` : ""}
+            ${engagement.length ? `<section><p class="overline">${t("extraction.engagement")}</p><div class="engagement-grid">${engagement.map(([label, value]) => `<div><strong>${localeNumberFormat(currentLocale()).format(value)}</strong><span>${label}</span></div>`).join("")}</div></section>` : ""}
+            ${secondaryWarnings.length ? `<aside class="extraction-warning"><strong>${t("extraction.nextCheck")}</strong>${currentLocale() === "ja" ? `<ul>${secondaryWarnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul>` : `<p>${t("extraction.sourceNotice")}</p>`}</aside>` : ""}
+            <p class="fine-print">${t("extraction.sourceNotice")}</p>
+            <p class="model-note">${t("extraction.modelNote", { model: state.extractionMode === "api" ? meta?.model || "Vision API" : "Sample" })}</p>
+          </div>
+        </details>
       </div>
     </div>
+    <dialog class="screenshot-dialog" id="screenshot-dialog"><div><button type="button" data-close-screenshot>${t("extraction.closeImage")}</button><img src="${state.uploadPreviewUrl}" alt="${t("extraction.imageAlt")}"></div></dialog>
   </section>`;
 
   document.querySelector("#extraction-form").addEventListener("submit", async (event) => {
@@ -586,7 +602,11 @@ function renderExtraction() {
       return;
     }
     if (submittedReview.requiresAcknowledgement && form.get("confirm_extraction") !== "yes") {
-      showToast(t("error.confirmImage"));
+      const checkbox = event.currentTarget.elements.confirm_extraction;
+      const error = document.querySelector("#confirm-extraction-error");
+      if (error) error.hidden = false;
+      checkbox?.setAttribute("aria-invalid", "true");
+      checkbox?.focus();
       return;
     }
     state.input = [clues.name, clues.branch, clues.address || clues.area || clues.nearest_station].filter(Boolean).join(" ");
@@ -599,6 +619,14 @@ function renderExtraction() {
       render();
     }
   });
+  document.querySelector('[name="confirm_extraction"]')?.addEventListener("change", (event) => {
+    const error = document.querySelector("#confirm-extraction-error");
+    if (error) error.hidden = event.currentTarget.checked;
+    event.currentTarget.removeAttribute("aria-invalid");
+  });
+  const screenshotDialog = document.querySelector("#screenshot-dialog");
+  document.querySelector("[data-view-screenshot]")?.addEventListener("click", () => screenshotDialog?.showModal());
+  document.querySelector("[data-close-screenshot]")?.addEventListener("click", () => screenshotDialog?.close());
   document.querySelectorAll("[data-extracted-restaurant]").forEach((button) => button.addEventListener("click", () => {
     state.extraction = selectExtractedRestaurant(state.extraction, Number(button.dataset.extractedRestaurant));
     state.input = buildRestaurantQuery(state.extraction);
@@ -617,6 +645,14 @@ function renderExtraction() {
 
 function restaurantKeyForView(restaurant) {
   return [restaurant?.name, restaurant?.branch, restaurant?.address].map((value) => String(value || "").normalize("NFKC").toLowerCase().replace(/\s+/g, "")).join("|");
+}
+
+function partitionExtractionWarnings(warnings = []) {
+  const identityPattern = /(店名|支店|住所|場所|最寄り|駅|判読|読み取れ|低解像|低画質|不鮮明|ぼや|restaurant name|branch|address|location|station|low.resolution|blurry|餐厅名|店名|分店|地址|地点|车站|低清|模糊)/iu;
+  return warnings.reduce((groups, warning) => {
+    groups[identityPattern.test(String(warning || "")) ? "identity" : "secondary"].push(warning);
+    return groups;
+  }, { identity: [], secondary: [] });
 }
 
 function renderCandidates() {
