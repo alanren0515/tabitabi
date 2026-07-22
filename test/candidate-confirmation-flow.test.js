@@ -6,18 +6,17 @@ import { translate } from "../src/i18n.js";
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
 const i18nSource = await readFile(new URL("../src/i18n.js", import.meta.url), "utf8");
 
-test("requires a confirmed candidate before presenting details or reservation choices", () => {
-  assert.match(appSource, /state\.view = "candidate_confirmed"/);
-  assert.match(appSource, /data-confirmed-action="details"/);
-  assert.match(appSource, /data-confirmed-action="reservation"/);
+test("loads details immediately after the user confirms a candidate", () => {
+  assert.doesNotMatch(appSource, /state\.view = "candidate_confirmed"/);
+  assert.doesNotMatch(appSource, /data-confirmed-action=/);
+  assert.match(appSource, /await openConfirmedCandidate\("details"\)/);
   assert.match(appSource, /recordConfirmation: false/);
 });
 
-test("explains that details are fetched only after identity confirmation", () => {
-  assert.match(appSource, /candidate\.identityTitle/);
-  assert.match(i18nSource, /店舗を特定してから詳細を取得/);
-  assert.match(appSource, /t\("candidate\.liveCost"\)/);
-  assert.match(translate("ja", "candidate.liveCost"), /営業時間・電話・予約方法は店舗確認後だけ取得/);
+test("fetches details only after identity confirmation without showing technical cost copy", () => {
+  assert.doesNotMatch(appSource, /t\("candidate\.liveCost"\)/);
+  assert.match(appSource, /await openConfirmedCandidate\("details"\)/);
+  assert.equal(translate("ja", "candidate.select"), "このお店です");
 });
 
 test("labels screenshot text without presenting it as an officially verified fact", () => {

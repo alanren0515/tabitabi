@@ -1,0 +1,62 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { translate } from "../src/i18n.js";
+
+const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
+const cssSource = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+
+test("keeps the home screen focused on input instead of explanatory panels", () => {
+  assert.doesNotMatch(appSource, /<section class="promise-grid"/);
+  assert.doesNotMatch(appSource, /<aside class="demo-banner/);
+});
+
+test("uses progressive disclosure through confirmation, result, and feedback", () => {
+  assert.match(appSource, /<details class="review-more"/);
+  assert.doesNotMatch(appSource, /<details class="review-more"[^>]*open/);
+  assert.match(appSource, /<details class="candidate-evidence"/);
+  assert.match(appSource, /<details class="decision-details"/);
+  assert.match(appSource, /<details class="result-more"/);
+  assert.match(appSource, /<details class="feedback-more"/);
+});
+
+test("requires only the helpfulness answer in the default feedback path", () => {
+  assert.match(appSource, /name="helpful" value="yes" required/);
+  assert.doesNotMatch(appSource, /name="bookingOutcome"[^>]*required/);
+  assert.doesNotMatch(appSource, /name="accuracy"[^>]*required/);
+  assert.match(appSource, /<button type="submit" disabled>/);
+  assert.match(appSource, /\[name="helpful"\][^]*button\.disabled = false/);
+});
+
+test("ships the new novice-flow labels in all supported languages", () => {
+  for (const locale of ["ja", "en", "zh-CN"]) {
+    for (const key of ["review.more", "candidate.why", "result.why", "result.moreTitle", "result.otherActions", "feedback.more"]) {
+      assert.notEqual(translate(locale, key), key);
+    }
+  }
+});
+
+test("keeps candidate and result actions focused on one primary choice", () => {
+  assert.doesNotMatch(appSource, /<button class="preview-button"/);
+  assert.match(appSource, /<details class="action-more"/);
+  assert.match(appSource, /<summary>\$\{t\("result\.otherActions"\)\}<\/summary>/);
+});
+
+test("makes every new disclosure visibly interactive and touch-sized", () => {
+  assert.match(cssSource, /details:not\(\[open\]\)>:not\(summary\) \{ display:none!important; \}/);
+  for (const selector of ["candidate-evidence summary", "decision-details>summary", "action-more>summary", "feedback-more>summary", "review-more>summary"]) {
+    assert.match(cssSource, new RegExp(`\\.${selector.replaceAll(".", "\\.")}[^}]*min-height:4[46]px`));
+  }
+  assert.match(cssSource, /summary::marker \{ color:/);
+  assert.match(cssSource, /review-more>summary:focus-visible/);
+});
+
+test("keeps English and Chinese candidate guidance short without echoing long user input", () => {
+  for (const locale of ["en", "zh-CN"]) {
+    for (const key of ["candidate.singleSummary", "candidate.leadSummary", "candidate.uncertainSummary", "candidate.ambiguousSummary"]) {
+      const copy = translate(locale, key, { input: "x".repeat(200) });
+      assert.ok(copy.length < 80);
+      assert.doesNotMatch(copy, /x{20}/);
+    }
+  }
+});

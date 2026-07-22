@@ -45,25 +45,25 @@ export function candidateDecisionCopy({ fallback = false, decision, candidateCou
   }
   if (decision?.kind === "likely_single") {
     return {
-      heading: "最も可能性が高い店舗です",
-      summary: `「${input}」の店名と場所に強く一致する候補は現在1件です。内容をご確認ください。`
+      heading: "このお店ですか？",
+      summary: "店名と住所が合っていれば、そのまま進んでください。"
     };
   }
   if (decision?.kind === "likely_with_alternatives") {
     return {
-      heading: "第一候補があります。ほかの可能性も残しています",
-      summary: `最初の店舗が「${input}」の手掛かりに最も近い候補です。違う場合は別の候補を選んでください。`
+      heading: "このお店ですか？",
+      summary: "違う場合は、ほかの候補を選べます。"
     };
   }
   if (candidateCount === 1) {
     return {
-      heading: "候補は1件ですが、確定できません",
-      summary: `「${input}」と一部一致しますが、根拠が十分ではありません。店名・支店・住所を確認してください。`
+      heading: "このお店ですか？",
+      summary: "店名・支店・住所を確認してください。"
     };
   }
   return {
-    heading: "候補を1つに絞れません",
-    summary: `「${input}」に近い結果が複数あります。店名・支店・住所を見比べて選んでください。`
+    heading: "どのお店ですか？",
+    summary: "店名と住所を見比べて選んでください。"
   };
 }
 

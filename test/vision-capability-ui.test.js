@@ -5,11 +5,12 @@ import { readFile } from "node:fs/promises";
 const appSource = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
 const i18nSource = await readFile(new URL("../src/i18n.js", import.meta.url), "utf8");
 
-test("shows whether screenshot fallback is actually configured", () => {
-  assert.match(appSource, /capabilities\?\.fallbackAvailable/);
-  assert.match(appSource, /home\.fallbackMissing/);
-  assert.match(i18nSource, /予備モデルは未設定/);
-  assert.match(i18nSource, /予備モデルを使用します/);
+test("shows fallback configuration in settings without crowding the homepage", () => {
+  assert.match(appSource, /capabilities\.fallbackAvailable/);
+  assert.match(appSource, /settings\.fallbackMissing/);
+  assert.doesNotMatch(appSource, /home\.fallbackMissing/);
+  assert.match(i18nSource, /画像モデルは1つです/);
+  assert.match(i18nSource, /低確度時に自動使用/);
   assert.match(i18nSource, /確度が低い場合は手動確認が必要/);
 });
 

@@ -78,7 +78,6 @@ const VIEW_LABEL_KEYS = {
   text_extraction: "route.textExtraction",
   link_guidance: "route.linkGuidance",
   candidates: "route.candidates",
-  candidate_confirmed: "route.confirmed",
   loading: "route.loading",
   result: "route.result",
   saved: "route.saved",
@@ -191,7 +190,6 @@ function render() {
   if (state.view === "text_extraction") renderTextExtraction();
   if (state.view === "link_guidance") renderLinkGuidance();
   if (state.view === "candidates") renderCandidates();
-  if (state.view === "candidate_confirmed") renderCandidateConfirmed();
   if (state.view === "loading") renderLoading();
   if (state.view === "result") renderResult();
   if (state.view === "saved") renderSaved();
@@ -218,10 +216,6 @@ function render() {
 }
 
 function renderHome() {
-  const visionLive = Boolean(state.capabilities?.visionExtraction);
-  const visionModel = state.capabilities?.models?.[0]?.model || "";
-  const visionFallback = Boolean(state.capabilities?.fallbackAvailable);
-  const capabilitiesUnavailable = Boolean(state.capabilities?.capabilitiesUnavailable);
   const offline = navigator.onLine === false;
   const accessLocked = pilotAccessLocked(state.capabilities, state.settings);
   app.innerHTML = `
@@ -272,12 +266,7 @@ function renderHome() {
     </section>
     ${state.pending.length ? `<section class="recent-preview queue-preview"><div><p class="overline">${t("home.queueOverline")}</p><h2>${t("home.queueTitle")}</h2></div><div class="recent-preview-list">${state.pending.slice(0, 3).map((item) => `<button data-open-pending="${esc(item.id)}"><strong>${esc(item.clues.name)}</strong><span>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || t("queue.locationUnknown"))}</span></button>`).join("")}</div><button class="text-button" data-action="queue">${t("home.viewAll", { count: state.pending.length })}</button></section>` : ""}
     ${state.recent.length ? `<section class="recent-preview"><div><p class="overline">${t("home.recentOverline")}</p><h2>${t("home.recentTitle")}</h2></div><div class="recent-preview-list">${state.recent.slice(0, 3).map((item) => `<button data-open-recent="${esc(item.id)}"><strong>${esc(item.name)}</strong><span>${esc(item.area || t("history.areaUnknown"))} · ${formatClientTime(item.analyzedAt)}</span></button>`).join("")}</div><button class="text-button" data-action="history">${t("home.viewAll", { count: state.recent.length })}</button></section>` : ""}
-    <section class="promise-grid">
-      <article><b>${t("home.promise1Overline")}</b><h3>${t("home.promise1Title")}</h3><p>${t("home.promise1Body")}</p></article>
-      <article><b>${t("home.promise2Overline")}</b><h3>${t("home.promise2Title")}</h3><p>${t("home.promise2Body")}</p></article>
-      <article><b>${t("home.promise3Overline")}</b><h3>${t("home.promise3Title")}</h3><p>${t("home.promise3Body")}</p></article>
-    </section>
-    <aside class="demo-banner ${visionLive ? "live" : ""}"><strong>${capabilitiesUnavailable ? t("home.serviceUnavailable") : visionLive ? t("home.visionReady") : t("home.visionDemo")}</strong><span>${capabilitiesUnavailable ? t("home.serviceUnavailableBody") : visionLive ? t("home.visionReadyBody", { model: esc(visionModel), fallback: visionFallback ? t("home.fallbackReady") : t("home.fallbackMissing") }) : t("home.visionDemoBody")}</span></aside>`;
+    `;
 
   document.querySelector("#analyze-form").addEventListener("submit", handleAnalyze);
   document.querySelector("#pilot-access-form")?.addEventListener("submit", (event) => {
@@ -469,14 +458,15 @@ function renderTextExtraction() {
   const parsed = state.textExtraction;
   const clues = parsed.clues;
   const parsedPlatformLabel = parsed.platformLabel || platformLabel(parsed.platform);
+  const hasPlanDetails = Boolean(parsed.plan.planDate || parsed.plan.planTime || state.currentPlanIntent.partySize !== state.settings.defaultPartySize);
   app.innerHTML = `<section class="content-view narrow">
     <button class="back-button" data-action="home">${t("review.back")}</button>
     <div class="section-heading"><span class="step-chip">${t("review.step")}</span><h2>${t("review.title")}</h2><p>${t("review.body")}</p></div>
     <section class="panel extracted-restaurant"><form id="text-extraction-form">
       <div class="field-pair"><label>${t("review.name")}<input name="name" value="${esc(clues.name)}" required></label><label>${t("review.branch")}<input name="branch" value="${esc(clues.branch)}"></label></div>
-      <div class="field-pair"><label>${t("review.area")}<input name="area" value="${esc(clues.area)}"></label><label>${t("review.address")}<input name="address" value="${esc(clues.address)}"></label></div>
+      <details class="review-more"><summary>${t("review.more")}</summary><div class="field-pair"><label>${t("review.area")}<input name="area" value="${esc(clues.area)}"></label><label>${t("review.address")}<input name="address" value="${esc(clues.address)}"></label></div></details>
       ${clues.aliasExpanded ? `<aside class="alias-expansion"><strong>${t("review.aliasTitle")}</strong><span>${esc(clues.originalName)} → ${esc(clues.name)}</span><p>${t("review.aliasBody")}</p></aside>` : ""}
-      <div class="plan-preview"><strong>${t("review.plan")}</strong><span>${parsed.plan.planDate || t("review.dateUnknown")} · ${parsed.plan.planTime || t("review.timeUnknown")} · ${t("review.people", { count: state.currentPlanIntent.partySize })}</span></div>
+      ${hasPlanDetails ? `<div class="plan-preview"><strong>${t("review.plan")}</strong><span>${parsed.plan.planDate || t("review.dateUnknown")} · ${parsed.plan.planTime || t("review.timeUnknown")} · ${t("review.people", { count: state.currentPlanIntent.partySize })}</span></div>` : ""}
       ${parsed.kind === "pending_analysis" ? `<aside class="link-capability"><p>${t("review.pendingNotice")}</p></aside>` : parsed.webpage ? `<aside class="link-capability"><p>${t("review.webNotice")}</p><a href="${esc(safeExternalUrl(parsed.webpage.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.sourceLanguage")}</a></aside>` : parsed.links.length ? `<aside class="link-capability"><strong>${esc(parsedPlatformLabel)}</strong><p>${t("review.linkNotice")}</p></aside>` : ""}
       <button class="primary-button" type="submit">${t("review.search")} ${icons.arrow}</button>
     </form></section>
@@ -672,22 +662,21 @@ function renderCandidates() {
   const decisionCopy = localizedCandidateDecisionCopy({ fallback, decision, candidateCount: visible.length, input: state.input });
   app.innerHTML = `<section class="content-view narrow">
     <button class="back-button" data-action="home">${t("common.backClues")}</button>
-    <div class="section-heading candidate-heading"><span class="step-chip">${t("candidate.step")}</span><h2>${esc(decisionCopy.heading)}</h2><p>${esc(decisionCopy.summary)}</p><aside class="identity-gate"><strong>${t("candidate.identityTitle")}</strong><span>${t("candidate.identityBody")}</span></aside></div>
+    <div class="section-heading candidate-heading"><span class="step-chip">${t("candidate.step")}</span><h2>${esc(decisionCopy.heading)}</h2><p>${esc(decisionCopy.summary)}</p></div>
     <div class="candidate-list">
       ${visible.map((restaurant, index) => {
         const preview = state.candidatePreviews[restaurant.placeId];
-        const previewLoading = state.candidatePreviewLoadingId === restaurant.placeId;
         const isSystemLead = !fallback && decision.kind !== "ambiguous" && restaurant.id === decision.leadId;
         const candidateLabel = isSystemLead ? t("candidate.lead") : visible.length === 1 ? t("candidate.confirm") : t("candidate.position", { index: index + 1, count: visible.length });
         return `<article class="candidate-card${isSystemLead ? " system-lead" : ""}">
         <div class="restaurant-avatar">${(restaurant.category || "店").slice(0, 1)}</div>
-        <div class="candidate-copy"><span class="candidate-label${isSystemLead ? " lead-label" : ""}">${esc(candidateLabel)}</span><small class="candidate-meta">${esc(restaurant.category || t("common.restaurant"))}${restaurant.price ? ` · ${esc(restaurant.price)}` : ""}</small><h3>${esc(restaurant.name)}</h3><p>${esc(restaurant.address || [restaurant.area, restaurant.station].filter(Boolean).join(" · "))}</p><small class="business-status status-${esc(String(restaurant.businessStatus || "unknown").toLowerCase())}">${esc(businessStatusLabel(restaurant.businessStatus))}</small>${restaurant.matchReasons?.length && currentLocale() === "ja" ? `<div class="match-reasons">${restaurant.matchReasons.map((reason) => `<small>${esc(reason)}</small>`).join("")}</div>` : restaurant.matchScore ? `<small>${t("candidate.match")}</small>` : ""}${preview ? `<div class="candidate-rating"><strong>${Number.isFinite(preview.rating) ? `★ ${esc(preview.rating.toFixed(1))}` : t("candidate.noRating")}</strong>${Number.isInteger(preview.userRatingCount) ? `<span>Google ${esc(localeNumberFormat(currentLocale()).format(preview.userRatingCount))}</span>` : ""}</div>` : ""}${restaurant.attributions?.length ? `<small class="provider-attribution">${t("candidate.attribution", { providers: restaurant.attributions.map((item) => esc(item.provider)).join(", ") })}</small>` : ""}</div>
-        <div class="candidate-actions"><button class="select-button" data-restaurant="${restaurant.id}">${t("candidate.select")} ${icons.arrow}</button>${live && !preview ? `<button class="preview-button" data-preview-candidate="${restaurant.placeId}" ${previewLoading ? "disabled" : ""}>${previewLoading ? t("candidate.ratingLoading") : t("candidate.rating")}</button>` : ""}<button class="reject-button" data-reject-candidate="${restaurant.id}" aria-label="${esc(restaurant.name)}: ${t("candidate.reject")}">${t("candidate.reject")}</button></div>
+        <div class="candidate-copy"><span class="candidate-label${isSystemLead ? " lead-label" : ""}">${esc(candidateLabel)}</span><small class="candidate-meta">${esc(restaurant.category || t("common.restaurant"))}${restaurant.price ? ` · ${esc(restaurant.price)}` : ""}</small><h3>${esc(restaurant.name)}</h3><p>${esc(restaurant.address || [restaurant.area, restaurant.station].filter(Boolean).join(" · "))}</p><small class="business-status status-${esc(String(restaurant.businessStatus || "unknown").toLowerCase())}">${esc(businessStatusLabel(restaurant.businessStatus))}</small>${preview ? `<div class="candidate-rating"><strong>${Number.isFinite(preview.rating) ? `★ ${esc(preview.rating.toFixed(1))}` : t("candidate.noRating")}</strong>${Number.isInteger(preview.userRatingCount) ? `<span>Google ${esc(localeNumberFormat(currentLocale()).format(preview.userRatingCount))}</span>` : ""}</div>` : ""}${restaurant.matchReasons?.length || restaurant.attributions?.length ? `<details class="candidate-evidence"><summary>${t("candidate.why")}</summary>${restaurant.matchReasons?.length && currentLocale() === "ja" ? `<div class="match-reasons">${restaurant.matchReasons.map((reason) => `<small>${esc(reason)}</small>`).join("")}</div>` : restaurant.matchScore ? `<small>${t("candidate.match")}</small>` : ""}${restaurant.attributions?.length ? `<small class="provider-attribution">${t("candidate.attribution", { providers: restaurant.attributions.map((item) => esc(item.provider)).join(", ") })}</small>` : ""}</details>` : ""}</div>
+        <div class="candidate-actions"><button class="select-button" data-restaurant="${restaurant.id}">${t("candidate.select")} ${icons.arrow}</button><button class="reject-button" data-reject-candidate="${restaurant.id}" aria-label="${esc(restaurant.name)}: ${t("candidate.reject")}">${t("candidate.reject")}</button></div>
       </article>`;
       }).join("")}
     </div>
     ${visible.length ? `<div class="candidate-review-actions"><button data-action="home">${t("candidate.edit")}</button>${rejectedCount ? `<button data-restore-candidates>${t("candidate.restore", { count: rejectedCount })}</button>` : ""}</div>` : `<div class="empty-state candidate-empty"><span>?</span><h3>${t("candidate.noneTitle")}</h3><p>${t("candidate.noneBody")}</p><div><button data-restore-candidates>${t("candidate.restoreAll")}</button><button class="primary-button" data-action="home">${t("candidate.searchEdit")} ${icons.arrow}</button></div></div>`}
-    ${live ? `<p class="candidate-cost-note">${t("candidate.liveCost")}</p><div class="google-attribution" translate="no">Google Maps</div>` : `<p class="fine-print">${t("candidate.demoNote")}</p>`}
+    ${live ? `<div class="google-attribution" translate="no">Google Maps</div>` : `<p class="fine-print">${t("candidate.demoNote")}</p>`}
   </section>`;
   document.querySelectorAll("[data-preview-candidate]").forEach((button) => button.addEventListener("click", async () => {
     await loadCandidatePreview(button.dataset.previewCandidate);
@@ -697,8 +686,7 @@ function renderCandidates() {
     state.confirmedCandidate = candidate;
     state.resultFocus = "";
     postEvent("candidate_confirmed", { placeId: live ? candidate.placeId : undefined, sourceMode: state.analysisSourceMode || state.candidateMode, selectedRank: candidate.rank || 1, candidateCount: state.candidates.length });
-    state.view = "candidate_confirmed";
-    render();
+    await openConfirmedCandidate("details");
   }));
   document.querySelectorAll("[data-reject-candidate]").forEach((button) => button.addEventListener("click", () => {
     state.rejectedCandidateIds = rejectCandidate(state.candidates, state.rejectedCandidateIds, button.dataset.rejectCandidate);
@@ -721,32 +709,6 @@ function localizedCandidateDecisionCopy({ fallback = false, decision, candidateC
   return { heading: t("candidate.ambiguousHeading"), summary: t("candidate.ambiguousSummary", { input }) };
 }
 
-function renderCandidateConfirmed() {
-  const candidate = state.confirmedCandidate;
-  if (!candidate) {
-    state.view = "candidates";
-    render();
-    return;
-  }
-  app.innerHTML = `<section class="content-view narrow confirmed-view">
-    <button class="back-button" data-back-to-candidates>${t("confirmed.back")}</button>
-    <div class="section-heading"><span class="step-chip">${t("confirmed.step")}</span><h2>${t("confirmed.title", { name: esc(candidate.name) })}</h2><p>${esc(candidate.address || [candidate.area, candidate.station].filter(Boolean).join(" · "))}</p></div>
-    <aside class="confirmed-identity">${icons.check}<div><strong>${t("confirmed.identityTitle")}</strong><span>${t("confirmed.identityBody")}</span></div></aside>
-    <div class="next-step-grid">
-      <button data-confirmed-action="details"><span>${t("confirmed.details")}</span><strong>${t("confirmed.detailsBody")}</strong>${icons.arrow}</button>
-      <button data-confirmed-action="reservation"><span>${t("confirmed.booking")}</span><strong>${t("confirmed.bookingBody")}</strong>${icons.arrow}</button>
-    </div>
-    <p class="candidate-cost-note">${t("confirmed.costNote")}</p>
-  </section>`;
-  document.querySelector("[data-back-to-candidates]").addEventListener("click", () => {
-    state.view = "candidates";
-    render();
-  });
-  document.querySelectorAll("[data-confirmed-action]").forEach((button) => button.addEventListener("click", async () => {
-    await openConfirmedCandidate(button.dataset.confirmedAction);
-  }));
-}
-
 async function openConfirmedCandidate(focus) {
   const candidate = state.confirmedCandidate;
   if (!candidate) return;
@@ -756,7 +718,7 @@ async function openConfirmedCandidate(focus) {
       recordConfirmation: false,
       selectedRank: candidate.rank,
       candidateCount: state.candidates.length,
-      returnView: "candidate_confirmed"
+      returnView: "candidates"
     });
     return;
   }
@@ -785,19 +747,22 @@ function renderResult() {
     <div class="decision-grid">
       <article class="decision-card ${esc(r.recommendation)}">
         <div class="status-row"><span class="status-dot"></span><span>${localizedConfidenceLabel(r.confidence)}</span></div>
-        <p class="overline">${t("result.checkResult")}</p><h2>${esc(localizedRecommendationLabel(r.recommendation))}</h2>${currentLocale() === "ja" ? `<p>${esc(r.summary)}</p><div class="reason-list">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div>` : `<p>${t("result.dynamicNotice")}</p><details class="source-language-details"><summary>${t("result.decisionDetails")}</summary><p lang="ja">${esc(r.summary)}</p><div class="reason-list" lang="ja">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div></details>`}
+        <p class="overline">${t("result.checkResult")}</p><h2>${esc(localizedRecommendationLabel(r.recommendation))}</h2>${currentLocale() === "ja" ? `<p>${esc(r.summary)}</p>` : `<p>${t("result.dynamicNotice")}</p>`}
         ${r.planAdvisory ? `<aside class="plan-advisory"><strong>${t("result.planAdvisory")}</strong><p lang="ja">${esc(r.planAdvisory)}</p></aside>` : ""}
-        ${r.decisionEvidence?.length ? `<div class="decision-boundary"><strong>${t("result.boundary")}</strong>${r.decisionEvidence.map((item) => `<p lang="ja">${esc(item.claim)} · ${t("result.confidence", { level: localizedConfidenceLevel(item.certainty) })}<br><small>${esc(item.limitation)}</small></p>`).join("")}</div>` : ""}
+        <details class="decision-details"><summary>${t("result.why")}</summary><div>${currentLocale() === "ja" ? `<div class="reason-list">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div>` : `<div class="source-language-details"><p lang="ja">${esc(r.summary)}</p><div class="reason-list" lang="ja">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div></div>`}${r.decisionEvidence?.length ? `<div class="decision-boundary"><strong>${t("result.boundary")}</strong>${r.decisionEvidence.map((item) => `<p lang="ja">${esc(item.claim)} · ${t("result.confidence", { level: localizedConfidenceLevel(item.certainty) })}<br><small>${esc(item.limitation)}</small></p>`).join("")}</div>` : ""}</div></details>
       </article>
-      <article class="action-card"><p class="overline">${t("result.next")}</p><h3>${currentLocale() === "ja" ? esc(r.nextAction) : t(primaryAction?.type === "phone" ? "result.actionPhone" : primaryAction ? "result.actionBooking" : "result.actionMap")}</h3>
+      <article class="action-card"><p class="overline">${t("result.next")}</p><h3>${t(primaryAction?.type === "phone" ? "result.actionPhone" : primaryAction ? "result.actionBooking" : "result.actionMap")}</h3>
         ${primaryAction ? `<a class="primary-button" id="primary-action" data-action-type="${esc(primaryAction.type || "external")}" href="${esc(actionHref(primaryAction))}" ${primaryAction.type === "phone" ? "" : 'target="_blank" rel="noreferrer"'}>${currentLocale() === "ja" ? esc(primaryAction.label) : t(primaryAction.type === "phone" ? "result.actionPhone" : "result.actionBooking")} ${primaryAction.type === "phone" ? icons.phone : icons.arrow}</a>` : r.phone ? `<a class="primary-button" id="primary-action" data-action-type="phone" href="tel:${esc(r.phone)}">${icons.phone} ${t("result.actionPhone")}</a>` : `<a class="primary-button" id="primary-action" data-action-type="map" href="${esc(safeExternalUrl(r.mapSearchUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address}`)}`))}" target="_blank" rel="noreferrer">${t("result.actionMap")} ${icons.arrow}</a>`}
-        ${r.phone && primaryAction?.type !== "phone" ? `<a class="secondary-button" id="phone-action" href="tel:${esc(r.phone)}">${icons.phone} ${esc(r.phone)} · ${t("result.phone")}</a>` : ""}
-        <button class="secondary-button" id="share-result">${t("result.share")}</button>
-        <button class="secondary-button" id="save-button">${icons.bookmark} ${saved ? t("result.editPlan") : t("result.savePlan")}</button>
-        ${state.planEditorOpen ? renderPlanForm(savedPlan, r) : ""}
+        <details class="action-more" ${state.planEditorOpen ? "open" : ""}><summary>${t("result.otherActions")}</summary><div>
+          ${r.phone && primaryAction?.type !== "phone" ? `<a class="secondary-button" id="phone-action" href="tel:${esc(r.phone)}">${icons.phone} ${esc(r.phone)} · ${t("result.phone")}</a>` : ""}
+          <button class="secondary-button" id="share-result">${t("result.share")}</button>
+          <button class="secondary-button" id="save-button">${icons.bookmark} ${saved ? t("result.editPlan") : t("result.savePlan")}</button>
+          ${state.planEditorOpen ? renderPlanForm(savedPlan, r) : ""}
+        </div></details>
       </article>
     </div>
     ${r.conflict ? `<aside class="conflict"><strong>${currentLocale() === "ja" ? esc(r.conflictTitle || "情報が一致していません") : t("result.conflict")}</strong><p lang="ja">${esc(r.conflict)}</p></aside>` : ""}
+    <details class="result-more"><summary><span>${t("result.moreTitle")}</span><small>${t("result.moreBody")}</small></summary><div class="result-more-body">
     ${r.reservationGuidance ? `<section class="panel reservation-guidance"><div><p class="overline">${t("result.reservationRules")}</p><h2 lang="ja">${esc(r.reservationGuidance.label)}</h2><p lang="ja">${esc(r.reservationGuidance.excerpt)}</p><small>${t("result.ruleBoundary")}</small></div><a href="${esc(safeExternalUrl(r.reservationGuidance.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.openOriginal")} ${icons.arrow}</a></section>` : ""}
     ${reservationOptions.length ? `<section class="panel reservation-options"><div class="panel-heading"><div><p class="overline">${t("result.options")}</p><h2>${t("result.optionsTitle")}</h2></div><span>${t("result.optionsBody")}</span></div><div class="reservation-option-grid">${reservationOptions.map((option) => `<a class="reservation-option ${reservationOptionClass(option)}" href="${esc(option.url)}" ${option.actionType === "phone" ? "" : 'target="_blank" rel="noreferrer"'} data-reservation-provider="${esc(option.provider)}" data-action-type="${esc(option.actionType)}"><span>${reservationOptionBadge(option)}</span><strong>${esc(option.label)}</strong><small>${esc(currentLocale() === "ja" ? option.capability?.label || reservationModeLabel(option.bookingMode) : reservationModeLabel(option.bookingMode))}</small>${option.capability?.confirmation ? `<em lang="ja">${esc(option.capability.confirmation)}</em>` : ""}${option.feeNote ? `<p lang="ja">${esc(option.feeNote)}</p>` : ""}</a>`).join("")}</div></section>` : ""}
     ${r.queueGuidance ? `<section class="panel queue-guidance"><div><p class="overline">${t("result.queueRules")}</p><h2 lang="ja">${esc(r.queueGuidance.label)}</h2><p lang="ja">${esc(r.queueGuidance.excerpt)}</p><small>${t("result.queueBoundary")}</small></div><a href="${esc(safeExternalUrl(r.queueGuidance.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.openOriginal")} ${icons.arrow}</a></section>` : ""}
@@ -812,13 +777,16 @@ function renderResult() {
       ${r.sources.some((source) => ["Hot Pepper", "ホットペッパーグルメ"].includes(source.name)) ? '<a class="hotpepper-credit" href="https://webservice.recruit.co.jp/" target="_blank" rel="noreferrer"><img src="https://webservice.recruit.co.jp/banner/hotpepper-s.gif" alt="ホットペッパーグルメ Webサービス" width="135" height="17"></a>' : ""}
       <p class="source-disclaimer">${t("result.sourceDisclaimer")}</p>
     </section>
+    </div></details>
     <section class="feedback-card" id="feedback-card"><div><p class="overline">${t("feedback.overline")}</p><h3>${t("feedback.title")}</h3><p>${t("feedback.privacy")}</p></div><form id="feedback-form" class="feedback-form">
-      <fieldset><legend>${t("feedback.helpful")}</legend><label><input type="radio" name="helpful" value="yes" required> ${t("feedback.yes")}</label><label><input type="radio" name="helpful" value="no"> ${t("feedback.no")}</label></fieldset>
-      <fieldset><legend>${t("feedback.booking")}</legend><label><input type="radio" name="bookingOutcome" value="succeeded" required> ${t("feedback.succeeded")}</label><label><input type="radio" name="bookingOutcome" value="not_succeeded"> ${t("feedback.notSucceeded")}</label><label><input type="radio" name="bookingOutcome" value="not_tried"> ${t("feedback.notTried")}</label></fieldset>
-      <fieldset><legend>${t("feedback.accuracy")}</legend><label><input type="radio" name="accuracy" value="accurate" required> ${t("feedback.accurate")}</label><label><input type="radio" name="accuracy" value="partly_wrong"> ${t("feedback.partlyWrong")}</label><label><input type="radio" name="accuracy" value="wrong"> ${t("feedback.wrong")}</label></fieldset>
-      <fieldset><legend>${t("feedback.pay")}</legend><label><input type="radio" name="willingnessToPay" value="consider"> ${t("feedback.consider")}</label><label><input type="radio" name="willingnessToPay" value="depends_on_price"> ${t("feedback.depends")}</label><label><input type="radio" name="willingnessToPay" value="would_not"> ${t("feedback.wouldNot")}</label><label><input type="radio" name="willingnessToPay" value="unsure"> ${t("feedback.unsure")}</label></fieldset>
-      <label class="feedback-text">${t("feedback.comment")}<textarea name="feedbackText" maxlength="500" rows="3" placeholder="${t("feedback.placeholder")}"></textarea></label>
-      <button type="submit">${t("feedback.submit")}</button>
+      <fieldset class="feedback-primary"><legend>${t("feedback.helpful")}</legend><label><input type="radio" name="helpful" value="yes" required> ${t("feedback.yes")}</label><label><input type="radio" name="helpful" value="no"> ${t("feedback.no")}</label></fieldset>
+      <details class="feedback-more"><summary>${t("feedback.more")}</summary><div class="feedback-more-body">
+        <fieldset><legend>${t("feedback.booking")}</legend><label><input type="radio" name="bookingOutcome" value="succeeded"> ${t("feedback.succeeded")}</label><label><input type="radio" name="bookingOutcome" value="not_succeeded"> ${t("feedback.notSucceeded")}</label><label><input type="radio" name="bookingOutcome" value="not_tried"> ${t("feedback.notTried")}</label></fieldset>
+        <fieldset><legend>${t("feedback.accuracy")}</legend><label><input type="radio" name="accuracy" value="accurate"> ${t("feedback.accurate")}</label><label><input type="radio" name="accuracy" value="partly_wrong"> ${t("feedback.partlyWrong")}</label><label><input type="radio" name="accuracy" value="wrong"> ${t("feedback.wrong")}</label></fieldset>
+        <fieldset><legend>${t("feedback.pay")}</legend><label><input type="radio" name="willingnessToPay" value="consider"> ${t("feedback.consider")}</label><label><input type="radio" name="willingnessToPay" value="depends_on_price"> ${t("feedback.depends")}</label><label><input type="radio" name="willingnessToPay" value="would_not"> ${t("feedback.wouldNot")}</label><label><input type="radio" name="willingnessToPay" value="unsure"> ${t("feedback.unsure")}</label></fieldset>
+        <label class="feedback-text">${t("feedback.comment")}<textarea name="feedbackText" maxlength="500" rows="3" placeholder="${t("feedback.placeholder")}"></textarea></label>
+      </div></details>
+      <button type="submit" disabled>${t("feedback.submit")}</button>
     </form></section>
   </section>`;
   document.querySelector("#save-button").addEventListener("click", toggleSaved);
@@ -865,6 +833,10 @@ function renderResult() {
     form.replaceWith(Object.assign(document.createElement("p"), { className: "feedback-thanks", textContent: t("feedback.accepted") }));
     showToast(t("feedback.accepted"));
   });
+  document.querySelectorAll('#feedback-form [name="helpful"]').forEach((input) => input.addEventListener("change", () => {
+    const button = document.querySelector('#feedback-form button[type="submit"]');
+    if (button) button.disabled = false;
+  }));
 }
 
 function focusResultSection() {
