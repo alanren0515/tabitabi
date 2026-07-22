@@ -1,5 +1,11 @@
 import { evaluateReleaseEvidence } from "./release-evidence.mjs";
 
+export function selectCurrentPilotReport({ remoteReport = null, localReport = null, revision = "" } = {}) {
+  return remoteReport?.source === "fly-volume" && remoteReport?.releaseRevision === revision
+    ? remoteReport
+    : localReport;
+}
+
 export function buildProjectStatus({
   providers = {}, cases = [], audits = [], matrix = [], candidateReport = null, decisionReport = null, testReport = null, revision = "", pilotReport = null
 } = {}) {

@@ -68,7 +68,7 @@
 ## 当前状态
 
 - 公开模式代码：已准备，默认关闭。
-- 同版本候选/决策付费评测：等待费用确认。
+- 同版本候选/决策付费评测：2026-07-23 已完成并通过；后续 revision 必须重新取得费用确认。评测命令要求显式设置 `EVAL_AUTHORIZED_PLACES_SEARCH_TOTAL`、`EVAL_AUTHORIZED_PLACES_DETAILS_TOTAL`、`EVAL_AUTHORIZED_HOTPEPPER_ATTEMPTS_TOTAL`，且服务端每日硬上限不得高于本轮授权。
 - 同版本真实试点：尚未开始累计。
 - 法律专业审阅：未完成。
 - 恢复与告警演练：未完成。

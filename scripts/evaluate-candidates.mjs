@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { classifyCandidateFailure, matchesExpected } from "./eval-matching.mjs";
-import { providerIntervalFromEnv } from "./release-eval-support.mjs";
+import { assertAuthorizedEvaluationBudget, providerIntervalFromEnv } from "./release-eval-support.mjs";
 
 const baseUrl = process.env.TABITABI_BASE_URL || "http://localhost:4173";
 const pilotHeaders = process.env.PILOT_ACCESS_CODE ? { "X-Pilot-Access": process.env.PILOT_ACCESS_CODE } : {};
@@ -33,6 +33,16 @@ if (!capabilities.placesSearch) {
 }
 if (!/^[a-f0-9]{40}$/.test(String(capabilities.releaseRevision || ""))) {
   console.error("候选评测要求服务以有效 RELEASE_REVISION 启动，避免把旧结果绑定到当前代码。\n");
+  process.exit(2);
+}
+try {
+  assertAuthorizedEvaluationBudget({
+    capabilities,
+    authorizedLimits: { places_search: process.env.EVAL_AUTHORIZED_PLACES_SEARCH_TOTAL },
+    requiredCalls: { places_search: cases.length }
+  });
+} catch (error) {
+  console.error(`${error.message}。请在取得费用确认后设置授权上限，并让本地服务使用不高于该值的 DAILY_PLACES_SEARCH_LIMIT。\n`);
   process.exit(2);
 }
 

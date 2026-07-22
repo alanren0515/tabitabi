@@ -15,3 +15,22 @@ export function candidateSelectionsForDecision({ report, releaseRevision, caseId
   }
   return selections;
 }
+
+export function assertAuthorizedEvaluationBudget({ capabilities, authorizedLimits, requiredCalls }) {
+  for (const [bucket, required] of Object.entries(requiredCalls)) {
+    const authorized = Number.parseInt(String(authorizedLimits[bucket] ?? ""), 10);
+    if (!Number.isInteger(authorized) || authorized < 1) {
+      throw new Error(`缺少 ${bucket} 的本轮评测授权上限`);
+    }
+    const state = capabilities?.dailyBudget?.buckets?.[bucket];
+    if (!state || !Number.isInteger(state.used) || !Number.isInteger(state.limit)) {
+      throw new Error(`服务未提供 ${bucket} 的可验证预算状态`);
+    }
+    if (state.limit > authorized) {
+      throw new Error(`${bucket} 的服务端硬上限 ${state.limit} 高于本轮授权 ${authorized}`);
+    }
+    if (state.used + required > authorized) {
+      throw new Error(`${bucket} 当前已用 ${state.used}，再执行 ${required} 次会超过本轮授权 ${authorized}`);
+    }
+  }
+}

@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { evaluateDecisionSafety } from "./decision-eval.mjs";
-import { candidateSelectionsForDecision, providerIntervalFromEnv } from "./release-eval-support.mjs";
+import { assertAuthorizedEvaluationBudget, candidateSelectionsForDecision, providerIntervalFromEnv } from "./release-eval-support.mjs";
 
 const baseUrl = process.env.TABITABI_BASE_URL || "http://localhost:4173";
 const pilotHeaders = process.env.PILOT_ACCESS_CODE ? { "X-Pilot-Access": process.env.PILOT_ACCESS_CODE } : {};
@@ -29,6 +29,18 @@ if (!capabilities?.placesSearch) {
 }
 if (!/^[a-f0-9]{40}$/.test(String(capabilities.releaseRevision || ""))) {
   await finishBlocked("决策评测要求服务以有效 RELEASE_REVISION 启动，避免把旧结果绑定到当前代码");
+}
+try {
+  assertAuthorizedEvaluationBudget({
+    capabilities,
+    authorizedLimits: {
+      places_details: process.env.EVAL_AUTHORIZED_PLACES_DETAILS_TOTAL,
+      hotpepper_attempts: process.env.EVAL_AUTHORIZED_HOTPEPPER_ATTEMPTS_TOTAL
+    },
+    requiredCalls: { places_details: cases.length, hotpepper_attempts: 0 }
+  });
+} catch (error) {
+  await finishBlocked(`${error.message}。请先取得本轮费用确认，并让服务端硬上限不高于授权值`);
 }
 
 let candidateReport;

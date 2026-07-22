@@ -50,6 +50,8 @@ export function evaluateFormalReleaseGate({
   return {
     generatedAt: new Date(now).toISOString(),
     app,
+    revision: /^[a-f0-9]{40}$/.test(currentRevision) ? currentRevision : null,
+    repositoryClean: repositoryClean === true,
     releaseId: sameRevision && /^sha256:[a-f0-9]{64}$/.test(imageDigest) ? `${app}:${currentRevision}:${imageDigest}` : null,
     gatePassed: blockedBy.length === 0,
     gates,

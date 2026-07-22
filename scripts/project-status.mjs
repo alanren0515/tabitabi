@@ -1,14 +1,16 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { buildProjectStatus } from "../server/project-status.mjs";
+import { buildProjectStatus, selectCurrentPilotReport } from "../server/project-status.mjs";
 import { loadPilotReport } from "../server/pilot-report.mjs";
 import { currentGitState } from "../server/release-revision.mjs";
 
-const [cases, audits, matrix, candidateReport, decisionReport, testReport, pilotReport, localEnv, git] = await Promise.all([
+const [cases, audits, matrix, candidateReport, decisionReport, testReport, remotePilotReport, localEnv, git] = await Promise.all([
   readJson("eval/cases.json", []), readJson("eval/manual-audits.json", []), readJson("eval/coverage-matrix.json", []),
   readJson("eval/latest-candidate-results.json", null), readJson("eval/latest-decision-results.json", null),
-  readJson("data/release-evidence/latest-tests.json", null), loadPilotReport(resolve(process.env.PILOT_EVENTS_PATH || "data/events.jsonl")), readText(".env.local"), currentGitState()
+  readJson("data/release-evidence/latest-tests.json", null), readJson("data/release-evidence/latest-remote-pilot.json", null), readText(".env.local"), currentGitState()
 ]);
+const localPilotReport = await loadPilotReport(resolve(process.env.PILOT_EVENTS_PATH || "data/events.jsonl"), new Date(), { releaseRevision: git.revision });
+const pilotReport = selectCurrentPilotReport({ remoteReport: remotePilotReport, localReport: localPilotReport, revision: git.revision });
 const filePresence = parseEnvPresence(localEnv);
 const providers = {
   qwenVision: Boolean(process.env.DASHSCOPE_API_KEY) || Boolean(filePresence.DASHSCOPE_API_KEY),

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { candidateSelectionsForDecision, providerIntervalFromEnv } from "../scripts/release-eval-support.mjs";
+import { assertAuthorizedEvaluationBudget, candidateSelectionsForDecision, providerIntervalFromEnv } from "../scripts/release-eval-support.mjs";
 
 test("uses a provider interval that stays below the 20 attempts per five minute circuit", () => {
   assert.equal(providerIntervalFromEnv(undefined), 16_000);
@@ -24,4 +24,28 @@ test("reuses only a passing candidate report from the same release revision", ()
     () => candidateSelectionsForDecision({ report, releaseRevision: "a".repeat(40), caseIds: ["missing"] }),
     /缺少.*Place ID/
   );
+});
+
+test("blocks an evaluation before provider calls when the approved ceiling is missing or insufficient", () => {
+  const capabilities = { dailyBudget: { buckets: { places_search: { used: 20, limit: 70 } } } };
+  assert.doesNotThrow(() => assertAuthorizedEvaluationBudget({
+    capabilities,
+    authorizedLimits: { places_search: 70 },
+    requiredCalls: { places_search: 35 }
+  }));
+  assert.throws(() => assertAuthorizedEvaluationBudget({
+    capabilities,
+    authorizedLimits: {},
+    requiredCalls: { places_search: 35 }
+  }), /缺少.*授权上限/);
+  assert.throws(() => assertAuthorizedEvaluationBudget({
+    capabilities,
+    authorizedLimits: { places_search: 50 },
+    requiredCalls: { places_search: 35 }
+  }), /硬上限.*高于本轮授权/);
+  assert.throws(() => assertAuthorizedEvaluationBudget({
+    capabilities: { dailyBudget: { buckets: { places_search: { used: 55, limit: 70 } } } },
+    authorizedLimits: { places_search: 70 },
+    requiredCalls: { places_search: 35 }
+  }), /会超过本轮授权/);
 });

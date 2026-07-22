@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildProjectStatus } from "../server/project-status.mjs";
+import { buildProjectStatus, selectCurrentPilotReport } from "../server/project-status.mjs";
+
+test("uses Fly pilot evidence only when it belongs to the current revision", () => {
+  const revision = "a".repeat(40);
+  const localReport = { source: "local", metrics: { inputRuns: 7, feedbackRuns: 2 } };
+  const remoteReport = { source: "fly-volume", releaseRevision: revision, metrics: { inputRuns: 0, feedbackRuns: 0 } };
+  assert.equal(selectCurrentPilotReport({ remoteReport, localReport, revision }), remoteReport);
+  assert.equal(selectCurrentPilotReport({ remoteReport: { ...remoteReport, releaseRevision: "b".repeat(40) }, localReport, revision }), localReport);
+  assert.equal(selectCurrentPilotReport({ remoteReport: { ...remoteReport, source: "local" }, localReport, revision }), localReport);
+});
 
 test("reports provider booleans and concrete remaining external evidence without secrets", () => {
   const cases = Array.from({ length: 33 }, (_, index) => ({ id: `case-${index}`, verificationStatus: "confirmed" }));

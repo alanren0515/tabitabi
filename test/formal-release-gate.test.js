@@ -21,7 +21,10 @@ const valid = {
 };
 
 test("passes only when technical, pilot, deployment, Fly, and provider-free evidence all pass", () => {
-  assert.equal(evaluateFormalReleaseGate(valid).gatePassed, true);
+  const report = evaluateFormalReleaseGate(valid);
+  assert.equal(report.gatePassed, true);
+  assert.equal(report.revision, revision);
+  assert.equal(report.repositoryClean, true);
   const failed = evaluateFormalReleaseGate({ ...valid, pilotEvidence: { ...valid.pilotEvidence, gatePassed: false } });
   assert.deepEqual(failed.blockedBy, ["productionPilot"]);
 });
