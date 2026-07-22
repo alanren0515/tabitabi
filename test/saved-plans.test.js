@@ -12,8 +12,18 @@ test("creates a privacy-minimized live saved plan with schedule and action statu
   assert.equal(item.planStatus, "needs_reservation");
   assert.equal(item.partySize, 4);
   assert.equal(item.name, "用户保存的名称");
+  assert.equal(item.sourceMode, "live");
   assert.equal(item.address, undefined);
   assert.equal(item.snapshot, undefined);
+});
+
+test("keeps an explicitly selected example labelled in saved plans", () => {
+  const item = createSavedPlan({
+    restaurant: { id: "sample:1", name: "架空店", sourceMode: "demo", recommendation: "unknown" },
+    plan: {}
+  });
+  assert.equal(item.sourceMode, "demo");
+  assert.equal(item.snapshot.sourceMode, "demo");
 });
 
 test("updates status while preserving the rest of a saved plan", () => {

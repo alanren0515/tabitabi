@@ -21,7 +21,7 @@ export function findCandidates(input, limit = 3) {
   const matches = ranked.filter((item) => item.score > 0);
   return (matches.length ? matches : ranked)
     .slice(0, limit)
-    .map((item, index) => ({ ...item.restaurant, matchScore: item.score, isFallback: matches.length === 0, rank: index + 1 }));
+    .map((item, index) => ({ ...item.restaurant, sourceMode: "demo", matchScore: item.score, isFallback: matches.length === 0, rank: index + 1 }));
 }
 
 export function recommendationLabel(value) {

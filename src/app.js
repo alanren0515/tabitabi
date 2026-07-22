@@ -1,4 +1,4 @@
-import { confidenceLabel, findCandidates, recommendationLabel } from "./analyzer.js";
+import { confidenceLabel, recommendationLabel } from "./analyzer.js";
 import { buildRestaurantQuery, extractionReviewState, formatBudget, isKnownSampleScreenshot, mergeScreenshotSupplemental, normalizeExtraction, sampleTikTokExtraction, selectExtractedRestaurant } from "./screenshot-extraction.js";
 import { createSavedPlan, normalizeSavedPlans, PLAN_STATUSES, sortSavedPlansByUrgency, updateSavedPlan } from "./saved-plans.js";
 import { deleteLocalData, LOCAL_STORAGE_KEY, summarizeLocalData, VISIT_STORAGE_KEY } from "./privacy-data.js";
@@ -15,12 +15,15 @@ import { sendEvent } from "./event-client.js";
 import { pathnameForView, viewFromPathname } from "./client-routes.js";
 import { SUPPORTED_LOCALES, localeNumberFormat, translate } from "./i18n.js";
 import { localizedLegalContent } from "./legal-content.js";
+import { createExampleCandidates, isExampleRestaurant } from "./example-experience.js";
 
 const app = document.querySelector("#app");
 const toast = document.querySelector("#toast");
 const routeStatus = document.querySelector("#route-status");
 const loadCapabilities = createCapabilitiesLoader();
 const AUDIT_SESSION_KEY = "tabitabi-audit-session-v1";
+const DEFAULT_PUBLIC_OPERATOR_NAME = "Ren";
+const DEFAULT_PUBLIC_CONTACT_EMAIL = "rgq.alan515@gmail.com";
 const initialParams = new URLSearchParams(window.location.search);
 if (initialParams.get("audit") === "1") sessionStorage.setItem(AUDIT_SESSION_KEY, "1");
 const trafficType = sessionStorage.getItem(AUDIT_SESSION_KEY) === "1" ? "audit" : "product";
@@ -55,7 +58,10 @@ const state = {
   analysisStartedAt: null,
   analysisRunId: "",
   analysisSourceMode: "",
+  analysisInputType: "",
   exampleInput: false,
+  searchRecovery: null,
+  homeRecoveryNotice: "",
   rejectedCandidateIds: [],
   confirmedCandidate: null,
   resultFocus: "",
@@ -86,7 +92,8 @@ const VIEW_LABEL_KEYS = {
   pilot: "route.pilot",
   privacy: "route.privacy",
   terms: "route.terms",
-  settings: "route.settings"
+  settings: "route.settings",
+  search_recovery: "route.searchRecovery"
 };
 
 const icons = {
@@ -107,6 +114,25 @@ function t(key, variables = {}) {
 
 function currentLocale() {
   return state.settings.locale || "ja";
+}
+
+function currentPublicInfo() {
+  const publicInfo = state.capabilities?.publicInfo || {};
+  return {
+    operatorName: publicInfo.operatorName || DEFAULT_PUBLIC_OPERATOR_NAME,
+    contactEmail: publicInfo.contactEmail || DEFAULT_PUBLIC_CONTACT_EMAIL
+  };
+}
+
+function resultInputSourceLabel(restaurant = state.restaurant) {
+  if (isExampleRestaurant(restaurant)) return t("result.inputSourceExample");
+  return t({
+    screenshot: "result.inputSourceScreenshot",
+    webpage: "result.inputSourceWebpage",
+    social_link: "result.inputSourceLink",
+    text: "result.inputSourceText",
+    restaurant_name: "result.inputSourceText"
+  }[state.analysisInputType] || "result.inputSourceGeneric");
 }
 
 function localizedPlanStatus(value) {
@@ -199,6 +225,7 @@ function render() {
   if (state.view === "privacy") renderPrivacy();
   if (state.view === "terms") renderTerms();
   if (state.view === "settings") renderSettings();
+  if (state.view === "search_recovery") renderSearchRecovery();
   syncShellLanguage();
   syncSaved();
   syncRecent();
@@ -234,6 +261,7 @@ function renderHome() {
         <label for="pilot-access-code">${t("home.accessLabel")}</label>
         <div class="pilot-access-controls"><input id="pilot-access-code" name="pilotAccessCode" type="password" maxlength="256" autocomplete="off" required aria-describedby="pilot-access-help" placeholder="${t("home.accessPlaceholder")}"><button type="submit">${t("home.accessSubmit")}</button></div>
       </form>` : ""}
+      ${state.homeRecoveryNotice ? `<aside class="recovery-banner" role="status"><strong>${t("home.noMatchTitle")}</strong><span>${esc(state.homeRecoveryNotice)}</span><small>${t("home.noMatchHelp")}</small></aside>` : ""}
       <form id="analyze-form" class="input-card">
         <div class="input-intro"><strong>${t("home.clueLabel")}</strong><span>${t("home.methodHelp")}</span></div>
         <div class="input-method-grid">
@@ -295,21 +323,24 @@ function renderHome() {
       attachScreenshotFile(file, { pasted: true });
     }, 0);
   });
-  document.querySelector("#clue").addEventListener("input", () => { state.exampleInput = false; });
+  document.querySelector("#clue").addEventListener("input", (event) => {
+    state.input = event.currentTarget.value;
+    state.exampleInput = false;
+    state.analysisError = "";
+    state.homeRecoveryNotice = "";
+    event.currentTarget.removeAttribute("aria-invalid");
+    document.querySelector("#analysis-error")?.remove();
+  });
   document.querySelector("#remove-upload")?.addEventListener("click", clearUpload);
   document.querySelectorAll("[data-open-recent]").forEach((button) => button.addEventListener("click", () => openRecentAnalysis(button.dataset.openRecent)));
   document.querySelectorAll("[data-open-pending]").forEach((button) => button.addEventListener("click", () => openPendingAnalysis(button.dataset.openPending)));
-  document.querySelectorAll("[data-example]").forEach((button) => button.addEventListener("click", () => {
-    state.input = button.dataset.example;
-    state.exampleInput = true;
-    renderHome();
-    document.querySelector("#clue").focus();
-  }));
+  document.querySelectorAll("[data-example]").forEach((button) => button.addEventListener("click", () => openExampleExperience(button.dataset.example)));
 }
 
 function attachScreenshotFile(file, { pasted = false } = {}) {
   if (!file) return;
   state.exampleInput = false;
+  state.homeRecoveryNotice = "";
   const validation = validateScreenshotFile(file);
   if (!validation.ok) {
     state.analysisError = currentLocale() === "ja" ? validation.error : t("error.imageUnsupported");
@@ -330,7 +361,9 @@ async function handleAnalyze(event) {
   event.preventDefault();
   const value = new FormData(event.currentTarget).get("clue").trim();
   if (!value && !state.uploadFile) {
-    showToast(t("error.inputRequired"));
+    state.analysisError = t("error.inputRequired");
+    renderHome();
+    requestAnimationFrame(() => document.querySelector("#clue")?.focus());
     return;
   }
   if (navigator.onLine === false) {
@@ -356,12 +389,15 @@ async function handleAnalyze(event) {
   state.activePendingId = null;
   state.userProvidedReservationLinks = [];
   state.analysisError = "";
+  state.homeRecoveryNotice = "";
+  state.searchRecovery = null;
   state.restaurant = null;
   state.currentPlanIntent = { planDate: "", planTime: "", partySize: state.settings.defaultPartySize };
   state.analysisRunId = createAnalysisRunId();
-  state.analysisSourceMode = state.exampleInput ? "demo" : capabilities.placesSearch ? "live" : "demo";
+  state.analysisInputType = classifyInputType(value, Boolean(state.uploadFile));
+  state.analysisSourceMode = state.exampleInput ? "demo" : "live";
   postEvent("input_submitted", {
-    inputType: classifyInputType(value, Boolean(state.uploadFile)),
+    inputType: state.analysisInputType,
     sourceMode: state.analysisSourceMode
   });
 
@@ -371,7 +407,10 @@ async function handleAnalyze(event) {
     render();
     try {
       const result = await extractScreenshot(state.uploadFile);
-      if (result.mode === "sample") state.analysisSourceMode = "demo";
+      if (result.mode === "sample") {
+        state.analysisSourceMode = "demo";
+        state.exampleInput = true;
+      }
       const supplemental = value ? await extractTextInput(value) : null;
       state.extraction = mergeScreenshotSupplemental(result.extraction, supplemental);
       if (supplemental) state.currentPlanIntent = withDefaultPlan(supplemental.plan);
@@ -459,11 +498,13 @@ function renderTextExtraction() {
   const clues = parsed.clues;
   const parsedPlatformLabel = parsed.platformLabel || platformLabel(parsed.platform);
   const hasPlanDetails = Boolean(parsed.plan.planDate || parsed.plan.planTime || state.currentPlanIntent.partySize !== state.settings.defaultPartySize);
+  const compactLocation = [clues.area, clues.address].filter(Boolean).join(" · ");
   app.innerHTML = `<section class="content-view narrow">
     <button class="back-button" data-action="home">${t("review.back")}</button>
     <div class="section-heading"><span class="step-chip">${t("review.step")}</span><h2>${t("review.title")}</h2><p>${t("review.body")}</p></div>
     <section class="panel extracted-restaurant"><form id="text-extraction-form">
       <div class="field-pair"><label>${t("review.name")}<input name="name" value="${esc(clues.name)}" required></label><label>${t("review.branch")}<input name="branch" value="${esc(clues.branch)}"></label></div>
+      ${compactLocation ? `<p class="review-location-summary"><strong>${t("review.locationSummary")}</strong><span>${esc(compactLocation)}</span></p>` : ""}
       <details class="review-more"><summary>${t("review.more")}</summary><div class="field-pair"><label>${t("review.area")}<input name="area" value="${esc(clues.area)}"></label><label>${t("review.address")}<input name="address" value="${esc(clues.address)}"></label></div></details>
       ${clues.aliasExpanded ? `<aside class="alias-expansion"><strong>${t("review.aliasTitle")}</strong><span>${esc(clues.originalName)} → ${esc(clues.name)}</span><p>${t("review.aliasBody")}</p></aside>` : ""}
       ${hasPlanDetails ? `<div class="plan-preview"><strong>${t("review.plan")}</strong><span>${parsed.plan.planDate || t("review.dateUnknown")} · ${parsed.plan.planTime || t("review.timeUnknown")} · ${t("review.people", { count: state.currentPlanIntent.partySize })}</span></div>` : ""}
@@ -483,6 +524,68 @@ function renderTextExtraction() {
       render();
     }
   });
+}
+
+function enterSearchRecovery({ reason = "unavailable", query = state.input, clues = state.currentClues } = {}) {
+  state.loadingMode = "";
+  state.candidates = [];
+  state.candidateMode = "live";
+  state.searchRecovery = { reason, query: String(query || ""), clues: { ...clues } };
+  state.view = "search_recovery";
+  render();
+}
+
+function renderSearchRecovery() {
+  const recovery = state.searchRecovery || { reason: "unavailable", query: state.input, clues: state.currentClues };
+  const noResults = recovery.reason === "no_results";
+  app.innerHTML = `<section class="content-view narrow search-recovery-view">
+    <button class="back-button" data-edit-clues>${t("common.backClues")}</button>
+    <section class="panel recovery-card" role="alert">
+      <span class="recovery-mark" aria-hidden="true">?</span>
+      <div><p class="overline">${t("recovery.overline")}</p><h2>${t(noResults ? "recovery.noResultsTitle" : "recovery.unavailableTitle")}</h2><p>${t(noResults ? "recovery.noResultsBody" : "recovery.unavailableBody")}</p></div>
+      <ul><li>${t("recovery.tipName")}</li><li>${t("recovery.tipLocation")}</li><li>${t("recovery.tipBranch")}</li></ul>
+      <div class="recovery-actions"><button class="primary-button" id="retry-search">${t("recovery.retry")}</button><button class="secondary-button" data-edit-clues>${t("recovery.edit")}</button></div>
+    </section>
+    <details class="examples recovery-examples"><summary>${t("recovery.exampleTitle")}</summary><p>${t("recovery.exampleBody")}</p><div><button data-recovery-example="銀座 鮨 蒼月">${t("home.demoSushi")}</button><button data-recovery-example="新宿 麺処 灯 ラーメン">${t("home.demoRamen")}</button><button data-recovery-example="京都 喫茶 こもれび">${t("home.demoCafe")}</button></div></details>
+  </section>`;
+  document.querySelector("#retry-search")?.addEventListener("click", async () => {
+    try { await searchCandidates(recovery.query, recovery.clues); }
+    catch (error) {
+      if (recoverFromPilotAccessError(error)) return;
+      enterSearchRecovery({ reason: "unavailable", query: recovery.query, clues: recovery.clues });
+    }
+  });
+  document.querySelectorAll("[data-edit-clues]").forEach((button) => button.addEventListener("click", () => returnToClues(noResults ? "no_results" : "unavailable")));
+  document.querySelectorAll("[data-recovery-example]").forEach((button) => button.addEventListener("click", () => openExampleExperience(button.dataset.recoveryExample)));
+}
+
+function returnToClues(reason = "no_match") {
+  state.homeRecoveryNotice = reason === "example" ? "" : t(reason === "unavailable" ? "home.searchUnavailableNotice" : "home.noMatchNotice");
+  state.analysisError = "";
+  state.searchRecovery = null;
+  state.view = "home";
+  render();
+  requestAnimationFrame(() => document.querySelector("#clue")?.focus());
+}
+
+function openExampleExperience(query) {
+  state.input = String(query || "");
+  state.exampleInput = true;
+  state.analysisInputType = "example";
+  state.analysisSourceMode = "demo";
+  state.analysisRunId = createAnalysisRunId();
+  state.searchRecovery = null;
+  state.homeRecoveryNotice = "";
+  state.currentClues = { name: state.input };
+  state.candidates = createExampleCandidates(state.input, { inputType: "example" });
+  state.candidatePreviews = {};
+  state.candidatePreviewLoadingId = "";
+  state.rejectedCandidateIds = [];
+  state.confirmedCandidate = null;
+  state.candidateMode = "demo";
+  state.view = "candidates";
+  postEvent("input_submitted", { inputType: "example", sourceMode: "demo" });
+  render();
 }
 
 function renderLinkGuidance() {
@@ -654,30 +757,35 @@ function partitionExtractionWarnings(warnings = []) {
 }
 
 function renderCandidates() {
-  const fallback = state.candidates[0]?.isFallback;
+  const exampleMode = state.candidateMode === "demo";
+  const fallback = !exampleMode && state.candidates[0]?.isFallback;
   const live = state.candidateMode === "live";
   const visible = visibleCandidates(state.candidates, state.rejectedCandidateIds);
   const rejectedCount = state.candidates.length - visible.length;
   const decision = candidateDecision(visible);
-  const decisionCopy = localizedCandidateDecisionCopy({ fallback, decision, candidateCount: visible.length, input: state.input });
+  const decisionCopy = exampleMode
+    ? { heading: t("candidate.exampleHeading"), summary: t("candidate.exampleSummary") }
+    : localizedCandidateDecisionCopy({ fallback, decision, candidateCount: visible.length, input: state.input });
   app.innerHTML = `<section class="content-view narrow">
-    <button class="back-button" data-action="home">${t("common.backClues")}</button>
+    <button class="back-button" data-edit-clues>${t("common.backClues")}</button>
+    ${exampleMode ? `<aside class="example-mode-banner" role="status"><strong>${t("example.bannerTitle")}</strong><span>${t("example.bannerBody")}</span></aside>` : ""}
     <div class="section-heading candidate-heading"><span class="step-chip">${t("candidate.step")}</span><h2>${esc(decisionCopy.heading)}</h2><p>${esc(decisionCopy.summary)}</p></div>
     <div class="candidate-list">
       ${visible.map((restaurant, index) => {
         const preview = state.candidatePreviews[restaurant.placeId];
-        const isSystemLead = !fallback && decision.kind !== "ambiguous" && restaurant.id === decision.leadId;
-        const candidateLabel = isSystemLead ? t("candidate.lead") : visible.length === 1 ? t("candidate.confirm") : t("candidate.position", { index: index + 1, count: visible.length });
-        return `<article class="candidate-card${isSystemLead ? " system-lead" : ""}">
+        const isSystemLead = !exampleMode && !fallback && decision.kind !== "ambiguous" && restaurant.id === decision.leadId;
+        const candidateLabel = exampleMode ? t("example.badge") : isSystemLead ? t("candidate.lead") : visible.length === 1 ? t("candidate.confirm") : t("candidate.position", { index: index + 1, count: visible.length });
+        return `<article class="candidate-card${isSystemLead ? " system-lead" : ""}${exampleMode ? " example-card" : ""}">
         <div class="restaurant-avatar">${(restaurant.category || "店").slice(0, 1)}</div>
         <div class="candidate-copy"><span class="candidate-label${isSystemLead ? " lead-label" : ""}">${esc(candidateLabel)}</span><small class="candidate-meta">${esc(restaurant.category || t("common.restaurant"))}${restaurant.price ? ` · ${esc(restaurant.price)}` : ""}</small><h3>${esc(restaurant.name)}</h3><p>${esc(restaurant.address || [restaurant.area, restaurant.station].filter(Boolean).join(" · "))}</p><small class="business-status status-${esc(String(restaurant.businessStatus || "unknown").toLowerCase())}">${esc(businessStatusLabel(restaurant.businessStatus))}</small>${preview ? `<div class="candidate-rating"><strong>${Number.isFinite(preview.rating) ? `★ ${esc(preview.rating.toFixed(1))}` : t("candidate.noRating")}</strong>${Number.isInteger(preview.userRatingCount) ? `<span>Google ${esc(localeNumberFormat(currentLocale()).format(preview.userRatingCount))}</span>` : ""}</div>` : ""}${restaurant.matchReasons?.length || restaurant.attributions?.length ? `<details class="candidate-evidence"><summary>${t("candidate.why")}</summary>${restaurant.matchReasons?.length && currentLocale() === "ja" ? `<div class="match-reasons">${restaurant.matchReasons.map((reason) => `<small>${esc(reason)}</small>`).join("")}</div>` : restaurant.matchScore ? `<small>${t("candidate.match")}</small>` : ""}${restaurant.attributions?.length ? `<small class="provider-attribution">${t("candidate.attribution", { providers: restaurant.attributions.map((item) => esc(item.provider)).join(", ") })}</small>` : ""}</details>` : ""}</div>
         <div class="candidate-actions"><button class="select-button" data-restaurant="${restaurant.id}">${t("candidate.select")} ${icons.arrow}</button><button class="reject-button" data-reject-candidate="${restaurant.id}" aria-label="${esc(restaurant.name)}: ${t("candidate.reject")}">${t("candidate.reject")}</button></div>
       </article>`;
       }).join("")}
     </div>
-    ${visible.length ? `<div class="candidate-review-actions"><button data-action="home">${t("candidate.edit")}</button>${rejectedCount ? `<button data-restore-candidates>${t("candidate.restore", { count: rejectedCount })}</button>` : ""}</div>` : `<div class="empty-state candidate-empty"><span>?</span><h3>${t("candidate.noneTitle")}</h3><p>${t("candidate.noneBody")}</p><div><button data-restore-candidates>${t("candidate.restoreAll")}</button><button class="primary-button" data-action="home">${t("candidate.searchEdit")} ${icons.arrow}</button></div></div>`}
-    ${live ? `<div class="google-attribution" translate="no">Google Maps</div>` : `<p class="fine-print">${t("candidate.demoNote")}</p>`}
+    ${visible.length ? `<div class="candidate-review-actions"><button data-edit-clues>${t("candidate.edit")}</button>${rejectedCount ? `<button data-restore-candidates>${t("candidate.restore", { count: rejectedCount })}</button>` : ""}</div>` : `<div class="empty-state candidate-empty"><span>?</span><h3>${t("candidate.noneTitle")}</h3><p>${t("candidate.noneBody")}</p><div><button data-restore-candidates>${t("candidate.restoreAll")}</button><button class="primary-button" data-edit-clues>${t("candidate.searchEdit")} ${icons.arrow}</button></div></div>`}
+    ${live ? `<div class="google-attribution" translate="no">Google Maps</div>` : `<p class="fine-print">${t("example.candidateNote")}</p>`}
   </section>`;
+  document.querySelectorAll("[data-edit-clues]").forEach((button) => button.addEventListener("click", () => returnToClues(exampleMode ? "example" : "no_match")));
   document.querySelectorAll("[data-preview-candidate]").forEach((button) => button.addEventListener("click", async () => {
     await loadCandidatePreview(button.dataset.previewCandidate);
   }));
@@ -735,15 +843,17 @@ async function openConfirmedCandidate(focus) {
 
 function renderResult() {
   const r = state.restaurant;
+  const exampleMode = isExampleRestaurant(r);
   const saved = state.saved.some((item) => item.id === r.id);
   const primaryAction = r.primaryAction || (r.booking ? { label: r.booking.label, url: r.booking.url } : null);
   const reservationOptions = Array.isArray(r.reservationOptions) ? r.reservationOptions : [];
   const savedPlan = state.saved.find((item) => item.id === r.id);
   app.innerHTML = `<section class="content-view result-view">
     <button class="back-button" data-action="home">${t("result.back")}</button>
+    ${exampleMode ? `<aside class="example-mode-banner result-example-banner" role="status"><strong>${t("example.bannerTitle")}</strong><span>${t("example.resultBody")}</span></aside>` : ""}
     ${currentLocale() !== "ja" ? `<aside class="language-beta-note result-language-note"><strong>${t("language.beta")}</strong><span>${t("result.dynamicNotice")}</span></aside>` : ""}
     ${state.pending.length ? `<aside class="result-queue"><div><strong>${t("result.moreQueue", { count: state.pending.length })}</strong><span>${t("result.moreQueueBody")}</span></div><button id="continue-pending">${t("result.nextQueue")} ${icons.arrow}</button></aside>` : ""}
-    <div class="result-title"><div><span class="category-line">${[r.category, r.price].filter(Boolean).map(esc).join(" · ")}</span><h1>${esc(r.name)}</h1><p>${[r.reading, r.area].filter(Boolean).map(esc).join(" · ")}</p></div><span class="demo-pill">${currentLocale() === "ja" ? esc(r.dataLabel || t("result.demoLabel")) : t("result.demoLabel")}</span></div>
+    <div class="result-title"><div><span class="category-line">${[r.category, r.price].filter(Boolean).map(esc).join(" · ")}</span><h1>${esc(r.name)}</h1><p>${[r.reading, r.area].filter(Boolean).map(esc).join(" · ")}</p></div>${exampleMode ? `<span class="demo-pill">${t("example.badge")}</span>` : ""}</div>
     <div class="decision-grid">
       <article class="decision-card ${esc(r.recommendation)}">
         <div class="status-row"><span class="status-dot"></span><span>${localizedConfidenceLabel(r.confidence)}</span></div>
@@ -772,7 +882,7 @@ function renderResult() {
         <dl class="facts">${Number.isFinite(r.rating) ? `<div><dt>Google</dt><dd>${esc(r.rating)} / 5${Number.isInteger(r.userRatingCount) ? ` · ${esc(localeNumberFormat(currentLocale()).format(r.userRatingCount))}` : ""}</dd></div>` : ""}<div><dt>${t("result.address")}</dt><dd>${esc(r.address)}</dd></div>${r.phone ? `<div><dt>${t("result.phoneLabel")}</dt><dd><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a></dd></div>` : ""}${r.officialInstagramUrl ? `<div><dt>Instagram</dt><dd><a href="${esc(safeExternalUrl(r.officialInstagramUrl))}" target="_blank" rel="noreferrer">Instagram</a></dd></div>` : ""}<div><dt>${t("result.station")}</dt><dd>${esc(r.station)}</dd></div><div><dt>${t("result.hours")}</dt><dd>${esc(r.hours)}</dd></div><div><dt>${t("result.closed")}</dt><dd>${esc(r.closed)}</dd></div></dl>
       </section>
     </div>
-    <section class="panel sources"><div class="panel-heading"><div><p class="overline">${t("result.sources")}</p><h2>${t("result.sourcesTitle")}</h2></div><span>${currentLocale() === "ja" ? esc(r.sourceContext || t("result.sourceContext")) : t("result.sourceContext")}</span></div>
+    <section class="panel sources"><div class="panel-heading"><div><p class="overline">${t("result.sources")}</p><h2>${t("result.sourcesTitle")}</h2></div><span>${resultInputSourceLabel(r)}</span></div>
       ${r.sources.map((source) => `<div class="source-row"><div>${source.url ? `<a href="${esc(safeExternalUrl(source.url))}" target="_blank" rel="noreferrer"><strong>${esc(source.name)}</strong></a>` : `<strong>${esc(source.name)}</strong>`}${source.official ? `<span class="official">${t("result.official")}</span>` : ""}<p lang="ja">${esc(source.note)}${source.retrievedAt ? ` · ${formatClientTime(source.retrievedAt)}` : ""}</p>${source.attribution ? `<small class="source-attribution" translate="no">${esc(source.attribution)}</small>` : ""}</div><span class="confidence-${["高", "high"].includes(source.confidence) ? "high" : ["中", "medium"].includes(source.confidence) ? "medium" : "low"}">${t("result.confidence", { level: localizedConfidenceLevel(source.confidence) })}</span></div>`).join("")}
       ${r.sources.some((source) => ["Hot Pepper", "ホットペッパーグルメ"].includes(source.name)) ? '<a class="hotpepper-credit" href="https://webservice.recruit.co.jp/" target="_blank" rel="noreferrer"><img src="https://webservice.recruit.co.jp/banner/hotpepper-s.gif" alt="ホットペッパーグルメ Webサービス" width="135" height="17"></a>' : ""}
       <p class="source-disclaimer">${t("result.sourceDisclaimer")}</p>
@@ -1028,11 +1138,8 @@ async function searchCandidates(query, clues = {}) {
   state.currentClues = clues;
   state.view = "loading";
   render();
-  const capabilities = await getCapabilities();
-  if (capabilities.capabilitiesUnavailable) throw new Error(t("error.searchState"));
-  if (!capabilities.placesSearch) {
-    await new Promise((resolve) => setTimeout(resolve, 450));
-    state.candidates = findCandidates(query);
+  if (state.exampleInput) {
+    state.candidates = createExampleCandidates(query, { inputType: state.analysisInputType || "example" });
     state.candidatePreviews = {};
     state.candidatePreviewLoadingId = "";
     state.rejectedCandidateIds = [];
@@ -1040,19 +1147,37 @@ async function searchCandidates(query, clues = {}) {
     state.resultFocus = "";
     state.candidateMode = "demo";
     state.view = "candidates";
-    showToast(t("error.demoCandidates"));
     render();
     return;
   }
-
-  const response = await fetch("/api/restaurants/search", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
-    body: JSON.stringify({ query, clues })
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw apiResponseError(payload, t("error.realSearch"));
-  if (!payload.candidates?.length) throw new Error(t("error.noCandidates"));
+  const capabilities = await getCapabilities();
+  if (capabilities.capabilitiesUnavailable || !capabilities.placesSearch) {
+    enterSearchRecovery({ reason: "unavailable", query, clues });
+    return;
+  }
+  let response;
+  let payload;
+  try {
+    response = await fetch("/api/restaurants/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
+      body: JSON.stringify({ query, clues })
+    });
+    payload = await response.json().catch(() => ({}));
+  } catch {
+    enterSearchRecovery({ reason: "failed", query, clues });
+    return;
+  }
+  if (!response.ok) {
+    const error = apiResponseError(payload, t("error.realSearch"));
+    if (pilotAccessRejected(error)) throw error;
+    enterSearchRecovery({ reason: "failed", query, clues });
+    return;
+  }
+  if (!payload.candidates?.length) {
+    enterSearchRecovery({ reason: "no_results", query, clues });
+    return;
+  }
   state.candidates = payload.candidates;
   state.candidatePreviews = {};
   state.candidatePreviewLoadingId = "";
@@ -1252,11 +1377,12 @@ function renderSaved() {
   app.innerHTML = `<section class="content-view narrow saved-view">
     <button class="back-button" data-action="home">${t("common.backHome")}</button>
     <div class="section-heading"><span class="step-chip">${t("saved.step")}</span><h2>${t("saved.title")}</h2><p>${t("saved.body")}</p></div>
-    ${state.saved.length ? `<div class="saved-list">${savedPlans.map((r) => `<article><div class="saved-main"><span class="plan-status status-${esc(r.planStatus)}">${esc(localizedPlanStatus(r.planStatus))}</span><h3>${esc(r.name)}</h3><p>${r.planDate ? `${esc(r.planDate)}${r.planTime ? ` · ${esc(r.planTime)}` : ""} · ${t("saved.people", { count: esc(r.partySize) })}` : `${t("saved.dateUnknown")} · ${t("saved.people", { count: esc(r.partySize) })}`}</p><small>${t("saved.lastCheck", { time: r.lastAnalyzedAt ? formatClientTime(r.lastAnalyzedAt) : t("saved.noRecord") })}</small></div><div class="saved-controls"><select data-plan-status="${esc(r.id)}" aria-label="${t("saved.updateAria", { name: esc(r.name) })}">${PLAN_STATUSES.map((item) => `<option value="${item.value}" ${item.value === r.planStatus ? "selected" : ""}>${localizedPlanStatus(item.value)}</option>`).join("")}</select><button data-open-saved="${esc(r.id)}" aria-label="${t("saved.recheckAria", { name: esc(r.name) })}">${icons.arrow}</button><button class="delete-plan" data-delete-saved="${esc(r.id)}" aria-label="${t("saved.deleteAria", { name: esc(r.name) })}">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>た</span><h3>${t("saved.emptyTitle")}</h3><p>${t("saved.emptyBody")}</p><button class="primary-button" data-action="home">${t("saved.start")} ${icons.arrow}</button></div>`}
+    ${state.saved.length ? `<div class="saved-list">${savedPlans.map((r) => `<article><div class="saved-main"><span class="plan-status status-${esc(r.planStatus)}">${esc(localizedPlanStatus(r.planStatus))}</span>${r.sourceMode === "demo" ? `<span class="example-list-badge">${t("example.badge")}</span>` : ""}<h3>${esc(r.name)}</h3><p>${r.planDate ? `${esc(r.planDate)}${r.planTime ? ` · ${esc(r.planTime)}` : ""} · ${t("saved.people", { count: esc(r.partySize) })}` : `${t("saved.dateUnknown")} · ${t("saved.people", { count: esc(r.partySize) })}`}</p><small>${t("saved.lastCheck", { time: r.lastAnalyzedAt ? formatClientTime(r.lastAnalyzedAt) : t("saved.noRecord") })}</small></div><div class="saved-controls"><select data-plan-status="${esc(r.id)}" aria-label="${t("saved.updateAria", { name: esc(r.name) })}">${PLAN_STATUSES.map((item) => `<option value="${item.value}" ${item.value === r.planStatus ? "selected" : ""}>${localizedPlanStatus(item.value)}</option>`).join("")}</select><button data-open-saved="${esc(r.id)}" aria-label="${t("saved.recheckAria", { name: esc(r.name) })}">${icons.arrow}</button><button class="delete-plan" data-delete-saved="${esc(r.id)}" aria-label="${t("saved.deleteAria", { name: esc(r.name) })}">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>た</span><h3>${t("saved.emptyTitle")}</h3><p>${t("saved.emptyBody")}</p><button class="primary-button" data-action="home">${t("saved.start")} ${icons.arrow}</button></div>`}
   </section>`;
   document.querySelectorAll("[data-open-saved]").forEach((button) => button.addEventListener("click", async () => {
     const item = state.saved.find((saved) => saved.id === button.dataset.openSaved);
     resetAnalysisAttribution();
+    state.analysisInputType = "restaurant_name";
     state.userProvidedReservationLinks = [];
     if (item.requiresRefresh && item.placeId) {
       state.currentClues = item.userClues || { name: item.name };
@@ -1342,7 +1468,9 @@ async function openPendingAnalysis(id) {
   const parsed = pendingAnalysisToTextExtraction(item, state.settings.defaultPartySize);
   if (!parsed) return;
   state.analysisRunId = createAnalysisRunId();
-  state.analysisSourceMode = capabilities.placesSearch ? "live" : "demo";
+  state.analysisSourceMode = "live";
+  state.analysisInputType = "restaurant_name";
+  state.exampleInput = false;
   state.activePendingId = item.id;
   state.userProvidedReservationLinks = [];
   state.textExtraction = parsed;
@@ -1367,6 +1495,7 @@ async function openRecentAnalysis(id) {
   const item = state.recent.find((entry) => entry.id === id);
   if (!item) return;
   resetAnalysisAttribution();
+  state.analysisInputType = item.sourceMode === "demo" ? item.snapshot?.exampleInputType || "example" : "restaurant_name";
   state.userProvidedReservationLinks = [];
   state.currentClues = item.userClues || { name: item.name };
   state.currentPlanIntent = { planDate: item.planDate || "", planTime: item.planTime || "", partySize: item.partySize || null };
@@ -1392,9 +1521,9 @@ function withDefaultPlan(plan = {}) {
 }
 
 function renderPrivacy() {
-  const publicInfo = state.capabilities?.publicInfo || {};
-  const operator = publicInfo.operatorName || "正式公開前に掲載します";
-  const contact = publicInfo.contactEmail || "正式公開前に掲載します";
+  const publicInfo = currentPublicInfo();
+  const operator = publicInfo.operatorName;
+  const contact = publicInfo.contactEmail;
   const local = summarizeLocalData(state.saved, state.recent, state.pending);
   const localized = localizedLegalContent(currentLocale())?.privacy;
   if (localized) {
@@ -1403,7 +1532,7 @@ function renderPrivacy() {
       <button class="back-button" data-action="home">${t("common.backHome")}</button>
       <div class="section-heading"><span class="step-chip">${localized.step}</span><h1>${localized.title}</h1><p>${localized.intro.replace("{date}", TERMS_EFFECTIVE_DATE)}</p></div>
       <div class="privacy-summary">${localized.cards.map((card, index) => `<article><span>${counts[index]}</span><strong>${card[0]}</strong><p>${card[1]}</p></article>`).join("")}</div>
-      <section class="panel privacy-section"><p class="overline">${localizedLegalContent(currentLocale()).terms.operator}</p><h2>${esc(publicInfo.operatorName || "Ren")}</h2><p>${publicInfo.contactEmail ? `<a href="mailto:${esc(publicInfo.contactEmail)}">${esc(publicInfo.contactEmail)}</a>` : "—"}</p></section>
+      <section class="panel privacy-section"><p class="overline">${localizedLegalContent(currentLocale()).terms.operator}</p><h2>${esc(operator)}</h2><p><a href="mailto:${esc(contact)}">${esc(contact)}</a></p></section>
       <section class="panel privacy-section"><h2>${localized.localTitle}</h2><p>${localized.localBody}</p></section>
       <section class="panel privacy-section"><h2>${localized.providersTitle}</h2><p>${localized.providersBody}</p></section>
       <section class="panel privacy-section"><h2>${localized.metricsTitle}</h2><p>${localized.metricsBody}</p></section>
@@ -1416,7 +1545,7 @@ function renderPrivacy() {
     <button class="back-button" data-action="home">← ホームへ</button>
     <div class="section-heading"><span class="step-chip">プライバシーとデータ</span><h1>この端末のデータを管理できます</h1><p>更新日：${esc(TERMS_EFFECTIVE_DATE)} · 招待制テストが扱うデータと、削除できる範囲を説明します。</p></div>
     <div class="privacy-summary"><article><span>${local.savedPlanCount}</span><strong>保存した予定</strong><p>このブラウザだけに保存。</p></article><article><span>${local.pendingAnalysisCount}</span><strong>確認待ちの店舗</strong><p>画像から得た店舗の手掛かりだけを保存。</p></article><article><span>${local.recentAnalysisCount}</span><strong>最近の確認</strong><p>必要最小限の履歴を最大10件保存。</p></article><article><span>0</span><strong>サーバーに保存する画像</strong><p>リクエスト内で処理し、本サービスのディスクには保存しません。</p></article></div>
-    <section class="panel privacy-section"><p class="overline">運営者と連絡先</p><h2>${esc(operator)}</h2><p>${publicInfo.contactEmail ? `<a href="mailto:${esc(contact)}">${esc(contact)}</a>` : esc(contact)}</p></section>
+    <section class="panel privacy-section"><p class="overline">運営者と連絡先</p><h2>${esc(operator)}</h2><p><a href="mailto:${esc(contact)}">${esc(contact)}</a></p></section>
     <section class="panel privacy-section"><p class="overline">この端末に保存</p><h2>行きたいリスト、確認待ち、履歴、設定</h2><ul>${local.fields.map((field) => `<li>${esc(field)}</li>`).join("")}${(local.sessionFields || []).map((field) => `<li>${esc(field)}</li>`).join("")}</ul><p>オフラインでも画面を開けるよう、HTML、フロントエンドモジュール、スタイル、アイコンをブラウザにキャッシュする場合があります。API 応答、店舗結果、外部ページはキャッシュしません。確認待ちリストに元画像、反応数、投稿本文は保存しません。共有されたタイトル・文章・リンクは現在の画面にだけ入力し、アドレス欄からすぐ削除します。「確認をはじめる」を押すまで送信しません。実在店舗の Google Maps 住所・評価・営業時間、ホットペッパーグルメ詳細、入力された予約 URL は長期保存せず、再表示時に Place ID から更新します。</p></section>
     <section class="panel privacy-section"><p class="overline">リクエスト時に外部へ送信</p><h2>画像解析と店舗確認</h2><div class="data-flow-list"><p><strong>Qwen / OpenAI fallback</strong><span>画像を追加した場合だけ受け取ります。本サービスは画像をサーバーファイルへ保存しません。提供会社側の処理とログ期間は各社の規約に従います。</span></p><p><strong>Google Places</strong><span>店舗の検索語と、店舗確認または評価表示時の Place ID を受け取り、候補・住所・電話・評価・営業時間を返します。端末の位置情報は要求しません。</span></p><p><strong>ホットペッパーグルメ</strong><span>確認した店舗の店名・住所・電話を受け取り、店舗ページを照合します。</span></p><p><strong>店舗の公式サイト</strong><span>店舗確認後、検証済み公式サイトの公開 HTML をサーバーが取得し、予約入口、公式 Instagram、明示された予約ルールを探す場合があります。Instagram の投稿本文は自動取得しません。</span></p></div></section>
     <section class="panel privacy-section"><p class="overline">サービス運用記録</p><h2>匿名イベント、回答、技術指標</h2><p>入力の種類、候補確認、評価表示、行動ボタン、保存状況、API の成功状態、店舗確認から結果表示までの時間、token 使用量を記録します。表示した評価点そのものは記録しません。回答を送信した場合は、役立ち度、予約結果、正確性、最大500文字の改善コメントも記録します。画像、元の検索文、具体的な来店日、API Key は記録しません。現在はアカウントがないため、端末データの削除から集計済み運用記録を特定・削除することはできません。</p></section>
@@ -1444,8 +1573,8 @@ function attachPrivacyDeleteHandlers() {
 }
 
 function renderPilot() {
-  const publicInfo = state.capabilities?.publicInfo || {};
-  const contact = publicInfo.contactEmail || "";
+  const publicInfo = currentPublicInfo();
+  const contact = publicInfo.contactEmail;
   const localized = localizedLegalContent(currentLocale())?.pilot;
   if (localized) {
     const subject = encodeURIComponent(currentLocale() === "en" ? "TabiTabi pilot participation" : "申请参加 TabiTabi 测试");
@@ -1517,9 +1646,11 @@ function renderSettings() {
       <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>${t("settings.history")}</strong><small>${t("settings.historyHelp")}</small></span></label>
       <button type="submit" class="primary-button">${t("settings.submit")}</button>
     </form></section>
-    ${providerStopped ? `<aside class="inline-error"><strong>${t("settings.apiStopped")}</strong><span>${esc(providerStopMessage)} ${t("settings.resume", { time: esc(providerStopUntil) })}</span></aside>` : ""}
-    <section class="panel capability-panel"><div class="panel-heading"><div><p class="overline">${t("settings.capabilities")}</p><h2>${t("settings.apiStatus")}</h2></div><button type="button" class="text-button" id="refresh-capabilities">${t("settings.refresh")}</button></div>${capabilitiesUnavailable ? `<aside class="inline-error"><strong>${t("settings.unavailable")}</strong><span>${t("settings.unavailableBody")}</span></aside>` : `<div class="capability-grid">${providers.map((item) => `<article class="${item.ready ? "ready" : "pending"}"><span>${item.ready ? t("settings.ready") : t("settings.notSet")}</span><strong>${esc(item.label)}</strong><p>${esc(item.detail)}</p></article>`).join("")}</div>`}<p class="source-disclaimer">${t("settings.keysHidden")}</p></section>
-    ${renderDailyBudget(budget)}
+    <details class="operations-settings"><summary><span>${t("settings.operationsTitle")}</span><small>${t("settings.operationsBody")}</small></summary><div class="operations-settings-body">
+      ${providerStopped ? `<aside class="inline-error"><strong>${t("settings.apiStopped")}</strong><span>${esc(providerStopMessage)} ${t("settings.resume", { time: esc(providerStopUntil) })}</span></aside>` : ""}
+      <section class="panel capability-panel"><div class="panel-heading"><div><p class="overline">${t("settings.capabilities")}</p><h2>${t("settings.apiStatus")}</h2></div><button type="button" class="text-button" id="refresh-capabilities">${t("settings.refresh")}</button></div>${capabilitiesUnavailable ? `<aside class="inline-error"><strong>${t("settings.unavailable")}</strong><span>${t("settings.unavailableBody")}</span></aside>` : `<div class="capability-grid">${providers.map((item) => `<article class="${item.ready ? "ready" : "pending"}"><span>${item.ready ? t("settings.ready") : t("settings.notSet")}</span><strong>${esc(item.label)}</strong><p>${esc(item.detail)}</p></article>`).join("")}</div>`}<p class="source-disclaimer">${t("settings.keysHidden")}</p></section>
+      ${renderDailyBudget(budget)}
+    </div></details>
   </section>`;
   document.querySelector("#settings-form").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1532,6 +1663,7 @@ function renderSettings() {
     state.settings = normalizeSettings({ ...state.settings, locale: event.currentTarget.value });
     syncSettings();
     render();
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
     showToast(t("settings.localeSaved"));
   });
   document.querySelector("#clear-access-code")?.addEventListener("click", () => {
@@ -1561,7 +1693,7 @@ function renderDailyBudget(budget = {}) {
 }
 
 function renderTerms() {
-  const publicInfo = state.capabilities?.publicInfo || {};
+  const publicInfo = currentPublicInfo();
   const localized = localizedLegalContent(currentLocale())?.terms;
   if (localized) {
     app.innerHTML = `<section class="content-view narrow terms-view">
@@ -1569,7 +1701,7 @@ function renderTerms() {
       <div class="section-heading"><span class="step-chip">${localized.step}</span><h1>${localized.title}</h1><p>${localized.intro.replace("{date}", TERMS_EFFECTIVE_DATE)}</p></div>
       <aside class="terms-highlight"><strong>${localized.highlightTitle}</strong><p>${localized.highlightBody}</p></aside>
       <div class="terms-list">${localized.sections.map((section, index) => `<section class="panel terms-section"><span>${String(index + 1).padStart(2, "0")}</span><div><h3>${section[0]}</h3><p>${section[1]}</p></div></section>`).join("")}</div>
-      <p class="terms-footer-note">${localized.operator}: ${esc(publicInfo.operatorName || "Ren")} · ${localized.contact}: ${publicInfo.contactEmail ? `<a href="mailto:${esc(publicInfo.contactEmail)}">${esc(publicInfo.contactEmail)}</a>` : "—"}</p>
+      <p class="terms-footer-note">${localized.operator}: ${esc(publicInfo.operatorName)} · ${localized.contact}: <a href="mailto:${esc(publicInfo.contactEmail)}">${esc(publicInfo.contactEmail)}</a></p>
       <p class="terms-footer-note">${localized.continue}</p>
     </section>`;
     return;
@@ -1579,7 +1711,7 @@ function renderTerms() {
     <div class="section-heading"><span class="step-chip">利用条件</span><h1>サービスの範囲と責任</h1><p>適用日：${esc(TERMS_EFFECTIVE_DATE)} · 現在の TabiTabi 招待制テストに適用されます。</p></div>
     <aside class="terms-highlight"><strong>最も大切なこと</strong><p>TabiTabi が示すのは次の行動であり、予約の確定ではありません。店舗や予約サービスの最終画面、電話回答、確認メールをご確認ください。</p></aside>
     <div class="terms-list">${TERMS_SECTIONS.map((section, index) => `<section class="panel terms-section"><span>${String(index + 1).padStart(2, "0")}</span><div><h3>${esc(section.title)}</h3>${section.paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join("")}</div></section>`).join("")}</div>
-    <p class="terms-footer-note">運営者：${esc(publicInfo.operatorName || "正式公開前に掲載します")} · お問い合わせ：${publicInfo.contactEmail ? `<a href="mailto:${esc(publicInfo.contactEmail)}">${esc(publicInfo.contactEmail)}</a>` : "正式公開前に掲載します"}</p>
+    <p class="terms-footer-note">運営者：${esc(publicInfo.operatorName)} · お問い合わせ：<a href="mailto:${esc(publicInfo.contactEmail)}">${esc(publicInfo.contactEmail)}</a></p>
     <p class="terms-footer-note">利用を続けることで、上記の範囲をご理解いただいたものとします。データの取り扱いは<a href="/privacy" data-action="privacy">プライバシーとデータ</a>をご覧ください。</p>
   </section>`;
 }
@@ -1607,6 +1739,7 @@ document.querySelector("#language-select")?.addEventListener("change", (event) =
   state.settings = normalizeSettings({ ...state.settings, locale: event.currentTarget.value });
   syncSettings();
   render();
+  requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
   showToast(t("settings.localeSaved"));
 });
 

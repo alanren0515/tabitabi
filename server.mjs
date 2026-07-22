@@ -699,9 +699,9 @@ function contentType(extension) {
 }
 
 function publicOperatorInfo(env = {}) {
-  const operatorName = String(env.PUBLIC_OPERATOR_NAME || "").replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, 120);
-  const candidateEmail = String(env.PUBLIC_CONTACT_EMAIL || "").trim();
-  const contactEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail) ? candidateEmail.slice(0, 254) : "";
+  const operatorName = String(env.PUBLIC_OPERATOR_NAME || "Ren").replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, 120) || "Ren";
+  const candidateEmail = String(env.PUBLIC_CONTACT_EMAIL || "rgq.alan515@gmail.com").trim();
+  const contactEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail) ? candidateEmail.slice(0, 254) : "rgq.alan515@gmail.com";
   return { operatorName, contactEmail };
 }
 

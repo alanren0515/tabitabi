@@ -16,13 +16,14 @@ test("shows fallback configuration in settings without crowding the homepage", (
 
 test("confirms capability state before recording a new analysis mode", () => {
   assert.match(appSource, /const capabilities = await getCapabilities\(\);[^]*capabilities\.capabilitiesUnavailable[^]*postEvent\("input_submitted"/);
-  assert.match(appSource, /state\.analysisSourceMode = state\.exampleInput \? "demo" : capabilities\.placesSearch \? "live" : "demo"/);
-  assert.match(appSource, /if \(result\.mode === "sample"\) state\.analysisSourceMode = "demo"/);
+  assert.match(appSource, /state\.analysisSourceMode = state\.exampleInput \? "demo" : "live"/);
+  assert.match(appSource, /if \(capabilities\.capabilitiesUnavailable \|\| !capabilities\.placesSearch\)[^]*enterSearchRecovery/);
+  assert.match(appSource, /if \(result\.mode === "sample"\)[^]*state\.analysisSourceMode = "demo"/);
 });
 
 test("keeps homepage examples out of live pilot metrics", () => {
   assert.match(appSource, /state\.exampleInput = true/);
-  assert.match(appSource, /addEventListener\("input", \(\) => \{ state\.exampleInput = false; \}\)/);
+  assert.match(appSource, /addEventListener\("input", \(event\) => \{[^]*state\.exampleInput = false/);
 });
 
 test("creates a fresh attributed run for queued restaurants and clears attribution for history refreshes", () => {

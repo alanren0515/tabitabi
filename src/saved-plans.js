@@ -19,6 +19,7 @@ export function createSavedPlan({ restaurant, userClues = {}, userLabel = "", pl
   const live = restaurant.sourceMode === "live";
   return {
     id: restaurant.id,
+    sourceMode: live ? "live" : "demo",
     placeId: restaurant.placeId || null,
     name: live ? userLabel || restaurant.userLabel || restaurant.name || "保存した店舗" : restaurant.name,
     area: live ? "最新情報を再確認してください" : restaurant.area || "",
@@ -52,6 +53,7 @@ export function normalizeSavedPlans(value) {
   if (!Array.isArray(value)) return [];
   return value.filter((item) => item?.id).map((item) => ({
     ...item,
+    sourceMode: item.sourceMode === "live" || (item.requiresRefresh && item.placeId) ? "live" : "demo",
     planDate: cleanDate(item.planDate),
     planTime: cleanTime(item.planTime),
     partySize: clampParty(item.partySize),
