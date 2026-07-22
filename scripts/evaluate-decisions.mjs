@@ -1,12 +1,14 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { evaluateDecisionSafety } from "./decision-eval.mjs";
-import { classifyCandidateFailure, matchesExpected } from "./eval-matching.mjs";
+import { candidateSelectionsForDecision, providerIntervalFromEnv } from "./release-eval-support.mjs";
 
 const baseUrl = process.env.TABITABI_BASE_URL || "http://localhost:4173";
 const pilotHeaders = process.env.PILOT_ACCESS_CODE ? { "X-Pilot-Access": process.env.PILOT_ACCESS_CODE } : {};
 const casesPath = resolve(process.argv[2] || "eval/cases.json");
 const reportPath = resolve(process.env.DECISION_EVAL_OUTPUT || "eval/latest-decision-results.json");
+const candidateReportPath = resolve(process.env.CANDIDATE_EVAL_INPUT || "eval/latest-candidate-results.json");
+const providerIntervalMs = providerIntervalFromEnv(process.env.EVAL_PROVIDER_INTERVAL_MS);
 const allCases = JSON.parse(await readFile(casesPath, "utf8"));
 const requestedIds = new Set(String(process.env.DECISION_EVAL_IDS || "").split(",").map((id) => id.trim()).filter(Boolean));
 const limit = Math.max(0, Number.parseInt(process.env.DECISION_EVAL_LIMIT || "0", 10) || 0);
@@ -29,28 +31,30 @@ if (!/^[a-f0-9]{40}$/.test(String(capabilities.releaseRevision || ""))) {
   await finishBlocked("决策评测要求服务以有效 RELEASE_REVISION 启动，避免把旧结果绑定到当前代码");
 }
 
+let candidateReport;
+try {
+  candidateReport = JSON.parse(await readFile(candidateReportPath, "utf8"));
+} catch (error) {
+  await finishBlocked(`无法读取同版本候选报告：${error.message}`);
+}
+let candidateResults;
+try {
+  candidateResults = candidateSelectionsForDecision({
+    report: candidateReport,
+    releaseRevision: capabilities.releaseRevision,
+    caseIds: cases.map((item) => item.id)
+  });
+} catch (error) {
+  await finishBlocked(error.message);
+}
+
 const results = [];
 for (const testCase of cases) {
   process.stderr.write(`[decision-eval] ${results.length + 1}/${cases.length} ${testCase.id}\n`);
+  if (results.length && providerIntervalMs) await delay(providerIntervalMs);
   try {
-    const searchPayload = await requestJsonWithRateLimit("/api/restaurants/search", {
-      query: testCase.query,
-      clues: testCase.clues
-    });
-    const candidates = Array.isArray(searchPayload.candidates) ? searchPayload.candidates : [];
-    const matchedIndex = candidates.findIndex((candidate) => matchesExpected(candidate, testCase.expected));
-    if (matchedIndex < 0 || matchedIndex >= 3) {
-      results.push({
-        id: testCase.id,
-        passed: false,
-        candidateMatched: false,
-        matchedRank: matchedIndex >= 0 ? matchedIndex + 1 : null,
-        failureReason: matchedIndex >= 0 ? "expected_candidate_outside_top3" : classifyCandidateFailure(candidates, testCase.expected)
-      });
-      continue;
-    }
-
-    const selected = candidates[matchedIndex];
+    const candidateResult = candidateResults.get(testCase.id);
+    const selected = { placeId: candidateResult.matchedPlaceId };
     const detailsPayload = await requestJsonWithRateLimit("/api/restaurants/details", {
       placeId: selected.placeId,
       clues: testCase.clues,
@@ -66,7 +70,7 @@ for (const testCase of cases) {
       id: testCase.id,
       passed: placeIdMatches && safety.passed,
       candidateMatched: true,
-      matchedRank: matchedIndex + 1,
+      matchedRank: candidateResult.matchedRank,
       selectedPlaceId: selected.placeId,
       detailsPlaceId: restaurant.placeId || null,
       restaurantName: restaurant.name || selected.name || null,
@@ -134,4 +138,8 @@ async function finishBlocked(blockedReason) {
   console.log(JSON.stringify(report, null, 2));
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   process.exit(2);
+}
+
+function delay(milliseconds) {
+  return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 }

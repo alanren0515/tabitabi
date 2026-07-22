@@ -1,10 +1,13 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { classifyCandidateFailure, matchesExpected } from "./eval-matching.mjs";
+import { providerIntervalFromEnv } from "./release-eval-support.mjs";
 
 const baseUrl = process.env.TABITABI_BASE_URL || "http://localhost:4173";
 const pilotHeaders = process.env.PILOT_ACCESS_CODE ? { "X-Pilot-Access": process.env.PILOT_ACCESS_CODE } : {};
 const casesPath = resolve(process.argv[2] || "eval/cases.json");
+const reportPath = resolve(process.env.CANDIDATE_EVAL_OUTPUT || "eval/latest-candidate-results.json");
+const providerIntervalMs = providerIntervalFromEnv(process.env.EVAL_PROVIDER_INTERVAL_MS);
 const cases = JSON.parse(await readFile(casesPath, "utf8"));
 
 let capabilities;
@@ -35,6 +38,8 @@ if (!/^[a-f0-9]{40}$/.test(String(capabilities.releaseRevision || ""))) {
 
 const results = [];
 for (const testCase of cases) {
+  process.stderr.write(`[candidate-eval] ${results.length + 1}/${cases.length} ${testCase.id}\n`);
+  if (results.length && providerIntervalMs) await delay(providerIntervalMs);
   try {
     const requestSearch = () => fetch(`${baseUrl}/api/restaurants/search`, {
       method: "POST",
@@ -57,6 +62,7 @@ for (const testCase of cases) {
       passed: matchedIndex >= 0 && matchedIndex < 3,
       top1: matchedIndex === 0,
       matchedRank: matchedIndex >= 0 ? matchedIndex + 1 : null,
+      matchedPlaceId: matchedIndex >= 0 ? candidates[matchedIndex]?.placeId || null : null,
       candidateCount: candidates.length,
       verificationStatus: testCase.verificationStatus,
       failureReason: matchedIndex >= 0 ? null : classifyCandidateFailure(candidates, testCase.expected)
@@ -84,6 +90,10 @@ summary.accuracyGatePassed = summary.top3Recall >= 0.9;
 summary.gatePassed = summary.coverageGatePassed && summary.accuracyGatePassed && !results.some((result) => result.error);
 
 console.log(JSON.stringify(summary, null, 2));
-await writeFile(resolve("eval/latest-candidate-results.json"), `${JSON.stringify({ generatedAt: new Date().toISOString(), releaseRevision: capabilities.releaseRevision, ...summary }, null, 2)}\n`, "utf8");
+await writeFile(reportPath, `${JSON.stringify({ generatedAt: new Date().toISOString(), releaseRevision: capabilities.releaseRevision, ...summary }, null, 2)}\n`, "utf8");
 if (results.some((result) => result.error)) process.exitCode = 2;
 else if (!summary.gatePassed) process.exitCode = 1;
+
+function delay(milliseconds) {
+  return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
+}

@@ -8,6 +8,7 @@
 
 - 冻结一个干净的 40 位 Git revision，并将 `RELEASE_REVISION` 写入镜像。
 - 运行当前 revision 的完整测试、35 个候选评测和35个决策评测。
+- 正式评测默认将付费数据源调用间隔设为16秒，以服从生产熔断器的5分钟窗口。候选报告保存允许长期保留的 Google Place ID；同一 revision 的决策评测复用这些 ID，只请求详情，不重复执行文本搜索。不要为正式发布证据调低 `EVAL_PROVIDER_INTERVAL_MS`。
 - 部署到现有 `tabitabi-jp` 单 Machine，不创建第二台 Machine 或第二个 Volume。
 - 在该镜像上完成至少20次真实 live 输入和10条有效反馈；满足完成率、行动率和有帮助比例门槛。
 - 生成 `latest-formal.json`，且 `release:formal-gate` 全部通过。
