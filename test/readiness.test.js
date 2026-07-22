@@ -20,7 +20,7 @@ test("requires live vision and Places but keeps fallback and enrichment optional
     env: { NODE_ENV: "production", GOOGLE_MAPS_API_KEY: "configured" }
   });
   assert.equal(production.ready, false);
-  assert.deepEqual(production.missing, ["pilot_access", "operator_name", "contact_email"]);
+  assert.deepEqual(production.missing, ["release_access", "operator_name", "contact_email"]);
 
   const weakAccess = serviceReadiness({ visionCapabilities: { visionExtraction: true }, env: { NODE_ENV: "production", GOOGLE_MAPS_API_KEY: "configured", PILOT_ACCESS_CODE: "short", PUBLIC_OPERATOR_NAME: "TabiTabi", PUBLIC_CONTACT_EMAIL: "support@example.com" } });
   assert.deepEqual(weakAccess.missing, ["pilot_access"]);
@@ -30,6 +30,12 @@ test("requires live vision and Places but keeps fallback and enrichment optional
     env: { NODE_ENV: "production", GOOGLE_MAPS_API_KEY: "configured", PILOT_ACCESS_CODE: "a-strong-random-access-code", PUBLIC_OPERATOR_NAME: "TabiTabi", PUBLIC_CONTACT_EMAIL: "support@example.com" }
   });
   assert.equal(productionReady.ready, true);
+
+  const publicReady = serviceReadiness({
+    visionCapabilities: { visionExtraction: true },
+    env: { NODE_ENV: "production", PUBLIC_RELEASE_MODE: "true", GOOGLE_MAPS_API_KEY: "configured", PUBLIC_OPERATOR_NAME: "TabiTabi", PUBLIC_CONTACT_EMAIL: "support@example.com" }
+  });
+  assert.equal(publicReady.ready, true);
 
   const unwritable = serviceReadiness({ visionCapabilities: { visionExtraction: true }, env: { GOOGLE_MAPS_API_KEY: "configured" }, dataStoreWritable: false });
   assert.deepEqual(unwritable.missing, ["data_store_writable"]);

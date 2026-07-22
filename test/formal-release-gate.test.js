@@ -17,7 +17,7 @@ const valid = {
   pilotEvidence: { schemaVersion: 2, source: "fly-volume", app: "tabitabi-jp", volume: "tabitabi_data", generatedAt, auditRevision: revision, releaseRevision: revision, imageRef: `registry.fly.io/tabitabi-jp:${imageTag}`, repositoryClean: true, gatePassed: true, gates: { inputSample: true, feedbackSample: true, analysisCompletion: true, actionRate: true, helpfulRate: true }, blockedBy: [], metrics: pilotMetrics },
   preflightEvidence: { generatedAt, revision, repositoryClean: true, passed: true, checks: Object.fromEntries(["qwenKey", "qwenEndpoint", "qwenModel", "googlePlacesKey", "pilotAccessCode", "operatorName", "contactEmail", "emergencyStopReady", "providerBudgetCaps", "flyTokyo", "flyIdleLifecycle", "flyHttpsAndHealth", "flyMachineShape", "flyPersistentData", "flySnapshots", "pinnedContainerBase", "releaseEvidence"].map((key) => [key, true])) },
   flyEvidence: { generatedAt, revision, repositoryClean: true, app: "tabitabi-jp", passed: true, checks: Object.fromEntries(["exactlyOneMachine", "machineStarted", "machineTokyo", "machineShape", "machineIdleLifecycle", "exactlyOneVolume", "volumeCreated", "volumeTokyo", "volumeName", "volumeSize", "volumeEncrypted", "volumeSnapshots", "volumeAttached", "volumeMounted", "healthChecksPresent", "healthChecksForMachine", "healthChecksPassing", "requiredSecretsDeployed"].map((key) => [key, true])), deployment: { releaseCreatedAt: "2026-07-18T10:00:00.000Z", imageDigest, imageTag } },
-  smokeEvidence: { generatedAt, revision, releaseRevision: revision, repositoryClean: true, baseUrl: "https://tabitabi-jp.fly.dev", passed: true, live: false, checks: { health: true, readiness: true, capabilities: true, pilot: true, pilotContent: true, privacy: true, terms: true } }
+  smokeEvidence: { generatedAt, revision, releaseRevision: revision, repositoryClean: true, baseUrl: "https://tabitabi-jp.fly.dev", passed: true, live: false, releaseMode: "pilot", checks: { health: true, readiness: true, capabilities: true, pilot: true, pilotContent: true, privacy: true, terms: true } }
 };
 
 test("passes only when technical, pilot, deployment, Fly, and provider-free evidence all pass", () => {
@@ -29,6 +29,7 @@ test("passes only when technical, pilot, deployment, Fly, and provider-free evid
 test("rejects stale, wrong-app, or live provider smoke evidence", () => {
   assert.equal(evaluateFormalReleaseGate({ ...valid, flyEvidence: { ...valid.flyEvidence, app: "other" } }).gates.flyRemoteState, false);
   assert.equal(evaluateFormalReleaseGate({ ...valid, smokeEvidence: { ...valid.smokeEvidence, live: true } }).gates.providerFreeSmoke, false);
+  assert.equal(evaluateFormalReleaseGate({ ...valid, smokeEvidence: { ...valid.smokeEvidence, releaseMode: "public" } }).gates.providerFreeSmoke, false);
   const stale = { ...valid.preflightEvidence, generatedAt: "2026-07-16T00:00:00.000Z" };
   assert.equal(evaluateFormalReleaseGate({ ...valid, preflightEvidence: stale }).gates.deploymentPreflight, false);
 });

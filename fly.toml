@@ -10,6 +10,7 @@ primary_region = "nrt"
   TRUST_PROXY = "true"
   NODE_ENV = "production"
   PAID_API_EMERGENCY_STOP = "false"
+  PUBLIC_RELEASE_MODE = "false"
 
 [mounts]
   source = "tabitabi_data"

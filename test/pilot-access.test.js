@@ -7,6 +7,18 @@ test("leaves all requests unchanged when no pilot access code is configured", ()
   assert.equal(pilotAccessAuthorized({ headers: {} }, {}), true);
 });
 
+test("fails closed in production without an explicit pilot or public mode", () => {
+  assert.equal(pilotAccessRequired({ NODE_ENV: "production" }), false);
+  assert.equal(pilotAccessAuthorized({ headers: {} }, { NODE_ENV: "production" }), false);
+  assert.equal(pilotAccessAuthorized({ headers: {} }, { NODE_ENV: "production", PUBLIC_RELEASE_MODE: "true" }), true);
+});
+
+test("explicit public mode takes precedence over a staged pilot secret", () => {
+  const env = { NODE_ENV: "production", PUBLIC_RELEASE_MODE: "true", PILOT_ACCESS_CODE: "closed-pilot-2026" };
+  assert.equal(pilotAccessRequired(env), false);
+  assert.equal(pilotAccessAuthorized({ headers: {} }, env), true);
+});
+
 test("protects only the expensive pilot APIs", () => {
   for (const path of ["/api/extract-screenshot", "/api/extract-webpage", "/api/events", "/api/restaurants/search", "/api/restaurants/details"]) {
     assert.equal(protectedPilotApiPath("POST", path), true);

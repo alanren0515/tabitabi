@@ -59,6 +59,70 @@ const CONTENT = {
   }
 };
 
-export function localizedLegalContent(locale) {
-  return CONTENT[locale] || null;
+const PUBLIC_CONTENT = {
+  en: {
+    terms: {
+      intro: "Effective {date} · Applies to the publicly available TabiTabi service.",
+      sections: [
+        ["Service scope", "TabiTabi organizes screenshots and text you submit and summarizes public restaurant information. It is not a restaurant, travel agency, or booking agent, and using it alone never creates a reservation."],
+        ["Booking and final verification", "Opening a booking page, calling, or saving a plan does not confirm a reservation. Before submitting, verify the restaurant, branch, address, date, time, party size, price, fees, cancellation terms, allergies, dietary needs, and accessibility requirements with the restaurant or booking service."],
+        ["External services and charges", "Google Maps, Hot Pepper Gourmet, Tabelog, TableCheck, Gurunavi, and other external services operate under their own terms and privacy policies. Cover charges, service fees, prepayment, or cancellation fees may apply."],
+        ["Your submissions", "Submit only content you are entitled to use. Do not upload private messages, confidential material, personal data about others, or content that infringes rights. You retain rights in your content and grant TabiTabi only the limited permission needed to process it for the requested check."],
+        ["Prohibited conduct", "Do not harass restaurants, automate excessive requests, bypass access or provider restrictions, probe security, disrupt the service, impersonate others, or use the service unlawfully."],
+        ["Changes and suspension", "We may change, restrict, or suspend features to protect users, providers, budgets, or service integrity. Important changes will be reflected on this page with an updated effective date."],
+        ["Availability and liability", "We take reasonable care but do not guarantee uninterrupted access or that every external fact is complete or current. To the extent permitted by law, TabiTabi is not responsible for losses caused by decisions made without completing the final checks described above."],
+        ["Governing law and contact", "Japanese law governs these terms. Please contact the operator first about questions or disputes. Mandatory consumer protections and the jurisdiction required by applicable law remain unaffected."]
+      ]
+    },
+    privacy: {
+      intro: "Updated {date} · This notice explains how the public TabiTabi service handles information and how to contact us about it.",
+      providersBody: "When you add an image, it is sent through TabiTabi to Alibaba Cloud Model Studio/Qwen in the Singapore international region; OpenAI may receive it only as a configured fallback. Google Places receives restaurant search terms and Place IDs. Recruit/Hot Pepper receives a confirmed name, address, or phone for matching. Fly.io hosts the service in Tokyo. After confirmation, the server may read bounded public HTML from a verified official restaurant site. Each provider processes data under its own terms and safeguards.",
+      metricsBody: "We record privacy-limited events such as input type, candidate confirmation, action clicks, success state, latency, token usage, and feedback you choose to submit. We do not store source images on TabiTabi's server disk, and do not log the original search text, exact visit date, or API keys. Operational logs are normally retained for up to 30 days and are also capped by file size and record count.",
+      rightsTitle: "Requests, questions, and complaints", rightsBody: "Contact the operator by email to ask about access, correction, deletion, suspension of use, or other handling of personal information. We may need enough information to verify the request and locate relevant records. Because there is no account and operational events are deliberately de-identified, some records cannot be linked back to a particular person.",
+      retentionTitle: "Retention and overseas processing", retentionBody: "Local plans and settings remain in your browser until you delete them. TabiTabi operational logs are normally retained for up to 30 days. Image analysis may involve processing in Singapore and, only if fallback is enabled and used, by OpenAI. Provider-side retention and international transfer safeguards follow each provider's applicable terms and settings. Do not put personal information in optional feedback unless it is necessary."
+    },
+    pilot: {
+      step: "Public beta", title: "Turn an SNS find into a usable next step.", intro: "TabiTabi is available as a public beta for people who discover restaurants on Instagram, TikTok, and other SNS.",
+      joinTitle: "Try TabiTabi now", joinBody: "No invitation code is required. Start with a restaurant name, link, or public SNS screenshot, and verify every booking on the final restaurant or booking-service screen.", email: "Contact the operator", haveCode: "Start checking a restaurant"
+    }
+  },
+  "zh-CN": {
+    terms: {
+      intro: "生效日期：{date} · 适用于公开提供的 TabiTabi 服务。",
+      sections: [
+        ["服务范围", "TabiTabi 会整理你提交的截图和文字，并汇总公开餐厅信息。TabiTabi 不是餐厅、旅行社或代订平台，仅使用本服务不会形成预约。"],
+        ["预约与最终核对", "打开预约页、拨打电话或保存计划都不代表预约成功。提交前请向餐厅或预约平台核对餐厅、分店、地址、日期、时间、人数、价格、手续费、取消条件、过敏、饮食限制和无障碍需求。"],
+        ["外部服务与费用", "Google Maps、Hot Pepper、食べログ、TableCheck、ぐるなび等外部服务适用各自的条款和隐私政策，可能产生座位费、系统费、预付款或取消费。"],
+        ["你提交的内容", "请只提交你有权使用的内容。请勿上传私信、机密信息、他人的个人信息或侵权内容。内容权利仍归你所有；你仅授予 TabiTabi 为完成本次查询所必需的有限处理权限。"],
+        ["禁止行为", "请勿骚扰餐厅、大量自动访问、绕过访问或供应商限制、探测安全漏洞、干扰服务、冒充他人或从事违法活动。"],
+        ["变更与暂停", "为保护用户、供应商、预算或服务安全，我们可能变更、限制或暂停功能。重要变更会在本页更新生效日期。"],
+        ["可用性与责任", "我们会采取合理措施，但不保证服务不中断，也不保证所有外部信息始终完整或最新。在法律允许的范围内，因未完成上述最终核对而作出的决定所产生的损失，不由 TabiTabi 承担。"],
+        ["适用法律与联系", "本条款适用日本法律。如有问题或争议，请先联系运营者；适用法律规定的消费者保护和管辖规则不受影响。"]
+      ]
+    },
+    privacy: {
+      intro: "更新日期：{date} · 本页说明公开版 TabiTabi 如何处理信息，以及如何联系我们。",
+      providersBody: "添加图片时，图片会经由 TabiTabi 发送到阿里云 Model Studio/Qwen 的新加坡国际区域；只有在已配置且需要兜底时才可能发送给 OpenAI。Google Places 会收到餐厅搜索词和 Place ID；Recruit/Hot Pepper 会收到已确认的店名、地址或电话用于匹配；Fly.io 在东京托管本服务。确认餐厅后，服务器还可能读取经过限制的餐厅官方公开网页。各供应商依据其条款和安全措施处理数据。",
+      metricsBody: "我们记录经过隐私限制的事件，例如输入类型、候选确认、行动点击、成功状态、耗时、token 用量，以及你主动提交的反馈。TabiTabi 不把原始图片保存到服务器磁盘，也不记录原始搜索文字、具体到店日期或 API Key。运行日志通常最多保留30天，同时受文件大小和记录数量上限约束。",
+      rightsTitle: "查询、更正、删除与投诉", rightsBody: "你可以通过邮件联系运营者，提出查询、更正、删除、停止使用或其他个人信息处理请求。我们可能需要足够的信息确认请求人并定位相关记录。由于当前没有账号，且运行事件经过刻意去标识化，部分记录无法关联到某位用户。",
+      retentionTitle: "保留期限与境外处理", retentionBody: "本机计划和设置会保留在浏览器中，直到你主动删除。TabiTabi 运行日志通常最多保留30天。图片识别可能在新加坡处理；仅在启用且触发兜底时，OpenAI 也可能处理图片。供应商侧的保留期限和跨境保护措施适用其各自条款与设置。除非确有必要，请勿在可选反馈中填写个人信息。"
+    },
+    pilot: {
+      step: "公开测试版", title: "把 SNS 里发现的店，变成可以行动的信息。", intro: "TabiTabi 公开测试版面向会从 Instagram、TikTok 等 SNS 发现餐厅的用户开放。",
+      joinTitle: "现在开始使用", joinBody: "无需邀请码。输入餐厅名称、链接或公开 SNS 截图，并在餐厅或预约平台最终页面自行确认预约是否成立。", email: "联系运营者", haveCode: "开始确认餐厅"
+    }
+  }
+};
+
+export function localizedLegalContent(locale, { publicRelease = false } = {}) {
+  const base = CONTENT[locale];
+  if (!base) return null;
+  if (!publicRelease) return base;
+  const overrides = PUBLIC_CONTENT[locale];
+  return {
+    ...base,
+    terms: { ...base.terms, ...overrides.terms },
+    privacy: { ...base.privacy, ...overrides.privacy },
+    pilot: { ...base.pilot, ...overrides.pilot }
+  };
 }

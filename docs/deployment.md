@@ -41,6 +41,7 @@ The formal gate trusts the local release operator, the local Git checkout, and t
 - `QWEN_VISION_MODEL=qwen3.6-flash`
 - `GOOGLE_MAPS_API_KEY`
 - `PILOT_ACCESS_CODE`
+- `PUBLIC_RELEASE_MODE=false` for the closed pilot. Set `true` only after the public-release prerequisites in [`formal-public-release-checklist.md`](formal-public-release-checklist.md) are complete.
 - `PUBLIC_OPERATOR_NAME`
 - `PUBLIC_CONTACT_EMAIL`
 - `PORT` when assigned by the host
@@ -50,6 +51,8 @@ Optional:
 - `OPENAI_API_KEY` for the quality fallback
 - `HOTPEPPER_API_KEY` for listing enrichment
 - `TRUST_PROXY=true` only when the service is behind a trusted reverse proxy that overwrites `X-Forwarded-For`
+
+Production is fail-closed: if neither a sufficiently strong `PILOT_ACCESS_CODE` nor explicit `PUBLIC_RELEASE_MODE=true` is present, `/readyz` fails and protected APIs reject requests. Local development may omit both. Public mode must not be enabled merely to repair a missing pilot secret.
 
 `PAID_API_EMERGENCY_STOP=false` is committed in `fly.toml`. During an incident, set it as a Fly secret to `true`; the secret overrides the non-secret default and restarts the Machine into fail-closed mode.
 

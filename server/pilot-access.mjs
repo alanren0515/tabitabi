@@ -1,7 +1,8 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { publicReleaseMode, releaseAccessMode } from "./release-mode.mjs";
 
 export function pilotAccessRequired(env = process.env) {
-  return Boolean(String(env.PILOT_ACCESS_CODE || ""));
+  return !publicReleaseMode(env) && Boolean(String(env.PILOT_ACCESS_CODE || ""));
 }
 
 export function pilotAccessCodeStrong(env = process.env) {
@@ -17,8 +18,10 @@ export function protectedPilotApiPath(method, pathname) {
 }
 
 export function pilotAccessAuthorized(request, env = process.env) {
+  const mode = releaseAccessMode(env);
+  if (mode === "public" || mode === "local") return true;
+  if (mode === "misconfigured") return false;
   const expected = String(env.PILOT_ACCESS_CODE || "");
-  if (!expected) return true;
   const supplied = String(request?.headers?.["x-pilot-access"] || "");
   return timingSafeEqual(digest(expected), digest(supplied));
 }

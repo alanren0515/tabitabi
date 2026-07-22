@@ -3,7 +3,7 @@ import { buildRestaurantQuery, extractionReviewState, formatBudget, isKnownSampl
 import { createSavedPlan, normalizeSavedPlans, PLAN_STATUSES, sortSavedPlansByUrgency, updateSavedPlan } from "./saved-plans.js";
 import { deleteLocalData, LOCAL_STORAGE_KEY, summarizeLocalData, VISIT_STORAGE_KEY } from "./privacy-data.js";
 import { candidateDecision, candidateDecisionCopy, rejectCandidate, restoreCandidates, visibleCandidates } from "./candidate-selection.js";
-import { TERMS_EFFECTIVE_DATE, TERMS_SECTIONS } from "./terms-data.js";
+import { PUBLIC_TERMS_SECTIONS, TERMS_EFFECTIVE_DATE, TERMS_SECTIONS } from "./terms-data.js";
 import { addRecentAnalysis, createRecentAnalysis, normalizeRecentAnalyses, RECENT_STORAGE_KEY } from "./recent-analyses.js";
 import { buildSharePayload } from "./share-result.js";
 import { DEFAULT_SETTINGS, loadSettingsFromStorage, normalizeSettings, persistentSettings, pilotAccessHeaders, pilotAccessLocked, pilotAccessRejected, savePilotAccessForSession, settingsFromForm, settingsWithoutPilotAccess, SETTINGS_STORAGE_KEY } from "./settings.js";
@@ -124,6 +124,14 @@ function currentPublicInfo() {
   };
 }
 
+function isPublicRelease() {
+  return state.capabilities?.publicReleaseMode === true;
+}
+
+function currentLegalContent() {
+  return localizedLegalContent(currentLocale(), { publicRelease: isPublicRelease() });
+}
+
 function resultInputSourceLabel(restaurant = state.restaurant) {
   if (isExampleRestaurant(restaurant)) return t("result.inputSourceExample");
   return t({
@@ -165,7 +173,7 @@ function syncShellLanguage() {
   if (footer) {
     footer.children[1]?.replaceChildren(t("shell.promise"));
     const labels = {
-      queue: t("shell.queue"), settings: t("shell.settings"), pilot: t("shell.pilot"),
+      queue: t("shell.queue"), settings: t("shell.settings"), pilot: isPublicRelease() ? ({ ja: "公開ベータについて", en: "About this beta", "zh-CN": "关于公开测试" }[locale] || t("shell.pilot")) : t("shell.pilot"),
       privacy: t("shell.privacy"), terms: t("shell.terms")
     };
     for (const [action, label] of Object.entries(labels)) {
@@ -231,11 +239,14 @@ function render() {
   syncRecent();
   syncSettings();
   syncPending();
-  document.title = state.view === "pilot" ? t("meta.pilotTitle") : state.view === "privacy" ? t("meta.privacyTitle") : state.view === "terms" ? t("meta.termsTitle") : t("meta.title");
+  document.title = state.view === "pilot" ? (isPublicRelease() ? ({ ja: "公開ベータについて | TabiTabi", en: "About the public beta | TabiTabi", "zh-CN": "关于公开测试 | TabiTabi" }[currentLocale()] || t("meta.pilotTitle")) : t("meta.pilotTitle")) : state.view === "privacy" ? t("meta.privacyTitle") : state.view === "terms" ? t("meta.termsTitle") : t("meta.title");
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
   if (viewChanged || localeChanged) {
-    routeStatus.textContent = t("route.opened", { label: VIEW_LABEL_KEYS[state.view] ? t(VIEW_LABEL_KEYS[state.view]) : t("route.new") });
+    const viewLabel = state.view === "pilot" && isPublicRelease()
+      ? ({ ja: "公開ベータについて", en: "About the public beta", "zh-CN": "关于公开测试" }[currentLocale()] || t("route.pilot"))
+      : VIEW_LABEL_KEYS[state.view] ? t(VIEW_LABEL_KEYS[state.view]) : t("route.new");
+    routeStatus.textContent = t("route.opened", { label: viewLabel });
     if (viewChanged && lastRenderedView) requestAnimationFrame(() => app.focus({ preventScroll: true }));
     lastRenderedView = state.view;
     lastRenderedLocale = currentLocale();
@@ -1525,17 +1536,19 @@ function renderPrivacy() {
   const operator = publicInfo.operatorName;
   const contact = publicInfo.contactEmail;
   const local = summarizeLocalData(state.saved, state.recent, state.pending);
-  const localized = localizedLegalContent(currentLocale())?.privacy;
+  const localized = currentLegalContent()?.privacy;
   if (localized) {
     const counts = [local.savedPlanCount, local.pendingAnalysisCount, local.recentAnalysisCount, 0];
     app.innerHTML = `<section class="content-view narrow privacy-view">
       <button class="back-button" data-action="home">${t("common.backHome")}</button>
       <div class="section-heading"><span class="step-chip">${localized.step}</span><h1>${localized.title}</h1><p>${localized.intro.replace("{date}", TERMS_EFFECTIVE_DATE)}</p></div>
       <div class="privacy-summary">${localized.cards.map((card, index) => `<article><span>${counts[index]}</span><strong>${card[0]}</strong><p>${card[1]}</p></article>`).join("")}</div>
-      <section class="panel privacy-section"><p class="overline">${localizedLegalContent(currentLocale()).terms.operator}</p><h2>${esc(operator)}</h2><p><a href="mailto:${esc(contact)}">${esc(contact)}</a></p></section>
+      <section class="panel privacy-section"><p class="overline">${currentLegalContent().terms.operator}</p><h2>${esc(operator)}</h2><p><a href="mailto:${esc(contact)}">${esc(contact)}</a></p></section>
       <section class="panel privacy-section"><h2>${localized.localTitle}</h2><p>${localized.localBody}</p></section>
       <section class="panel privacy-section"><h2>${localized.providersTitle}</h2><p>${localized.providersBody}</p></section>
       <section class="panel privacy-section"><h2>${localized.metricsTitle}</h2><p>${localized.metricsBody}</p></section>
+      ${localized.retentionTitle ? `<section class="panel privacy-section"><h2>${localized.retentionTitle}</h2><p>${localized.retentionBody}</p></section>` : ""}
+      ${localized.rightsTitle ? `<section class="panel privacy-section"><h2>${localized.rightsTitle}</h2><p>${localized.rightsBody}</p><p><a href="mailto:${esc(contact)}">${esc(contact)}</a></p></section>` : ""}
       <section class="danger-zone"><div><h2>${localized.deleteTitle}</h2><p>${localized.deleteBody}</p></div>${state.deleteConfirmOpen ? `<div class="delete-confirm"><strong>${localized.confirm}</strong><button id="cancel-delete">${localized.cancel}</button><button id="confirm-delete">${localized.deleteAll}</button></div>` : `<button id="start-delete" class="danger-button">${localized.deleteButton}</button>`}</section>
     </section>`;
     attachPrivacyDeleteHandlers();
@@ -1543,12 +1556,13 @@ function renderPrivacy() {
   }
   app.innerHTML = `<section class="content-view narrow privacy-view">
     <button class="back-button" data-action="home">← ホームへ</button>
-    <div class="section-heading"><span class="step-chip">プライバシーとデータ</span><h1>この端末のデータを管理できます</h1><p>更新日：${esc(TERMS_EFFECTIVE_DATE)} · 招待制テストが扱うデータと、削除できる範囲を説明します。</p></div>
+    <div class="section-heading"><span class="step-chip">プライバシーとデータ</span><h1>この端末のデータを管理できます</h1><p>更新日：${esc(TERMS_EFFECTIVE_DATE)} · ${isPublicRelease() ? "公開版 TabiTabi が扱う情報と、お問い合わせ方法を説明します。" : "招待制テストが扱うデータと、削除できる範囲を説明します。"}</p></div>
     <div class="privacy-summary"><article><span>${local.savedPlanCount}</span><strong>保存した予定</strong><p>このブラウザだけに保存。</p></article><article><span>${local.pendingAnalysisCount}</span><strong>確認待ちの店舗</strong><p>画像から得た店舗の手掛かりだけを保存。</p></article><article><span>${local.recentAnalysisCount}</span><strong>最近の確認</strong><p>必要最小限の履歴を最大10件保存。</p></article><article><span>0</span><strong>サーバーに保存する画像</strong><p>リクエスト内で処理し、本サービスのディスクには保存しません。</p></article></div>
     <section class="panel privacy-section"><p class="overline">運営者と連絡先</p><h2>${esc(operator)}</h2><p><a href="mailto:${esc(contact)}">${esc(contact)}</a></p></section>
-    <section class="panel privacy-section"><p class="overline">この端末に保存</p><h2>行きたいリスト、確認待ち、履歴、設定</h2><ul>${local.fields.map((field) => `<li>${esc(field)}</li>`).join("")}${(local.sessionFields || []).map((field) => `<li>${esc(field)}</li>`).join("")}</ul><p>オフラインでも画面を開けるよう、HTML、フロントエンドモジュール、スタイル、アイコンをブラウザにキャッシュする場合があります。API 応答、店舗結果、外部ページはキャッシュしません。確認待ちリストに元画像、反応数、投稿本文は保存しません。共有されたタイトル・文章・リンクは現在の画面にだけ入力し、アドレス欄からすぐ削除します。「確認をはじめる」を押すまで送信しません。実在店舗の Google Maps 住所・評価・営業時間、ホットペッパーグルメ詳細、入力された予約 URL は長期保存せず、再表示時に Place ID から更新します。</p></section>
+    <section class="panel privacy-section"><p class="overline">この端末に保存</p><h2>行きたいリスト、確認待ち、履歴、設定</h2><ul>${local.fields.map((field) => `<li>${esc(field)}</li>`).join("")}${(isPublicRelease() ? [] : (local.sessionFields || [])).map((field) => `<li>${esc(field)}</li>`).join("")}</ul><p>オフラインでも画面を開けるよう、HTML、フロントエンドモジュール、スタイル、アイコンをブラウザにキャッシュする場合があります。API 応答、店舗結果、外部ページはキャッシュしません。確認待ちリストに元画像、反応数、投稿本文は保存しません。共有されたタイトル・文章・リンクは現在の画面にだけ入力し、アドレス欄からすぐ削除します。「確認をはじめる」を押すまで送信しません。実在店舗の Google Maps 住所・評価・営業時間、ホットペッパーグルメ詳細、入力された予約 URL は長期保存せず、再表示時に Place ID から更新します。</p></section>
     <section class="panel privacy-section"><p class="overline">リクエスト時に外部へ送信</p><h2>画像解析と店舗確認</h2><div class="data-flow-list"><p><strong>Qwen / OpenAI fallback</strong><span>画像を追加した場合だけ受け取ります。本サービスは画像をサーバーファイルへ保存しません。提供会社側の処理とログ期間は各社の規約に従います。</span></p><p><strong>Google Places</strong><span>店舗の検索語と、店舗確認または評価表示時の Place ID を受け取り、候補・住所・電話・評価・営業時間を返します。端末の位置情報は要求しません。</span></p><p><strong>ホットペッパーグルメ</strong><span>確認した店舗の店名・住所・電話を受け取り、店舗ページを照合します。</span></p><p><strong>店舗の公式サイト</strong><span>店舗確認後、検証済み公式サイトの公開 HTML をサーバーが取得し、予約入口、公式 Instagram、明示された予約ルールを探す場合があります。Instagram の投稿本文は自動取得しません。</span></p></div></section>
-    <section class="panel privacy-section"><p class="overline">サービス運用記録</p><h2>匿名イベント、回答、技術指標</h2><p>入力の種類、候補確認、評価表示、行動ボタン、保存状況、API の成功状態、店舗確認から結果表示までの時間、token 使用量を記録します。表示した評価点そのものは記録しません。回答を送信した場合は、役立ち度、予約結果、正確性、最大500文字の改善コメントも記録します。画像、元の検索文、具体的な来店日、API Key は記録しません。現在はアカウントがないため、端末データの削除から集計済み運用記録を特定・削除することはできません。</p></section>
+    <section class="panel privacy-section"><p class="overline">サービス運用記録</p><h2>匿名イベント、回答、技術指標</h2><p>入力の種類、候補確認、評価表示、行動ボタン、保存状況、API の成功状態、店舗確認から結果表示までの時間、token 使用量を記録します。表示した評価点そのものは記録しません。回答を送信した場合は、役立ち度、予約結果、正確性、最大500文字の改善コメントも記録します。画像、元の検索文、具体的な来店日、API Key は記録しません。運用ログは通常30日以内で削除し、件数とファイルサイズにも上限を設けます。現在はアカウントがないため、端末データの削除から集計済み運用記録を特定・削除することはできません。</p></section>
+    ${isPublicRelease() ? `<section class="panel privacy-section"><p class="overline">保管期間と国外処理</p><h2>必要な期間と範囲に限定</h2><p>端末の予定と設定は削除するまでブラウザに残ります。画像解析は Alibaba Cloud Model Studio / Qwen のシンガポール国際リージョンで処理され、設定済みの予備モデルが必要な場合に限り OpenAI が処理することがあります。Google Places、Recruit / ホットペッパーグルメ、東京リージョンで本サービスをホストする Fly.io にも、依頼内容に応じた最小限の情報が送信されます。各社側の保管と国外移転の取扱いは各社の規約と設定に従います。</p></section><section class="panel privacy-section"><p class="overline">開示等のご請求・苦情</p><h2>運営者へメールでご連絡ください</h2><p>個人情報の開示、訂正、削除、利用停止その他のお問い合わせは、下記メールアドレスへご連絡ください。本人確認と対象記録の特定に必要な情報をお願いする場合があります。アカウントがなく、運用イベントを意図的に匿名化しているため、個人に結び付けられない記録があります。</p><p><a href="mailto:${esc(contact)}">${esc(contact)}</a></p></section>` : ""}
     <section class="danger-zone"><div><p class="overline">この端末のデータを削除</p><h2>予定、確認待ち、履歴、設定を消去</h2><p>行きたい予定 ${local.savedPlanCount} 件、確認待ち ${local.pendingAnalysisCount} 件、最近の確認 ${local.recentAnalysisCount} 件、人数などの端末設定を削除します。Google、ホットペッパーグルメ、Qwen、OpenAI、予約サービス側のデータには影響しません。</p></div>${state.deleteConfirmOpen ? `<div class="delete-confirm"><strong>この端末のデータをすべて完全に削除しますか？</strong><button id="cancel-delete">キャンセル</button><button id="confirm-delete">すべて削除</button></div>` : '<button id="start-delete" class="danger-button">この端末のデータを削除</button>'}</section>
   </section>`;
   attachPrivacyDeleteHandlers();
@@ -1575,7 +1589,7 @@ function attachPrivacyDeleteHandlers() {
 function renderPilot() {
   const publicInfo = currentPublicInfo();
   const contact = publicInfo.contactEmail;
-  const localized = localizedLegalContent(currentLocale())?.pilot;
+  const localized = currentLegalContent()?.pilot;
   if (localized) {
     const subject = encodeURIComponent(currentLocale() === "en" ? "TabiTabi pilot participation" : "申请参加 TabiTabi 测试");
     const body = encodeURIComponent(currentLocale() === "en" ? "I would like to join the TabiTabi pilot.\n\nSNS I use:\nDevice: iPhone / Android\n" : "我希望参加 TabiTabi 测试。\n\n常用 SNS：\n设备：iPhone / Android\n");
@@ -1586,7 +1600,18 @@ function renderPilot() {
       <section class="pilot-criteria">${localized.criteria.map((item, index) => `<article><span>0${index + 1}</span><strong>${item[0]}</strong><p>${item[1]}</p></article>`).join("")}</section>
       <section class="panel pilot-task"><h2>${localized.taskTitle}</h2><ol>${localized.tasks.map((item) => `<li>${item}</li>`).join("")}</ol></section>
       <aside class="pilot-safety"><strong>${localized.safetyTitle}</strong><p>${localized.safetyBody}</p></aside>
-      <section class="panel pilot-join"><div><h2>${localized.joinTitle}</h2><p>${localized.joinBody}</p></div><div class="pilot-actions">${mailto ? `<a class="primary-button" href="${esc(mailto)}">${localized.email} ${icons.arrow}</a>` : ""}<a class="secondary-button" href="/" data-action="home">${localized.haveCode}</a></div></section>
+      <section class="panel pilot-join"><div><h2>${localized.joinTitle}</h2><p>${localized.joinBody}</p></div><div class="pilot-actions">${mailto ? `<a class="${isPublicRelease() ? "secondary-button" : "primary-button"}" href="${esc(mailto)}">${localized.email}${isPublicRelease() ? "" : ` ${icons.arrow}`}</a>` : ""}<a class="${isPublicRelease() ? "primary-button" : "secondary-button"}" href="/" data-action="home">${localized.haveCode}${isPublicRelease() ? ` ${icons.arrow}` : ""}</a></div></section>
+    </section>`;
+    return;
+  }
+  if (isPublicRelease()) {
+    const mailto = contact ? `mailto:${encodeURIComponent(contact)}?subject=${encodeURIComponent("TabiTabi お問い合わせ")}` : "";
+    app.innerHTML = `<section class="content-view narrow pilot-view">
+      <button class="back-button" data-action="home">← ホームへ</button>
+      <div class="pilot-hero"><span class="step-chip">公開ベータ</span><h1>SNSで見つけた店を、<br>行ける情報に。</h1><p>Instagram、TikTok などで見つけた飲食店を、実在する店舗と次の行動へつなげます。</p></div>
+      <section class="pilot-criteria" aria-label="ご利用前の確認"><article><span>01</span><strong>公開情報を使用</strong><p>DM、通知、非公開投稿、他人の個人情報を含む画像は使用しないでください。</p></article><article><span>02</span><strong>店舗と支店を確認</strong><p>AI の抽出結果をそのまま確定せず、候補の住所と支店をご確認ください。</p></article><article><span>03</span><strong>予約成立は最終画面で確認</strong><p>TabiTabi の案内やリンクを開くだけでは予約は成立しません。</p></article></section>
+      <aside class="pilot-safety"><strong>公開ベータについて</strong><p>情報源、判断の限界、外部サービスの種類を表示しますが、すべての情報が常に完全・最新であることは保証しません。</p></aside>
+      <section class="panel pilot-join"><div><h2>今すぐ試す</h2><p>招待コードは不要です。店名、リンク、公開 SNS のスクリーンショットから始められます。</p></div><div class="pilot-actions"><a class="primary-button" href="/" data-action="home">店舗を確認する ${icons.arrow}</a>${mailto ? `<a class="secondary-button" href="${esc(mailto)}">運営者へ問い合わせ</a>` : ""}</div></section>
     </section>`;
     return;
   }
@@ -1634,15 +1659,17 @@ function renderSettings() {
     { label: t("settings.hotpepper"), ready: Boolean(capabilities.hotPepper), detail: capabilities.hotPepper ? t("settings.availableEnrichment") : t("settings.noEnrichment") },
     { label: t("settings.webpage"), ready: Boolean(capabilities.webpageExtraction), detail: capabilities.webpageExtraction ? t("settings.webReady") : t("settings.notSet") }
   ];
+  const settingsIntro = capabilities.publicReleaseMode
+    ? ({ ja: "設定は現在のブラウザに保存されます。公開ベータでは招待アクセスコードは使用しません。", en: "Preferences are saved in this browser. The public beta does not use an invitation code.", "zh-CN": "设置保存在当前浏览器中。公开测试版不使用邀请码。" }[currentLocale()] || t("settings.intro"))
+    : t("settings.intro");
   app.innerHTML = `<section class="content-view narrow settings-view">
     <button class="back-button" data-action="home">${t("common.backHome")}</button>
-    <div class="section-heading"><span class="step-chip">${t("settings.step")}</span><h2>${t("settings.title")}</h2><p>${t("settings.intro")}</p></div>
+    <div class="section-heading"><span class="step-chip">${t("settings.step")}</span><h2>${t("settings.title")}</h2><p>${settingsIntro}</p></div>
     <section class="panel language-settings"><p class="overline">${t("settings.languageOverline")}</p><h2>${t("settings.languageTitle")}</h2><label>${t("settings.languageLabel")}<select id="settings-language-select">${SUPPORTED_LOCALES.map((item) => `<option value="${item.value}" ${item.value === currentLocale() ? "selected" : ""}>${item.label}</option>`).join("")}</select></label><aside><strong>${t("settings.translationTitle")}</strong><span>${t("settings.translationBody")}</span></aside></section>
     <section class="panel"><p class="overline">${t("settings.defaults")}</p><h2>${t("settings.reduceInput")}</h2><form id="settings-form" class="settings-form">
       <input type="hidden" name="locale" value="${esc(currentLocale())}">
       <label>${t("settings.party")}<input type="number" name="defaultPartySize" min="1" max="20" value="${esc(state.settings.defaultPartySize)}"></label>
-      <label>${t("settings.access")}${capabilities.pilotAccessRequired ? t("settings.required") : t("settings.optional")}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="${t("home.accessHelp")}"><small>${capabilities.pilotAccessRequired ? t("settings.accessRequiredHelp") : t("settings.accessOptionalHelp")}</small></label>
-      ${state.settings.pilotAccessCode ? `<button type="button" class="text-button clear-access-code" id="clear-access-code">${t("settings.clearAccess")}</button>` : ""}
+      ${capabilities.publicReleaseMode ? "" : `<label>${t("settings.access")}${capabilities.pilotAccessRequired ? t("settings.required") : t("settings.optional")}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="${t("home.accessHelp")}"><small>${capabilities.pilotAccessRequired ? t("settings.accessRequiredHelp") : t("settings.accessOptionalHelp")}</small></label>${state.settings.pilotAccessCode ? `<button type="button" class="text-button clear-access-code" id="clear-access-code">${t("settings.clearAccess")}</button>` : ""}`}
       <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>${t("settings.history")}</strong><small>${t("settings.historyHelp")}</small></span></label>
       <button type="submit" class="primary-button">${t("settings.submit")}</button>
     </form></section>
@@ -1694,7 +1721,7 @@ function renderDailyBudget(budget = {}) {
 
 function renderTerms() {
   const publicInfo = currentPublicInfo();
-  const localized = localizedLegalContent(currentLocale())?.terms;
+  const localized = currentLegalContent()?.terms;
   if (localized) {
     app.innerHTML = `<section class="content-view narrow terms-view">
       <button class="back-button" data-action="home">${t("common.backHome")}</button>
@@ -1708,9 +1735,9 @@ function renderTerms() {
   }
   app.innerHTML = `<section class="content-view narrow terms-view">
     <button class="back-button" data-action="home">← ホームへ</button>
-    <div class="section-heading"><span class="step-chip">利用条件</span><h1>サービスの範囲と責任</h1><p>適用日：${esc(TERMS_EFFECTIVE_DATE)} · 現在の TabiTabi 招待制テストに適用されます。</p></div>
+    <div class="section-heading"><span class="step-chip">利用条件</span><h1>サービスの範囲と責任</h1><p>適用日：${esc(TERMS_EFFECTIVE_DATE)} · ${isPublicRelease() ? "公開版 TabiTabi に適用されます。" : "現在の TabiTabi 招待制テストに適用されます。"}</p></div>
     <aside class="terms-highlight"><strong>最も大切なこと</strong><p>TabiTabi が示すのは次の行動であり、予約の確定ではありません。店舗や予約サービスの最終画面、電話回答、確認メールをご確認ください。</p></aside>
-    <div class="terms-list">${TERMS_SECTIONS.map((section, index) => `<section class="panel terms-section"><span>${String(index + 1).padStart(2, "0")}</span><div><h3>${esc(section.title)}</h3>${section.paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join("")}</div></section>`).join("")}</div>
+    <div class="terms-list">${(isPublicRelease() ? PUBLIC_TERMS_SECTIONS : TERMS_SECTIONS).map((section, index) => `<section class="panel terms-section"><span>${String(index + 1).padStart(2, "0")}</span><div><h3>${esc(section.title)}</h3>${section.paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join("")}</div></section>`).join("")}</div>
     <p class="terms-footer-note">運営者：${esc(publicInfo.operatorName)} · お問い合わせ：<a href="mailto:${esc(publicInfo.contactEmail)}">${esc(publicInfo.contactEmail)}</a></p>
     <p class="terms-footer-note">利用を続けることで、上記の範囲をご理解いただいたものとします。データの取り扱いは<a href="/privacy" data-action="privacy">プライバシーとデータ</a>をご覧ください。</p>
   </section>`;

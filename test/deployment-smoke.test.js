@@ -84,3 +84,28 @@ test("requires route-specific pilot, privacy, and terms markers", async () => {
   };
   await assert.rejects(() => runDeploymentSmoke({ baseUrl: "https://tabitabi-jp.fly.dev", fetchImpl }), /independent|独立/u);
 });
+
+test("proves explicit public mode separately from the closed pilot", async () => {
+  const fetchImpl = async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/healthz") return Response.json({ status: "ok" });
+    if (path === "/readyz") return Response.json({ ready: true });
+    if (path === "/api/capabilities") return Response.json({ visionExtraction: true, placesSearch: true, publicReleaseMode: true, pilotAccessRequired: false, releaseAccessMode: "public" });
+    if (path === "/src/app.js") return new Response("公開ベータ 招待コードは不要です 店舗を確認する");
+    return new Response('<main id="app"></main>', { headers: { "x-tabitabi-document": path.slice(1) } });
+  };
+  const result = await runDeploymentSmoke({ baseUrl: "https://tabitabi.example", allowedOrigin: "https://tabitabi.example", releaseMode: "public", fetchImpl });
+  assert.equal(result.passed, true);
+  assert.equal(result.releaseMode, "public");
+});
+
+test("does not accept a public deployment as closed-pilot smoke evidence", async () => {
+  const fetchImpl = async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/healthz") return Response.json({ status: "ok" });
+    if (path === "/readyz") return Response.json({ ready: true });
+    if (path === "/api/capabilities") return Response.json({ visionExtraction: true, placesSearch: true, publicReleaseMode: true, pilotAccessRequired: false, releaseAccessMode: "public" });
+    return new Response("", { status: 200 });
+  };
+  await assert.rejects(() => runDeploymentSmoke({ baseUrl: "https://tabitabi.example", allowedOrigin: "https://tabitabi.example", fetchImpl }), /capabilities/);
+});

@@ -23,6 +23,7 @@ import { installFatalProcessHandlers } from "./server/process-failures.mjs";
 import { probeWritableDataStore } from "./server/data-store-readiness.mjs";
 import { createVisionConcurrencyGate, imageContentFingerprint, VisionConcurrencyError } from "./server/vision-abuse-protection.mjs";
 import { createProviderCircuitBreaker, ProviderCircuitOpenError } from "./server/provider-circuit-breaker.mjs";
+import { publicReleaseMode, releaseAccessConfigured, releaseAccessMode } from "./server/release-mode.mjs";
 
 const ROOT = resolve(process.cwd());
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
@@ -115,6 +116,9 @@ const server = createServer(async (request, response) => {
         hotPepper: Boolean(process.env.HOTPEPPER_API_KEY),
         webpageExtraction: true,
         pilotAccessRequired: pilotAccessRequired(process.env),
+        publicReleaseMode: publicReleaseMode(process.env),
+        releaseAccessMode: releaseAccessMode(process.env),
+        releaseAccessConfigured: releaseAccessConfigured(process.env),
         dailyBudget: dailyBudgetStatus,
         providerCircuit: providerCircuitStatus,
         emergencyStop: paidApiEmergencyStopped(),

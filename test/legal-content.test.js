@@ -14,3 +14,18 @@ test("provides product-authored English and Simplified Chinese legal and pilot c
   }
   assert.equal(localizedLegalContent("ja"), null);
 });
+
+test("keeps public legal copy distinct from invitation-only pilot copy", () => {
+  for (const locale of ["en", "zh-CN"]) {
+    const pilot = localizedLegalContent(locale);
+    const publicCopy = localizedLegalContent(locale, { publicRelease: true });
+    assert.equal(publicCopy.terms.sections.length, 8);
+    assert.notEqual(publicCopy.terms.intro, pilot.terms.intro);
+    assert.notEqual(publicCopy.privacy.intro, pilot.privacy.intro);
+    assert.match(publicCopy.privacy.providersBody, /Singapore|新加坡/);
+    assert.match(publicCopy.privacy.metricsBody, /30 days|30天/);
+    assert.ok(publicCopy.privacy.rightsTitle);
+    assert.ok(publicCopy.privacy.retentionTitle);
+    assert.match(publicCopy.pilot.joinBody, /No invitation code|无需邀请码/);
+  }
+});

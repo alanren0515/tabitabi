@@ -43,7 +43,7 @@ export function evaluateFormalReleaseGate({
     productionPilot: pilotProvenance && pilotConsistent && recomputedPilot.gatePassed === true && fresh(pilotEvidence, now, maxAgeMs),
     deploymentPreflight: preflightEvidence?.passed === true && exactTrueMap(preflightEvidence?.checks, PREFLIGHT_CHECKS) && fresh(preflightEvidence, now, maxAgeMs),
     flyRemoteState: flyEvidence?.passed === true && flyEvidence?.app === app && exactTrueMap(flyEvidence?.checks, FLY_CHECKS) && fresh(flyEvidence, now, maxAgeMs),
-    providerFreeSmoke: smokeEvidence?.passed === true && smokeEvidence?.live === false
+    providerFreeSmoke: smokeEvidence?.passed === true && smokeEvidence?.live === false && smokeEvidence?.releaseMode === "pilot"
       && smokeEvidence?.baseUrl === `https://${app}.fly.dev` && exactTrueMap(smokeEvidence?.checks, SMOKE_CHECKS) && fresh(smokeEvidence, now, maxAgeMs)
   };
   const blockedBy = Object.entries(gates).filter(([, passed]) => !passed).map(([name]) => name);

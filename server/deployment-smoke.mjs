@@ -15,7 +15,8 @@ export function validateSmokeImageMetadata({ extension = "", size = 0 } = {}) {
   return mime;
 }
 
-export async function runDeploymentSmoke({ baseUrl, allowedOrigin = "https://tabitabi-jp.fly.dev", expectedRevision = "", accessCode = "", screenshotDataUrl = "", live = false, fetchImpl = fetch } = {}) {
+export async function runDeploymentSmoke({ baseUrl, allowedOrigin = "https://tabitabi-jp.fly.dev", expectedRevision = "", accessCode = "", screenshotDataUrl = "", live = false, releaseMode = "pilot", fetchImpl = fetch } = {}) {
+  if (!["pilot", "public"].includes(releaseMode)) throw new Error("releaseMode must be pilot or public");
   const parsedBaseUrl = new URL(baseUrl);
   const local = ["127.0.0.1", "localhost"].includes(parsedBaseUrl.hostname);
   if (parsedBaseUrl.username || parsedBaseUrl.password || (parsedBaseUrl.protocol !== "https:" && !local)) {
@@ -28,15 +29,16 @@ export async function runDeploymentSmoke({ baseUrl, allowedOrigin = "https://tab
   checks.health = await expectJson("health", fetchImpl, `${origin}/healthz`, {}, (value) => value.status === "ok");
   checks.readiness = await expectJson("readiness", fetchImpl, `${origin}/readyz`, {}, (value) => value.ready === true);
   const capabilities = await fetchJson("capabilities", fetchImpl, `${origin}/api/capabilities`);
-  checks.capabilities = capabilities.visionExtraction === true && capabilities.placesSearch === true && capabilities.pilotAccessRequired === true
+  const expectedAccess = releaseMode === "public"
+    ? capabilities.publicReleaseMode === true && capabilities.pilotAccessRequired === false && capabilities.releaseAccessMode === "public"
+    : capabilities.publicReleaseMode !== true && capabilities.pilotAccessRequired === true && [undefined, "pilot"].includes(capabilities.releaseAccessMode);
+  checks.capabilities = capabilities.visionExtraction === true && capabilities.placesSearch === true && expectedAccess
     && (!expectedRevision || capabilities.releaseRevision === expectedRevision);
   if (!checks.capabilities) throw new DeploymentSmokeError("capabilities", null, "本番機能と埋め込み release revision を確認してください。");
   checks.pilot = await expectDocument("pilot", fetchImpl, `${origin}/pilot`);
-  checks.pilotContent = await expectTextMarkers("pilotContent", fetchImpl, `${origin}/src/app.js`, [
-    "クローズドテスト参加者募集",
-    "予約の確定、支払い、電話は必要ありません",
-    "メールで参加を相談する"
-  ]);
+  checks.pilotContent = await expectTextMarkers("pilotContent", fetchImpl, `${origin}/src/app.js`, releaseMode === "public"
+    ? ["公開ベータ", "招待コードは不要です", "店舗を確認する"]
+    : ["クローズドテスト参加者募集", "予約の確定、支払い、電話は必要ありません", "メールで参加を相談する"]);
   checks.privacy = await expectDocument("privacy", fetchImpl, `${origin}/privacy`);
   checks.terms = await expectDocument("terms", fetchImpl, `${origin}/terms`);
   if (live) {
@@ -50,7 +52,7 @@ export async function runDeploymentSmoke({ baseUrl, allowedOrigin = "https://tab
     checks.placesDetails = Boolean(candidate.placeId && details.restaurant?.placeId === candidate.placeId);
     if (!checks.placesDetails) throw new Error("Live Place Details smoke returned a mismatched restaurant");
   }
-  return { passed: Object.values(checks).every(Boolean), live, releaseRevision: capabilities.releaseRevision || null, checks };
+  return { passed: Object.values(checks).every(Boolean), live, releaseMode, releaseRevision: capabilities.releaseRevision || null, checks };
 }
 
 function post(body, headers) { return { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(60_000) }; }
