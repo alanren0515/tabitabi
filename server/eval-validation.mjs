@@ -35,10 +35,11 @@ export function validateReleaseInputs({ cases = [], matrix = [], audits = [] }) 
   return errors;
 }
 
-export function validateDecisionEvalReport({ report, cases = [], now = Date.now(), maxAgeMs = 7 * 24 * 60 * 60 * 1_000 }) {
+export function validateDecisionEvalReport({ report, cases = [], now = Date.now(), maxAgeMs = 7 * 24 * 60 * 60 * 1_000, expectedRevision = "" }) {
   const errors = [];
   const confirmedIds = cases.filter((item) => item.verificationStatus === "confirmed").map((item) => item.id).sort();
   if (!report || typeof report !== "object") return ["decision evaluation report is missing"];
+  if (expectedRevision && report.releaseRevision !== expectedRevision) errors.push("decision evaluation report is from a different release revision");
 
   const generatedAt = new Date(report.generatedAt || "").valueOf();
   if (!Number.isFinite(generatedAt)) errors.push("decision evaluation report has invalid generatedAt");
@@ -75,10 +76,11 @@ export function validateDecisionEvalReport({ report, cases = [], now = Date.now(
   return [...new Set(errors)];
 }
 
-export function validateCandidateEvalReport({ report, cases = [], now = Date.now(), maxAgeMs = 7 * 24 * 60 * 60 * 1_000 }) {
+export function validateCandidateEvalReport({ report, cases = [], now = Date.now(), maxAgeMs = 7 * 24 * 60 * 60 * 1_000, expectedRevision = "" }) {
   const errors = [];
   const confirmedIds = cases.filter((item) => item.verificationStatus === "confirmed").map((item) => item.id).sort();
   if (!report || typeof report !== "object") return ["candidate evaluation report is missing"];
+  if (expectedRevision && report.releaseRevision !== expectedRevision) errors.push("candidate evaluation report is from a different release revision");
   const generatedAt = new Date(report.generatedAt || "").valueOf();
   if (!Number.isFinite(generatedAt)) errors.push("candidate evaluation report has invalid generatedAt");
   else if (generatedAt > now + 5 * 60 * 1_000) errors.push("candidate evaluation report is dated in the future");

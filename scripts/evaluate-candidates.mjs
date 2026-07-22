@@ -28,6 +28,10 @@ if (!capabilities.placesSearch) {
   }, null, 2));
   process.exit(2);
 }
+if (!/^[a-f0-9]{40}$/.test(String(capabilities.releaseRevision || ""))) {
+  console.error("候选评测要求服务以有效 RELEASE_REVISION 启动，避免把旧结果绑定到当前代码。\n");
+  process.exit(2);
+}
 
 const results = [];
 for (const testCase of cases) {
@@ -80,6 +84,6 @@ summary.accuracyGatePassed = summary.top3Recall >= 0.9;
 summary.gatePassed = summary.coverageGatePassed && summary.accuracyGatePassed && !results.some((result) => result.error);
 
 console.log(JSON.stringify(summary, null, 2));
-await writeFile(resolve("eval/latest-candidate-results.json"), `${JSON.stringify({ generatedAt: new Date().toISOString(), ...summary }, null, 2)}\n`, "utf8");
+await writeFile(resolve("eval/latest-candidate-results.json"), `${JSON.stringify({ generatedAt: new Date().toISOString(), releaseRevision: capabilities.releaseRevision, ...summary }, null, 2)}\n`, "utf8");
 if (results.some((result) => result.error)) process.exitCode = 2;
 else if (!summary.gatePassed) process.exitCode = 1;

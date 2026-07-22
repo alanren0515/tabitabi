@@ -67,3 +67,14 @@ test("accepts only a fresh candidate report covering every confirmed case", () =
   assert.ok(errors.some((item) => item.includes("did not pass")));
   assert.ok(validateCandidateEvalReport({ report: { ...report, results: [{ id: "case-1", passed: true, matchedRank: 0 }] }, cases, now: new Date("2026-07-14T01:00:00Z").valueOf() }).some((item) => item.includes("did not pass")));
 });
+
+test("binds candidate and decision evidence to the evaluated release revision", () => {
+  const revision = "a".repeat(40);
+  const candidate = { generatedAt: "2026-07-14T00:00:00Z", releaseRevision: revision, cases: 1, verifiedCases: 1, top3Recall: 1, gatePassed: true, results: [{ id: "case-1", passed: true, matchedRank: 1 }] };
+  const decision = { generatedAt: "2026-07-14T00:00:00Z", releaseRevision: revision, selectedCaseIds: ["case-1"], selectedCases: 1, evaluated: 1, candidateMatchPassed: 1, safeDecisionPassed: 1, errors: 0, gatePassed: true, results: [{ id: "case-1", candidateMatched: true, passed: true, selectedPlaceId: "place-1", detailsPlaceId: "place-1", issues: [] }] };
+  const now = new Date("2026-07-14T01:00:00Z").valueOf();
+  assert.deepEqual(validateCandidateEvalReport({ report: candidate, cases, now, expectedRevision: revision }), []);
+  assert.deepEqual(validateDecisionEvalReport({ report: decision, cases, now, expectedRevision: revision }), []);
+  assert.ok(validateCandidateEvalReport({ report: candidate, cases, now, expectedRevision: "b".repeat(40) }).some((item) => item.includes("different release")));
+  assert.ok(validateDecisionEvalReport({ report: decision, cases, now, expectedRevision: "b".repeat(40) }).some((item) => item.includes("different release")));
+});

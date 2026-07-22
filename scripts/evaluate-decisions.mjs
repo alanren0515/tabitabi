@@ -25,6 +25,9 @@ try {
 if (!capabilities?.placesSearch) {
   await finishBlocked("本地服务未配置 Google Places Search/Details");
 }
+if (!/^[a-f0-9]{40}$/.test(String(capabilities.releaseRevision || ""))) {
+  await finishBlocked("决策评测要求服务以有效 RELEASE_REVISION 启动，避免把旧结果绑定到当前代码");
+}
 
 const results = [];
 for (const testCase of cases) {
@@ -80,7 +83,7 @@ for (const testCase of cases) {
 }
 
 const summary = summarize(results, cases.length);
-const report = { generatedAt: new Date().toISOString(), baseUrl, selectedCaseIds: cases.map((item) => item.id), ...summary, results };
+const report = { generatedAt: new Date().toISOString(), releaseRevision: capabilities.releaseRevision, baseUrl, selectedCaseIds: cases.map((item) => item.id), ...summary, results };
 console.log(JSON.stringify(report, null, 2));
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 if (summary.errors) process.exitCode = 2;

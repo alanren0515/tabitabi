@@ -10,6 +10,7 @@
     "audit:mobile": "node scripts/start-audit-workbench.mjs --lan",
     "dev:static": "python3 -m http.server 4173",
     "test": "node --test",
+    "release:test": "node scripts/run-release-tests.mjs",
     "eval:candidates": "node scripts/evaluate-candidates.mjs",
     "eval:decisions": "node scripts/evaluate-decisions.mjs",
     "eval:platform-urls": "node scripts/check-platform-urls.mjs",

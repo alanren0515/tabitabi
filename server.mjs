@@ -463,7 +463,7 @@ function allowExpensiveRequest(request, response, limiter) {
 
 async function handleEvent(request, response) {
   const body = await readJsonBody(request);
-  const record = sanitizeEvent(body);
+  const record = sanitizeEvent(body, new Date(), { releaseRevision: process.env.RELEASE_REVISION });
   if (!record) {
     sendJson(response, 400, { code: "INVALID_EVENT", error: "Unsupported event" });
     return;

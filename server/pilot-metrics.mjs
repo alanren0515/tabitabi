@@ -6,10 +6,12 @@ export const DEFAULT_PILOT_THRESHOLDS = Object.freeze({
   helpfulRate: 0.6
 });
 
-export function summarizePilotMetrics(events = []) {
-  const product = events.filter((item) => item?.trafficType === "product");
+export function summarizePilotMetrics(events = [], { releaseRevision = "" } = {}) {
+  const targetRevision = normalizeReleaseRevision(releaseRevision);
+  const scopedEvents = targetRevision ? events.filter((item) => item?.releaseRevision === targetRevision) : events;
+  const product = scopedEvents.filter((item) => item?.trafficType === "product");
   const demoRunIds = new Set(product.filter((item) => item?.analysisRunId && item?.sourceMode === "demo").map((item) => item.analysisRunId));
-  const live = pilotEligibleLiveEvents(events);
+  const live = pilotEligibleLiveEvents(scopedEvents);
   const inputRuns = runIds(live, "input_submitted");
   const identifiedRuns = runIds(live, "restaurant_identified");
   const completedRuns = runIds(live, "analysis_completed");
@@ -43,10 +45,17 @@ export function summarizePilotMetrics(events = []) {
     firstOpens,
     returnsWithin7Days,
     sevenDayReturnLowerBound: rate(returnsWithin7Days, firstOpens),
-    excludedAuditEvents: events.filter((item) => item?.trafficType === "audit").length,
-    excludedLegacyEvents: events.filter((item) => !["product", "audit"].includes(item?.trafficType)).length,
+    releaseRevision: targetRevision || null,
+    excludedPreviousReleaseEvents: targetRevision ? events.length - scopedEvents.length : 0,
+    excludedAuditEvents: scopedEvents.filter((item) => item?.trafficType === "audit").length,
+    excludedLegacyEvents: scopedEvents.filter((item) => !["product", "audit"].includes(item?.trafficType)).length,
     excludedDemoRuns: demoRunIds.size
   };
+}
+
+function normalizeReleaseRevision(value) {
+  const revision = String(value || "").trim().toLowerCase();
+  return /^[a-f0-9]{40}$/.test(revision) ? revision : "";
 }
 
 function countWillingness(events) {

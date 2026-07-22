@@ -26,9 +26,10 @@ export const ALLOWED_EVENTS = new Set([
   "app_visit"
 ]);
 
-export function sanitizeEvent(body = {}, now = new Date()) {
+export function sanitizeEvent(body = {}, now = new Date(), { releaseRevision = "" } = {}) {
   if (!ALLOWED_EVENTS.has(body.event)) return null;
   const willingnessToPay = allowedValue(body.willingnessToPay, ["consider", "depends_on_price", "would_not", "unsure"]);
+  const trustedRevision = /^[a-f0-9]{40}$/.test(String(releaseRevision)) ? String(releaseRevision) : "";
   return {
     event: body.event,
     placeId: limitedString(body.placeId, 160),
@@ -50,6 +51,7 @@ export function sanitizeEvent(body = {}, now = new Date()) {
     ...(willingnessToPay ? { willingnessToPay } : {}),
     feedbackText: limitedString(body.feedbackText, 500),
     visitType: allowedValue(body.visitType, ["first_open", "return_within_7d", "return_after_7d"]),
+    ...(trustedRevision ? { releaseRevision: trustedRevision } : {}),
     occurredAt: now.toISOString()
   };
 }

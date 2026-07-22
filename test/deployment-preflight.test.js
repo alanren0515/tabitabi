@@ -56,3 +56,13 @@ test("parses local environment files without exposing or evaluating values", () 
   assert.equal(flyApplicationName('app = "tabitabi-jp"\n'), "tabitabi-jp");
   assert.equal(flyApplicationName('app = "../../bad"\n'), "");
 });
+
+test("accepts fresh same-app Fly evidence instead of recovering the pilot secret locally", () => {
+  const now = Date.parse("2026-07-23T00:00:00Z");
+  const env = { ...valid.env, PILOT_ACCESS_CODE: "" };
+  const flyConfig = `app = "tabitabi-jp"\n${valid.flyConfig}`;
+  const remoteSecretEvidence = { generatedAt: "2026-07-22T23:00:00Z", app: "tabitabi-jp", checks: { requiredSecretsDeployed: true } };
+  assert.equal(evaluateDeploymentPreflight({ ...valid, env, flyConfig, remoteSecretEvidence, now }).checks.pilotAccessCode, true);
+  assert.equal(evaluateDeploymentPreflight({ ...valid, env, flyConfig, remoteSecretEvidence: { ...remoteSecretEvidence, app: "other" }, now }).checks.pilotAccessCode, false);
+  assert.equal(evaluateDeploymentPreflight({ ...valid, env, flyConfig, remoteSecretEvidence: { ...remoteSecretEvidence, generatedAt: "2026-07-20T00:00:00Z" }, now }).checks.pilotAccessCode, false);
+});

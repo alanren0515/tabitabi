@@ -85,3 +85,10 @@ test("records privacy-safe visit categories without a user identifier", () => {
   assert.equal(record.visitType, "return_within_7d");
   assert.equal("userId" in record, false);
 });
+
+test("records only the server-provided deployment revision", () => {
+  const trusted = "a".repeat(40);
+  const record = sanitizeEvent({ event: "input_submitted", releaseRevision: "b".repeat(40) }, new Date(), { releaseRevision: trusted });
+  assert.equal(record.releaseRevision, trusted);
+  assert.equal("releaseRevision" in sanitizeEvent({ event: "input_submitted", releaseRevision: trusted }), false);
+});

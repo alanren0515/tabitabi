@@ -31,3 +31,18 @@ test("treats a missing event log as an empty pilot", async () => {
   assert.equal(report.metrics.inputRuns, 0);
   assert.equal(report.metrics.feedbackRuns, 0);
 });
+
+test("builds deployment-scoped evidence without counting older releases", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tabitabi-pilot-revision-"));
+  const path = join(root, "events.jsonl");
+  const current = "c".repeat(40);
+  await writeFile(path, [
+    { event: "input_submitted", trafficType: "product", sourceMode: "live", analysisRunId: "current_01", releaseRevision: current },
+    { event: "analysis_completed", trafficType: "product", sourceMode: "live", analysisRunId: "current_01", releaseRevision: current },
+    { event: "input_submitted", trafficType: "product", sourceMode: "live", analysisRunId: "old_run_01", releaseRevision: "d".repeat(40) }
+  ].map(JSON.stringify).join("\n"));
+  const report = await loadPilotReport(path, new Date("2026-07-16T00:00:00Z"), { releaseRevision: current });
+  assert.equal(report.metrics.inputRuns, 1);
+  assert.equal(report.metrics.completedRuns, 1);
+  assert.equal(report.metrics.excludedPreviousReleaseEvents, 1);
+});

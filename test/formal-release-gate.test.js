@@ -7,14 +7,14 @@ const generatedAt = "2026-07-18T11:00:00.000Z";
 const revision = "a".repeat(40);
 const imageDigest = `sha256:${"b".repeat(64)}`;
 const imageTag = "deployment-01KXRBYNTMPKPM0CPT8YZHPFJW";
-const pilotMetrics = { inputRuns: 20, feedbackRuns: 10, analysisCompletionRate: 0.8, actionRate: 0.35, helpfulRate: 0.6 };
+const pilotMetrics = { releaseRevision: revision, inputRuns: 20, feedbackRuns: 10, analysisCompletionRate: 0.8, actionRate: 0.35, helpfulRate: 0.6 };
 const valid = {
   now,
   app: "tabitabi-jp",
   currentRevision: revision,
   repositoryClean: true,
-  releaseEvidence: { generatedAt, revision, repositoryClean: true, gatePassed: true, gates: { schemaValid: true, confirmedSampleSize: true, auditedSampleSize: true, identificationAccuracy: true, severeActionErrors: true, bookingSafety: true, coverageMatrix: true, candidateTop3: true, decisionSafety: true } },
-  pilotEvidence: { schemaVersion: 1, source: "fly-volume", app: "tabitabi-jp", volume: "tabitabi_data", generatedAt, auditRevision: revision, releaseRevision: revision, imageRef: `registry.fly.io/tabitabi-jp:${imageTag}`, repositoryClean: true, gatePassed: true, gates: { inputSample: true, feedbackSample: true, analysisCompletion: true, actionRate: true, helpfulRate: true }, blockedBy: [], metrics: pilotMetrics },
+  releaseEvidence: { generatedAt, revision, repositoryClean: true, gatePassed: true, gates: { currentRevisionTests: true, schemaValid: true, confirmedSampleSize: true, auditedSampleSize: true, identificationAccuracy: true, severeActionErrors: true, bookingSafety: true, coverageMatrix: true, candidateTop3: true, decisionSafety: true } },
+  pilotEvidence: { schemaVersion: 2, source: "fly-volume", app: "tabitabi-jp", volume: "tabitabi_data", generatedAt, auditRevision: revision, releaseRevision: revision, imageRef: `registry.fly.io/tabitabi-jp:${imageTag}`, repositoryClean: true, gatePassed: true, gates: { inputSample: true, feedbackSample: true, analysisCompletion: true, actionRate: true, helpfulRate: true }, blockedBy: [], metrics: pilotMetrics },
   preflightEvidence: { generatedAt, revision, repositoryClean: true, passed: true, checks: Object.fromEntries(["qwenKey", "qwenEndpoint", "qwenModel", "googlePlacesKey", "pilotAccessCode", "operatorName", "contactEmail", "emergencyStopReady", "providerBudgetCaps", "flyTokyo", "flyIdleLifecycle", "flyHttpsAndHealth", "flyMachineShape", "flyPersistentData", "flySnapshots", "pinnedContainerBase", "releaseEvidence"].map((key) => [key, true])) },
   flyEvidence: { generatedAt, revision, repositoryClean: true, app: "tabitabi-jp", passed: true, checks: Object.fromEntries(["exactlyOneMachine", "machineStarted", "machineTokyo", "machineShape", "machineIdleLifecycle", "exactlyOneVolume", "volumeCreated", "volumeTokyo", "volumeName", "volumeSize", "volumeEncrypted", "volumeSnapshots", "volumeAttached", "volumeMounted", "healthChecksPresent", "healthChecksForMachine", "healthChecksPassing", "requiredSecretsDeployed"].map((key) => [key, true])), deployment: { releaseCreatedAt: "2026-07-18T10:00:00.000Z", imageDigest, imageTag } },
   smokeEvidence: { generatedAt, revision, releaseRevision: revision, repositoryClean: true, baseUrl: "https://tabitabi-jp.fly.dev", passed: true, live: false, checks: { health: true, readiness: true, capabilities: true, pilot: true, pilotContent: true, privacy: true, terms: true } }
@@ -44,6 +44,8 @@ test("rejects a forged passing pilot and local-report provenance", () => {
   const forged = { ...valid.pilotEvidence, gatePassed: true, metrics: { inputRuns: 0, feedbackRuns: 0 } };
   assert.equal(evaluateFormalReleaseGate({ ...valid, pilotEvidence: forged }).gates.productionPilot, false);
   assert.equal(evaluateFormalReleaseGate({ ...valid, pilotEvidence: { ...valid.pilotEvidence, source: "local-events" } }).gates.productionPilot, false);
+  assert.equal(evaluateFormalReleaseGate({ ...valid, pilotEvidence: { ...valid.pilotEvidence, schemaVersion: 1 } }).gates.productionPilot, false);
+  assert.equal(evaluateFormalReleaseGate({ ...valid, pilotEvidence: { ...valid.pilotEvidence, metrics: { ...valid.pilotEvidence.metrics, releaseRevision: "c".repeat(40) } } }).gates.productionPilot, false);
 });
 
 test("rejects top-level pass flags without complete check schemas", () => {

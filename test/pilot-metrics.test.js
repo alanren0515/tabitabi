@@ -75,3 +75,18 @@ test("enforces sample, completion, action, and helpfulness thresholds", () => {
   const failed = evaluatePilotGate({ ...metrics, inputRuns: 19, helpfulRate: 0.59 });
   assert.deepEqual(failed.blockedBy, ["inputSample", "helpfulRate"]);
 });
+
+test("scopes formal pilot metrics to one deployment revision", () => {
+  const current = "a".repeat(40);
+  const previous = "b".repeat(40);
+  const metrics = summarizePilotMetrics([
+    event("input_submitted", "current_01", { releaseRevision: current }),
+    event("analysis_completed", "current_01", { releaseRevision: current }),
+    event("input_submitted", "previous_1", { releaseRevision: previous }),
+    event("input_submitted", "unversioned")
+  ], { releaseRevision: current });
+  assert.equal(metrics.releaseRevision, current);
+  assert.equal(metrics.inputRuns, 1);
+  assert.equal(metrics.completedRuns, 1);
+  assert.equal(metrics.excludedPreviousReleaseEvents, 2);
+});

@@ -2,11 +2,12 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { buildProjectStatus } from "../server/project-status.mjs";
 import { loadPilotReport } from "../server/pilot-report.mjs";
+import { currentGitState } from "../server/release-revision.mjs";
 
-const [cases, audits, matrix, candidateReport, decisionReport, pilotReport, localEnv] = await Promise.all([
+const [cases, audits, matrix, candidateReport, decisionReport, testReport, pilotReport, localEnv, git] = await Promise.all([
   readJson("eval/cases.json", []), readJson("eval/manual-audits.json", []), readJson("eval/coverage-matrix.json", []),
   readJson("eval/latest-candidate-results.json", null), readJson("eval/latest-decision-results.json", null),
-  loadPilotReport(resolve(process.env.PILOT_EVENTS_PATH || "data/events.jsonl")), readText(".env.local")
+  readJson("data/release-evidence/latest-tests.json", null), loadPilotReport(resolve(process.env.PILOT_EVENTS_PATH || "data/events.jsonl")), readText(".env.local"), currentGitState()
 ]);
 const filePresence = parseEnvPresence(localEnv);
 const providers = {
@@ -15,7 +16,7 @@ const providers = {
   hotPepper: Boolean(process.env.HOTPEPPER_API_KEY) || Boolean(filePresence.HOTPEPPER_API_KEY),
   openAiFallback: Boolean(process.env.OPENAI_API_KEY) || Boolean(filePresence.OPENAI_API_KEY)
 };
-console.log(JSON.stringify(buildProjectStatus({ providers, cases, audits, matrix, candidateReport, decisionReport, pilotReport }), null, 2));
+console.log(JSON.stringify(buildProjectStatus({ providers, cases, audits, matrix, candidateReport, decisionReport, testReport, revision: git.revision, pilotReport }), null, 2));
 
 function parseEnvPresence(content = "") {
   const result = {};

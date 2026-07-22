@@ -1,13 +1,14 @@
 import { isApprovedQwenBaseUrl } from "./qwen-endpoint.mjs";
 
-export function evaluateDeploymentPreflight({ env = {}, flyConfig = "", dockerfile = "", releaseGate = null } = {}) {
+export function evaluateDeploymentPreflight({ env = {}, flyConfig = "", dockerfile = "", releaseGate = null, remoteSecretEvidence = null, now = Date.now() } = {}) {
   const fly = parseSimpleToml(flyConfig);
+  const app = flyApplicationName(flyConfig);
   const checks = {
     qwenKey: present(env.DASHSCOPE_API_KEY),
     qwenEndpoint: isApprovedQwenBaseUrl(env.DASHSCOPE_BASE_URL),
     qwenModel: String(env.QWEN_VISION_MODEL || "").trim() === "qwen3.6-flash",
     googlePlacesKey: present(env.GOOGLE_MAPS_API_KEY),
-    pilotAccessCode: String(env.PILOT_ACCESS_CODE || "").trim().length >= 24,
+    pilotAccessCode: String(env.PILOT_ACCESS_CODE || "").trim().length >= 24 || validRemotePilotSecretEvidence(remoteSecretEvidence, app, now),
     operatorName: present(env.PUBLIC_OPERATOR_NAME),
     contactEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(env.PUBLIC_CONTACT_EMAIL || "").trim()),
     emergencyStopReady: fly["env.PAID_API_EMERGENCY_STOP"] === "false",
@@ -28,6 +29,16 @@ export function evaluateDeploymentPreflight({ env = {}, flyConfig = "", dockerfi
     releaseEvidence: releaseGate?.gatePassed === true
   };
   return { passed: Object.values(checks).every(Boolean), checks, missing: Object.entries(checks).filter(([, value]) => !value).map(([name]) => name) };
+}
+
+function validRemotePilotSecretEvidence(evidence, app, now) {
+  const generatedAt = Date.parse(String(evidence?.generatedAt || ""));
+  return Boolean(app)
+    && evidence?.app === app
+    && evidence?.checks?.requiredSecretsDeployed === true
+    && Number.isFinite(generatedAt)
+    && generatedAt <= now
+    && now - generatedAt <= 24 * 60 * 60 * 1_000;
 }
 
 export function parseEnvironmentFile(content = "") {

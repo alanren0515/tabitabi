@@ -1,9 +1,10 @@
 import { validateCandidateEvalReport, validateDecisionEvalReport, validateReleaseInputs } from "./eval-validation.mjs";
 
-export function evaluateReleaseEvidence({ cases = [], matrix = [], audits = [], candidateResults = null, decisionResults = null, now = Date.now() } = {}) {
+export function evaluateReleaseEvidence({ cases = [], matrix = [], audits = [], candidateResults = null, decisionResults = null, testResults = null, revision = "", now = Date.now() } = {}) {
   const errors = validateReleaseInputs({ cases, matrix, audits });
-  const candidateErrors = validateCandidateEvalReport({ report: candidateResults, cases, now });
-  const decisionErrors = validateDecisionEvalReport({ report: decisionResults, cases, now });
+  const candidateErrors = validateCandidateEvalReport({ report: candidateResults, cases, now, expectedRevision: revision });
+  const decisionErrors = validateDecisionEvalReport({ report: decisionResults, cases, now, expectedRevision: revision });
+  const testErrors = validateTestEvidence(testResults, revision, now);
   const confirmedCases = cases.filter((item) => item.verificationStatus === "confirmed");
   const audited = audits.filter((item) => item.status === "audited");
   const decisionAudited = audits.filter((item) => ["audited", "decision_audited"].includes(item.status));
@@ -25,6 +26,7 @@ export function evaluateReleaseEvidence({ cases = [], matrix = [], audits = [], 
     decisionSafetyPassed: decisionResults?.safeDecisionPassed ?? null
   };
   const gates = {
+    currentRevisionTests: testErrors.length === 0,
     schemaValid: errors.length === 0,
     confirmedSampleSize: confirmedCases.length >= 30,
     auditedSampleSize: audited.length >= 30,
@@ -39,10 +41,20 @@ export function evaluateReleaseEvidence({ cases = [], matrix = [], audits = [], 
     gatePassed: Object.values(gates).every(Boolean),
     gates,
     metrics,
-    errors: [...errors, ...candidateErrors, ...decisionErrors],
+    errors: [...errors, ...testErrors, ...candidateErrors, ...decisionErrors],
     blockedBy: Object.entries(gates).filter(([, passed]) => !passed).map(([name]) => name),
     note: "planned 场景不计入准确率；只有 confirmed case + audited result 才进入发布指标。"
   };
+}
+
+function validateTestEvidence(report, revision, now, maxAgeMs = 24 * 60 * 60 * 1_000) {
+  if (!report || typeof report !== "object") return ["current revision test evidence is missing"];
+  const generatedAt = Date.parse(String(report.generatedAt || ""));
+  const errors = [];
+  if (!/^[a-f0-9]{40}$/.test(revision) || report.revision !== revision) errors.push("test evidence is from a different release revision");
+  if (!Number.isFinite(generatedAt) || generatedAt > now || now - generatedAt > maxAgeMs) errors.push("test evidence is missing, future-dated, or stale");
+  if (report.repositoryClean !== true || report.passed !== true || !Number.isInteger(report.tests) || report.tests < 1 || report.failures !== 0) errors.push("current revision tests did not pass from a clean repository");
+  return errors;
 }
 
 function ratio(value, total) { return total ? value / total : null; }
