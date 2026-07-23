@@ -136,8 +136,9 @@ export function buildReservationOptions({ place, hotPepperMatch = null, discover
   for (const platform of PLATFORM_HOSTS.filter((item) => ["tabelog", "tablecheck", "gurunavi"].includes(item.provider))) {
     if (options.some((item) => item.provider === platform.provider)) continue;
     options.push(withCapability({
-      id: `${platform.provider}_discovery`, provider: platform.provider, label: platform.label,
-      url: siteSearchUrl(platform.hosts[0], query), actionType: "discover_platform", bookingMode: "unknown",
+      id: `${platform.provider}_discovery`, provider: platform.provider,
+      label: platform.provider === "tabelog" ? "食べログで店舗を検索" : platform.label,
+      url: platformDiscoveryUrl(platform, query), actionType: "discover_platform", bookingMode: "unknown",
       status: "discovery_only", officiality: "unverified_discovery", confidence: "low",
       feeNote: platform.provider === "tabelog" ? "店舗を探すための入口です。食べログ予約対応を示すものではなく、予約時にシステム利用料がかかる場合があります。" : "店舗を探すための入口です。このサービスで予約受付中とは限りません。",
       prepaymentRequired: null
@@ -186,6 +187,17 @@ function siteSearchUrl(host, query) {
   const url = new URL("https://www.google.com/search");
   url.searchParams.set("q", `site:${host} ${query}`.trim());
   return url.href;
+}
+
+function platformDiscoveryUrl(platform, query) {
+  if (platform?.provider === "tabelog") {
+    const url = new URL("https://tabelog.com/rst/rstsearch/");
+    url.searchParams.set("LstKind", "1");
+    url.searchParams.set("voluntary_search", "1");
+    url.searchParams.set("sk", String(query || "").trim());
+    return url.href;
+  }
+  return siteSearchUrl(platform?.hosts?.[0] || "", query);
 }
 
 function safeHttpUrl(value) {

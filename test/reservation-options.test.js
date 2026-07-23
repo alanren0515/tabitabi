@@ -11,6 +11,13 @@ test("builds verified links separately from platform discovery links", () => {
   assert.equal(options.find((item) => item.id === "tabelog_discovery").capability.kind, "discovery");
   assert.match(options.find((item) => item.id === "tabelog_discovery").feeNote, /示すものではなく/);
   assert.match(options.find((item) => item.id === "tabelog_discovery").feeNote, /システム利用料/);
+  const tabelogDiscovery = options.find((item) => item.id === "tabelog_discovery");
+  const tabelogSearchUrl = new URL(tabelogDiscovery.url);
+  assert.equal(tabelogDiscovery.label, "食べログで店舗を検索");
+  assert.equal(tabelogSearchUrl.hostname, "tabelog.com");
+  assert.equal(tabelogSearchUrl.pathname, "/rst/rstsearch/");
+  assert.equal(tabelogSearchUrl.searchParams.get("sk"), "ホームズパスタ 上野店 東京都台東区上野4-8-9");
+  assert.equal(tabelogDiscovery.url.includes("google.com/search"), false);
 });
 
 test("recognizes known reservation platforms and avoids duplicate discovery", () => {
