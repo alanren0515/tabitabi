@@ -17,6 +17,22 @@
 - Do not stop for ordinary technical choices. Pause only for actions that require the user in person, create or confirm payment, expose or transmit sensitive credentials/data, request a new external permission, or make an irreversible external change.
 - Never treat subagent approval as completion evidence by itself; the main agent remains responsible for inspecting changes and proving the final state.
 
+## Model roles and agent allocation
+
+- Treat the following as the permanent default collaboration model for this project, not a one-turn preference.
+- The main agent remains the project owner: it defines scope and acceptance criteria, decides whether another agent is worth the resource cost, integrates the work, inspects all changes, runs verification, controls billing and deployment, and reports the final state.
+- Use GPT-5.6 Sol as the product-design and independent-review role. Sol owns information architecture, user-flow direction, visual hierarchy, interaction and copy priorities, difficult product judgment, and post-implementation review. Sol should normally not write the same production code it later reviews.
+- Use GPT-5.6 Terra with medium reasoning as the default implementation model for substantive frontend, backend, cross-file, refactoring, testing, and documentation work.
+- Use GPT-5.6 Luna only for clearly mechanical, high-volume work such as repetitive translation keys, formatting, fixture generation, or non-semantic file migration. Do not delegate core business logic, security, release decisions, or UX judgment to Luna.
+- When subagent tooling is available, spawn the project-scoped `sol_design_reviewer` and `terra_implementer` agents from `.codex/agents/`; the user should not need to switch the main chat's model or maintain separate conversations. Keep the main conversation as the source of requirements, decisions, approvals, and final status.
+- If a pinned agent model is unavailable for the current account or Codex surface, do not silently claim that role ran on the requested model. Report the availability problem and use the closest available model only when doing so does not materially change quality, cost, or user intent.
+- Small, clear, tightly scoped fixes should be completed directly by the main agent or one Terra implementer without invoking Sol. Do not spend a design or review pass on copy-only edits, isolated links, single-rule CSS fixes, or routine regressions unless they reveal a broader user-flow problem.
+- Medium product or UI changes should normally follow: main-agent acceptance criteria -> Sol design direction when material judgment is needed -> Terra implementation -> main-agent automated and browser verification -> Sol review only when the resulting experience benefits from an independent design pass -> Terra fixes -> main-agent final verification.
+- Large or high-risk changes involving primary flows, permissions, billing, security, data migration, or release architecture should normally follow: Sol pre-design -> Terra implementation -> main-agent verification -> Sol final review -> Terra remediation -> main-agent release decision.
+- Backend-only or operational changes skip Sol unless they materially change user behavior or carry enough product/release risk to justify independent review.
+- Limit a normal loop to one implementation agent, at most one Sol pre-design pass, and at most one Sol final-review pass. Add more agents only when workstreams are genuinely independent and the expected quality or latency benefit outweighs duplicated context and token cost.
+- Review agents produce findings, not completion evidence. The main agent must triage each finding against the repository and test evidence, implement or explicitly reject it, and rerun the relevant checks.
+
 ## Cost and billing control
 
 - Before any action that may create or increase a charge, report the provider, billable resource or API operation, pricing basis, estimated one-time and recurring amount, expected usage ceiling, and the condition that stops further spending. Obtain the user's explicit confirmation before proceeding.
