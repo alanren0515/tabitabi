@@ -69,6 +69,7 @@ textarea:focus { border-color:var(--green); box-shadow:0 0 0 2px rgba(29,107,82,
 .image-method { display:flex; flex-direction:column; }
 .upload-button { width:100%; min-height:76px; flex:1; padding:12px; border:1px dashed var(--control-border); border-radius:var(--radius-control); background:var(--card); display:flex!important; flex-direction:column; justify-content:center; align-items:center; gap:7px; cursor:pointer; margin:0!important; font-size:12px!important; font-weight:700!important; color:var(--ink); }
 .upload-button:hover { border-color:var(--green); color:var(--green); }
+.upload-button:disabled { cursor:wait; opacity:.68; border-style:solid; color:var(--muted); }
 .upload-button svg { width:20px; height:20px; }
 .privacy-note,.fine-print { color:var(--subtle); font-size:12px; }
 .remove-upload { border:0; background:none; color:var(--red); font-size:12px; cursor:pointer; }
@@ -78,6 +79,7 @@ textarea:focus { border-color:var(--green); box-shadow:0 0 0 2px rgba(29,107,82,
 .upload-preview img { width:42px; height:46px; object-fit:cover; object-position:top; border-radius:6px; background:#ddd; }
 .upload-preview div { display:flex; flex-direction:column; gap:4px; }
 .upload-preview strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }.upload-preview span { color:var(--muted); font-size:10px; line-height:1.4; }
+.upload-optimization { display:grid; gap:3px; margin-top:8px; padding:8px 9px; border-radius:9px; background:#edf4f0; color:var(--green-strong); font-size:10px; line-height:1.45; }.upload-optimization strong { font-size:11px; }.upload-optimization span { color:#4d665c; }.upload-optimization-complete { background:#edf6ef; }.upload-optimization-error { background:var(--surface-danger); color:var(--red); }.upload-optimization-error span { color:#8e3e36; }
 .supported-sources { margin:10px 2px 13px; text-align:center; }
 .inline-error { display:flex; flex-direction:column; gap:4px; padding:11px 13px; margin:0 0 12px; border-radius:10px; background:var(--surface-danger); color:var(--red); font-size:12px; }
 .recovery-banner,.example-mode-banner { display:flex; flex-direction:column; gap:4px; margin:0 0 14px; padding:13px 15px; border:1px solid #d5bc73; border-radius:12px; background:#fff8df; color:#6d5415; }

@@ -10,7 +10,7 @@ import { DEFAULT_SETTINGS, loadSettingsFromStorage, normalizeSettings, persisten
 import { addPendingRestaurants, normalizePendingAnalyses, parseBatchRestaurantLines, pendingAnalysisToTextExtraction, PENDING_STORAGE_KEY, removePendingAnalysis, restaurantClueKey } from "./analysis-queue.js";
 import { parseShareTarget, urlWithoutShareTarget } from "./shared-input.js";
 import { createCapabilitiesLoader } from "./capabilities.js";
-import { clipboardScreenshotFile, SCREENSHOT_ACCEPT, validateScreenshotFile } from "./image-input.js";
+import { clipboardScreenshotFile, optimizeScreenshotFile, SCREENSHOT_ACCEPT, validateScreenshotFile } from "./image-input.js";
 import { sendEvent } from "./event-client.js";
 import { pathnameForView, viewFromPathname } from "./client-routes.js";
 import { SUPPORTED_LOCALES, localeNumberFormat, translate } from "./i18n.js";
@@ -41,6 +41,7 @@ const state = {
   uploadName: "",
   uploadFile: null,
   uploadPreviewUrl: "",
+  uploadOptimization: null,
   extraction: null,
   extractionMode: "",
   extractionMeta: null,
@@ -77,6 +78,8 @@ const state = {
 
 let lastRenderedView = "";
 let lastRenderedLocale = "";
+let uploadOptimizationJob = 0;
+let uploadOptimizationController = null;
 
 const VIEW_LABEL_KEYS = {
   home: "route.home",
@@ -256,6 +259,7 @@ function render() {
 function renderHome() {
   const offline = navigator.onLine === false;
   const accessLocked = pilotAccessLocked(state.capabilities, state.settings);
+  const uploadBlocked = ["optimizing", "failed"].includes(state.uploadOptimization?.status);
   app.innerHTML = `
     <section class="hero">
       <div class="hero-intro">
@@ -282,15 +286,16 @@ function renderHome() {
           </label>
           <section class="input-method-card image-method" aria-labelledby="image-method-title">
             <div class="input-method-heading"><b aria-hidden="true">▧</b><span><strong id="image-method-title">${t("home.imageMethod")}</strong><small>${t("home.imageMethodHint")}</small></span></div>
-            <button type="button" class="upload-button" id="upload-trigger">${icons.upload}<span>${state.uploadName ? t("home.replaceScreenshot") : t("home.addScreenshot")}</span></button>
+            <button type="button" class="upload-button" id="upload-trigger" ${state.uploadOptimization?.status === "optimizing" ? "disabled" : ""}>${icons.upload}<span>${state.uploadOptimization?.status === "optimizing" ? t("home.preparingScreenshot") : state.uploadName ? t("home.replaceScreenshot") : t("home.addScreenshot")}</span></button>
             <input type="file" id="screenshot" hidden accept="${SCREENSHOT_ACCEPT}" />
             ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="${t("home.previewAlt")}"><div><strong>${esc(state.uploadName)}</strong><span>${t("home.previewTitle")}</span></div></div>` : ""}
+            ${renderUploadOptimizationStatus()}
             <div class="image-method-footer">${state.uploadName ? `<button type="button" class="remove-upload" id="remove-upload">${t("home.removeScreenshot")}</button>` : `<span class="privacy-note" id="upload-help">${t("home.imagePrivacy")}</span>`}</div>
           </section>
         </div>
         <p class="supported-sources">${t("home.sources")}</p>
         ${state.analysisError ? `<aside class="inline-error" id="analysis-error" role="alert"><strong>${t("home.errorTitle")}</strong><span>${esc(state.analysisError)}</span></aside>` : ""}
-        <button class="primary-button" type="submit" ${accessLocked ? 'disabled aria-describedby="pilot-access-help"' : ""}>${t("home.start")} ${icons.arrow}</button>
+        <button class="primary-button" type="submit" ${accessLocked ? 'disabled aria-describedby="pilot-access-help"' : uploadBlocked ? 'disabled aria-describedby="upload-optimization-status"' : ""}>${t("home.start")} ${icons.arrow}</button>
       </form>
       ${currentLocale() !== "ja" ? `<aside class="language-beta-note"><strong>${t("language.beta")}</strong><span>${t("result.originalLanguageNotice")}</span></aside>` : ""}
       <details class="examples">
@@ -324,14 +329,14 @@ function renderHome() {
     document.querySelector("#clue")?.focus();
   });
   document.querySelector("#upload-trigger").addEventListener("click", () => document.querySelector("#screenshot").click());
-  document.querySelector("#screenshot").addEventListener("change", (event) => attachScreenshotFile(event.target.files[0] || null));
+  document.querySelector("#screenshot").addEventListener("change", (event) => { void attachScreenshotFile(event.target.files[0] || null); });
   document.querySelector("#clue").addEventListener("paste", (event) => {
     const file = clipboardScreenshotFile(event.clipboardData);
     if (!file) return;
     const textarea = event.currentTarget;
     setTimeout(() => {
       state.input = textarea.value;
-      attachScreenshotFile(file, { pasted: true });
+      void attachScreenshotFile(file, { pasted: true });
     }, 0);
   });
   document.querySelector("#clue").addEventListener("input", (event) => {
@@ -348,7 +353,7 @@ function renderHome() {
   document.querySelectorAll("[data-example]").forEach((button) => button.addEventListener("click", () => openExampleExperience(button.dataset.example)));
 }
 
-function attachScreenshotFile(file, { pasted = false } = {}) {
+async function attachScreenshotFile(file, { pasted = false } = {}) {
   if (!file) return;
   state.exampleInput = false;
   state.homeRecoveryNotice = "";
@@ -359,17 +364,76 @@ function attachScreenshotFile(file, { pasted = false } = {}) {
     renderHome();
     return;
   }
+  uploadOptimizationController?.abort();
+  const controller = new AbortController();
+  uploadOptimizationController = controller;
+  const job = ++uploadOptimizationJob;
   if (state.uploadPreviewUrl) URL.revokeObjectURL(state.uploadPreviewUrl);
-  state.uploadFile = file;
+  state.uploadFile = null;
   state.uploadName = file.name || (pasted ? t("upload.pastedName") : t("upload.screenshotName"));
   state.uploadPreviewUrl = URL.createObjectURL(file);
+  state.uploadOptimization = { status: "optimizing", phase: "decoding" };
   state.analysisError = "";
-  showToast(pasted ? t("error.imagePasted") : t("error.imageAdded"));
   renderHome();
+  try {
+    const result = await optimizeScreenshotFile(file, {
+      signal: controller.signal,
+      onProgress(progress) {
+        if (job !== uploadOptimizationJob) return;
+        if (progress.phase === state.uploadOptimization?.phase) return;
+        state.uploadOptimization = { status: "optimizing", ...progress };
+        renderHome();
+      }
+    });
+    if (job !== uploadOptimizationJob) return;
+    uploadOptimizationController = null;
+    if (state.uploadPreviewUrl) URL.revokeObjectURL(state.uploadPreviewUrl);
+    state.uploadFile = result.file;
+    state.uploadPreviewUrl = URL.createObjectURL(result.file);
+    state.uploadOptimization = result.optimized ? { status: "complete", ...result } : null;
+    state.analysisError = "";
+    showToast(result.optimized ? t("home.screenshotPrepared") : (pasted ? t("error.imagePasted") : t("error.imageAdded")));
+  } catch (error) {
+    if (job !== uploadOptimizationJob) return;
+    if (error?.name === "AbortError" || error?.code === "ABORTED") return;
+    uploadOptimizationController = null;
+    state.uploadFile = null;
+    state.uploadOptimization = { status: "failed" };
+    state.analysisError = t("error.imageOptimizeFailed");
+    showToast(t("error.imageOptimizeFailed"));
+  }
+  renderHome();
+}
+
+function renderUploadOptimizationStatus() {
+  const optimization = state.uploadOptimization;
+  if (!optimization) return "";
+  if (optimization.status === "optimizing") {
+    const body = optimization.phase === "encoding" ? t("home.preparingScreenshotEncoding") : t("home.preparingScreenshotBody");
+    return `<aside class="upload-optimization" id="upload-optimization-status" role="status" aria-live="polite"><strong>${t("home.preparingScreenshot")}</strong><span>${body}</span></aside>`;
+  }
+  if (optimization.status === "complete") {
+    return `<aside class="upload-optimization upload-optimization-complete" id="upload-optimization-status" role="status"><strong>${t("home.screenshotPrepared")}</strong><span>${t("home.screenshotPreparedBody", { original: formatImageBytes(optimization.originalBytes), optimized: formatImageBytes(optimization.outputBytes) })}</span></aside>`;
+  }
+  return `<aside class="upload-optimization upload-optimization-error" id="upload-optimization-status" role="alert"><strong>${t("home.screenshotPrepareFailed")}</strong><span>${t("home.screenshotPrepareFailedBody")}</span></aside>`;
+}
+
+function formatImageBytes(value) {
+  const megabytes = Number(value) / 1024 / 1024;
+  return `${localeNumberFormat(currentLocale()).format(Math.max(0.1, Math.round(megabytes * 10) / 10))} MB`;
 }
 
 async function handleAnalyze(event) {
   event.preventDefault();
+  if (state.uploadOptimization?.status === "optimizing") {
+    showToast(t("home.preparingScreenshot"));
+    return;
+  }
+  if (state.uploadOptimization?.status === "failed") {
+    showToast(t("error.imageOptimizeFailed"));
+    document.querySelector("#upload-trigger")?.focus();
+    return;
+  }
   const value = new FormData(event.currentTarget).get("clue").trim();
   if (!value && !state.uploadFile) {
     state.analysisError = t("error.inputRequired");
@@ -1066,10 +1130,14 @@ function savePlanFromForm(event) {
 }
 
 function clearUpload() {
+  uploadOptimizationJob += 1;
+  uploadOptimizationController?.abort();
+  uploadOptimizationController = null;
   if (state.uploadPreviewUrl) URL.revokeObjectURL(state.uploadPreviewUrl);
   state.uploadFile = null;
   state.uploadName = "";
   state.uploadPreviewUrl = "";
+  state.uploadOptimization = null;
   state.extraction = null;
   state.extractionMode = "";
   state.extractionMeta = null;

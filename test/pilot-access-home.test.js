@@ -18,6 +18,14 @@ test("the homepage access form does not validate by spending a provider request"
   assert.doesNotMatch(handler, /extractScreenshot|findRestaurantCandidates|fetch\(/);
 });
 
+test("a failed local screenshot preparation blocks analysis until the image is replaced or removed", () => {
+  assert.match(appSource, /\["optimizing", "failed"\]\.includes\(state\.uploadOptimization\?\.status\)/);
+  assert.doesNotMatch(appSource, /state\.uploadOptimization \? 'disabled aria-describedby="upload-optimization-status"'/);
+  assert.match(appSource, /state\.uploadOptimization\?\.status === "failed"/);
+  assert.match(appSource, /document\.querySelector\("#upload-trigger"\)\?\.focus\(\)/);
+  assert.match(appSource, /uploadOptimizationController\?\.abort\(\)/);
+});
+
 test("a rejected code clears the session value and returns focus to the homepage gate", () => {
   assert.match(appSource, /recoverFromPilotAccessError\(error\)/);
   assert.match(appSource, /settingsWithoutPilotAccess\(state\.settings\)/);
