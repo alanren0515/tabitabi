@@ -75,6 +75,7 @@ export async function getGooglePlaceDetails({ placeId, apiKey, fetchImpl = fetch
         "websiteUri",
         "nationalPhoneNumber",
         "regularOpeningHours",
+        "currentOpeningHours",
         "primaryTypeDisplayName",
         "rating",
         "userRatingCount",
@@ -154,6 +155,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
   addFact(facts, "business_status", place.businessStatus, "google_places", place.googleMapsUri, retrievedAt, "medium");
   addFact(facts, "phone", place.phone, "google_places", place.googleMapsUri, retrievedAt, "medium");
   addFact(facts, "opening_hours", place.hours.join(" / "), "google_places", place.googleMapsUri, retrievedAt, "medium");
+  addFact(facts, "current_opening_status", place.currentOpeningHours?.openNow === true ? "open" : place.currentOpeningHours?.openNow === false ? "closed" : "", "google_places", place.googleMapsUri, place.currentOpeningHours?.retrievedAt || retrievedAt, "medium");
   addFact(facts, "rating", place.rating, "google_places", place.googleMapsUri, retrievedAt, "medium");
   addFact(facts, "user_rating_count", place.userRatingCount, "google_places", place.googleMapsUri, retrievedAt, "medium");
   addFact(facts, "website", place.websiteUri, "google_places", place.googleMapsUri, retrievedAt, "medium");
@@ -309,6 +311,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
     address: place.address,
     station: hp?.station || hp?.access || "地図で要確認",
     hours: place.hours.length ? place.hours.join(" / ") : hp?.open || "要確認",
+    currentOpeningHours: place.currentOpeningHours || null,
     closed: hp?.close || "要確認",
     phone: confirmedPhone || "",
     rating: place.rating,
@@ -481,12 +484,27 @@ export function normalizePlaceDetails(place, retrievedAt) {
     websiteUri: place.websiteUri || "",
     phone: place.nationalPhoneNumber || "",
     hours: place?.regularOpeningHours?.weekdayDescriptions || [],
+    currentOpeningHours: normalizeCurrentOpeningHours(place.currentOpeningHours, retrievedAt),
     category: place?.primaryTypeDisplayName?.text || "飲食店",
     rating: Number.isFinite(place.rating) ? place.rating : null,
     userRatingCount: Number.isInteger(place.userRatingCount) ? place.userRatingCount : null,
     attributions: Array.isArray(place.attributions) ? place.attributions : [],
     retrievedAt
   };
+}
+
+function normalizeCurrentOpeningHours(hours, retrievedAt) {
+  if (!hours || typeof hours !== "object") return null;
+  const nextOpenTime = normalizeGoogleTimestamp(hours.nextOpenTime);
+  const nextCloseTime = normalizeGoogleTimestamp(hours.nextCloseTime);
+  const openNow = typeof hours.openNow === "boolean" ? hours.openNow : null;
+  if (openNow === null && !nextOpenTime && !nextCloseTime) return null;
+  return { openNow, nextOpenTime, nextCloseTime, retrievedAt };
+}
+
+function normalizeGoogleTimestamp(value) {
+  if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return "";
+  return value;
 }
 
 async function readSourceResponse(response, source) {

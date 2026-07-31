@@ -208,6 +208,11 @@ footer button { min-height:44px; border:0; background:none; color:var(--green); 
 .action-card { display:flex; flex-direction:column; justify-content:center; }
 .action-card h3 { font-size:23px; line-height:1.45; margin:8px 0 25px; }
 .action-more { margin-top:10px; border-top:1px solid var(--line); }
+.map-action { width:fit-content; align-self:flex-start; min-height:44px; padding:0 14px; margin-top:10px; color:var(--green-strong); }
+.current-opening-status { display:grid; gap:3px; margin:-10px 0 16px; padding:11px 12px; border:1px solid var(--line); border-radius:11px; background:var(--surface-subtle); }
+.current-opening-status span { color:var(--muted); font-size:11px; font-weight:700; }
+.current-opening-status strong { font-size:14px; line-height:1.4; }
+.current-opening-status small { color:var(--muted); font-size:10px; line-height:1.45; }
 .action-more>summary { min-height:44px; padding:11px 2px; cursor:pointer; color:var(--muted); font-size:12px; font-weight:700; }
 .action-more>summary::marker { color:var(--green); }
 .action-more>div { display:grid; gap:8px; padding-top:4px; }

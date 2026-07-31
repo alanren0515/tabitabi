@@ -30,7 +30,7 @@ test("requires only the helpfulness answer in the default feedback path", () => 
 
 test("ships the new novice-flow labels in all supported languages", () => {
   for (const locale of ["ja", "en", "zh-CN"]) {
-    for (const key of ["review.more", "candidate.why", "result.why", "result.moreTitle", "result.otherActions", "feedback.more"]) {
+    for (const key of ["review.more", "candidate.why", "result.why", "result.moreTitle", "result.otherActions", "feedback.more", "result.actionMap", "result.currentStatus", "result.currentStatusOpen", "result.currentStatusClosed", "result.currentStatusUnknown"]) {
       assert.notEqual(translate(locale, key), key);
     }
   }
@@ -40,6 +40,12 @@ test("keeps candidate and result actions focused on one primary choice", () => {
   assert.doesNotMatch(appSource, /<button class="preview-button"/);
   assert.match(appSource, /<details class="action-more"/);
   assert.match(appSource, /<summary>\$\{t\("result\.otherActions"\)\}<\/summary>/);
+  assert.match(appSource, /const mapUrl = safeExternalUrl\(r\.mapSearchUrl \|\| r\.googleMapsUri \|\| ""\)/);
+  assert.match(appSource, /const mapsIsFallbackPrimary = !primaryAction && !r\.phone/);
+  assert.match(appSource, /mapUrl !== "#" && !mapsIsPrimary/);
+  assert.match(appSource, /class="secondary-button map-action"/);
+  assert.match(appSource, /displayedReservationOptions = reservationOptions\.filter\(\(option\) => option\.provider !== "google_maps"\)/);
+  assert.ok(appSource.indexOf("renderCurrentOpeningStatus(r.currentOpeningHours)") < appSource.indexOf('<details class="action-more"'));
 });
 
 test("makes every new disclosure visibly interactive and touch-sized", () => {
@@ -58,5 +64,12 @@ test("keeps English and Chinese candidate guidance short without echoing long us
       assert.ok(copy.length < 80);
       assert.doesNotMatch(copy, /x{20}/);
     }
+  }
+});
+
+test("names the recognized social platform in standalone-link guidance", () => {
+  assert.match(appSource, /t\("link\.postTitle", \{ platform: esc\(parsedPlatformLabel\) \}\)/);
+  for (const locale of ["ja", "en", "zh-CN"]) {
+    assert.match(translate(locale, "link.postTitle", { platform: "TikTok" }), /TikTok/);
   }
 });

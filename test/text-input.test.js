@@ -97,6 +97,8 @@ test("applies the same link-only boundary to Instagram", () => {
   assert.equal(result.contentRead, false);
   assert.equal(result.requiresContent, true);
   assert.ok(result.warnings.every((warning) => !/已读取帖子正文/.test(warning)));
+  assert.equal(result.clues.name, "");
+  assert.equal(result.searchQuery, "");
 });
 
 test("recognizes Japan-focused secondary social sources without claiming to read them", () => {

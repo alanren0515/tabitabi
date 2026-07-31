@@ -44,6 +44,21 @@ test("keeps an area-only clue as a search hint without overriding the current ma
   assert.doesNotMatch(result.address, /神保町/);
 });
 
+test("carries Google Maps current opening status without inferring it from regular hours", () => {
+  const result = buildRestaurantResult({
+    place: {
+      placeId: "open-status", name: "営業状況テスト", address: "東京都千代田区", businessStatus: "OPERATIONAL",
+      googleMapsUri: "https://maps.google.com/?cid=open-status", websiteUri: "", phone: "", hours: ["月曜日: 11:00～22:00"],
+      currentOpeningHours: { openNow: false, nextOpenTime: "2026-08-01T11:00:00+09:00", nextCloseTime: "", retrievedAt: "2026-07-31T06:00:00.000Z" },
+      category: "飲食店", retrievedAt: "2026-07-31T06:00:00.000Z", attributions: []
+    },
+    hotPepperResult: { available: false, match: null }
+  });
+  assert.equal(result.currentOpeningHours.openNow, false);
+  assert.equal(result.currentOpeningHours.nextOpenTime, "2026-08-01T11:00:00+09:00");
+  assert.ok(result.evidenceFacts.some((fact) => fact.field === "current_opening_status" && fact.value === "closed"));
+});
+
 test("flags a specific old address that differs from the current address", () => {
   const conflicts = detectUserClueConflicts(
     { address: "東京都港区六本木7丁目8-6 アクソール六本木7F" },
@@ -380,6 +395,7 @@ test("Places details are fetched only after a confirmed place id", async () => {
       websiteUri: "https://example-restaurant.jp",
       nationalPhoneNumber: "03-1234-5678",
       regularOpeningHours: { weekdayDescriptions: ["月曜日: 11:00～22:00"] },
+      currentOpeningHours: { openNow: true, nextCloseTime: "2026-07-31T22:00:00+09:00", nextOpenTime: "2026-08-01T11:00:00+09:00" },
       rating: 4.2,
       userRatingCount: 128,
       primaryTypeDisplayName: { text: "イタリア料理店" },
@@ -391,9 +407,13 @@ test("Places details are fetched only after a confirmed place id", async () => {
   assert.equal(place.name, "ホームズパスタ 上野店");
   assert.equal(place.phone, "03-1234-5678");
   assert.equal(place.hours.length, 1);
+  assert.equal(place.currentOpeningHours.openNow, true);
+  assert.equal(place.currentOpeningHours.nextCloseTime, "2026-07-31T22:00:00+09:00");
+  assert.equal(place.currentOpeningHours.retrievedAt, place.retrievedAt);
   assert.equal(place.rating, 4.2);
   assert.equal(place.userRatingCount, 128);
   assert.match(capturedOptions.headers["X-Goog-FieldMask"], /rating/);
+  assert.match(capturedOptions.headers["X-Goog-FieldMask"], /currentOpeningHours/);
   assert.equal(place.attributions[0].provider, "Example Data");
 });
 

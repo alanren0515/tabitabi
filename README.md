@@ -139,6 +139,7 @@ npm run release:formal-gate
 - PNG/JPEG/WebP 截图会在服务端直接读取像素尺寸；短边不足 360px 或长边不足 640px 时，即使模型自报高置信度也会显示低分辨率警告并要求人工确认。WebP 的 VP8、VP8L 与 VP8X 三种封装均支持。该检查不会为了同一张低清图片额外调用备用模型。
 - 上传选择器会拒绝 HEIC/HEIF、GIF、空文件和超过 40MB 的图片。PNG/JPEG/WebP 若已处于服务端安全范围（8MB、2,000 万像素、单边 10,000px）会原样发送；较大的 iPhone 截图会仅在当前设备上自动按方向缩放并转为高质量 JPEG，目标约 6MB、1,600 万像素、单边 8,192px。原图不会上传或写入磁盘；无法在设备上解码或处理时会明确提示重新选择或裁剪。桌面浏览器也可以直接把支持格式的截图粘贴到餐厅线索输入框。
 - 截图中的画面文字、帖子说法和作者观点分开显示。临时休业、闭店、搬迁和预约状态即使出现在截图里，也只作为未核验帖子线索，不会直接形成行动结论；确认具体门店后仍须由当前 Google Maps 状态或已核验官网复核。
+- Instagram、TikTok 等动态帖子链接只会识别平台，不会抓取或读取帖子内容；单独链接必须补充截图或餐厅名称后才会搜索门店。Google Place Details 在同一已确认门店请求中也会保守显示 Google Maps 返回的当前营业状态（含查询时间）；这不等于保证可以到店，出发前仍须最终确认。
 - Google Places API (New) 已完成真实联调，Key 仅允许访问 Places API (New)；Text Search 与 Place Details 的每日硬配额均为 100 次。
 - Hot Pepper 数据出现时，结果页会显示 Recruit 要求的 Hot Pepper Web Service 署名；真实 API Key 申请仍需邮箱验证和用户本人同意利用条款。
 - 预约入口统一输出为 `reservationOptions`：当前识别已核验餐厅官网、Google Maps、电话、Hot Pepper、Tabelog、TableCheck、Rakuten Gurunavi、一休、OMAKASE、Pocket Concierge、TABLEALL、OpenTable、Reserve with Google、EPARK、AutoReserve、ヒトサラ、SAVOR JAPAN、Toreta、ebica、PayPay Gourmet、OZmall、Retty、byFood、Foodies Reserve、JPNEAZY、My Concierge Japan 和 JapanFoodTravel。未发现直接店铺链接时，Tabelog、TableCheck 与 Gurunavi 只提供明确标注的查找入口；普通 Google 搜索或 Maps URL 不会被误判成 Google 预约流程。
