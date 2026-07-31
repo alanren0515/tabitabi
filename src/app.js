@@ -49,6 +49,7 @@ const state = {
   currentPlanIntent: {},
   capabilities: null,
   analysisError: "",
+  analysisErrorTarget: "",
   loadingMode: "",
   candidateMode: "demo",
   currentClues: {},
@@ -260,6 +261,8 @@ function renderHome() {
   const offline = navigator.onLine === false;
   const accessLocked = pilotAccessLocked(state.capabilities, state.settings);
   const uploadBlocked = ["optimizing", "failed"].includes(state.uploadOptimization?.status);
+  const uploadError = state.analysisError && state.analysisErrorTarget === "upload";
+  const clueError = state.analysisError && state.analysisErrorTarget === "clue";
   app.innerHTML = `
     <section class="hero">
       <div class="hero-intro">
@@ -279,23 +282,23 @@ function renderHome() {
       ${state.homeRecoveryNotice ? `<aside class="recovery-banner" role="status"><strong>${t("home.noMatchTitle")}</strong><span>${esc(state.homeRecoveryNotice)}</span><small>${t("home.noMatchHelp")}</small></aside>` : ""}
       <form id="analyze-form" class="input-card">
         <div class="input-intro"><strong>${t("home.clueLabel")}</strong><span>${t("home.methodHelp")}</span></div>
-        <div class="input-method-grid">
-          <label class="input-method-card text-method" for="clue">
-            <span class="input-method-heading"><b aria-hidden="true">Aa</b><span><strong>${t("home.textMethod")}</strong><small>${t("home.textMethodHint")}</small></span></span>
-            <textarea id="clue" name="clue" rows="4" placeholder="${t("home.cluePlaceholder")}" ${state.analysisError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
-          </label>
-          <section class="input-method-card image-method" aria-labelledby="image-method-title">
-            <div class="input-method-heading"><b aria-hidden="true">▧</b><span><strong id="image-method-title">${t("home.imageMethod")}</strong><small>${t("home.imageMethodHint")}</small></span></div>
-            <button type="button" class="upload-button" id="upload-trigger" ${state.uploadOptimization?.status === "optimizing" ? "disabled" : ""}>${icons.upload}<span>${state.uploadOptimization?.status === "optimizing" ? t("home.preparingScreenshot") : state.uploadName ? t("home.replaceScreenshot") : t("home.addScreenshot")}</span></button>
+        <div class="input-method-stack">
+          <section class="input-method-card image-method primary-input-method" aria-labelledby="image-method-title">
+            <div class="input-method-heading"><span><b class="method-badge">${t("home.primaryBadge")}</b><strong id="image-method-title">${t("home.imageMethod")}</strong><small>${t("home.imageMethodHint")}</small></span></div>
+            <button type="button" class="upload-button" id="upload-trigger" ${state.uploadOptimization?.status === "optimizing" ? "disabled" : ""} ${uploadError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${icons.upload}<span>${state.uploadOptimization?.status === "optimizing" ? t("home.preparingScreenshot") : state.uploadName ? t("home.replaceScreenshot") : t("home.addScreenshot")}</span></button>
             <input type="file" id="screenshot" hidden accept="${SCREENSHOT_ACCEPT}" />
             ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="${t("home.previewAlt")}"><div><strong>${esc(state.uploadName)}</strong><span>${t("home.previewTitle")}</span></div></div>` : ""}
             ${renderUploadOptimizationStatus()}
             <div class="image-method-footer">${state.uploadName ? `<button type="button" class="remove-upload" id="remove-upload">${t("home.removeScreenshot")}</button>` : `<span class="privacy-note" id="upload-help">${t("home.imagePrivacy")}</span>`}</div>
           </section>
+          <div class="input-method-divider"><span>${t("home.or")}</span></div>
+          <label class="input-method-card text-method secondary-input-method" for="clue">
+            <span class="input-method-heading"><span><strong>${t("home.nameMethod")}</strong><small>${t("home.nameMethodHint")}</small></span></span>
+            <textarea id="clue" name="clue" rows="2" placeholder="${t("home.cluePlaceholder")}" ${clueError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
+          </label>
         </div>
-        <p class="supported-sources">${t("home.sources")}</p>
         ${state.analysisError ? `<aside class="inline-error" id="analysis-error" role="alert"><strong>${t("home.errorTitle")}</strong><span>${esc(state.analysisError)}</span></aside>` : ""}
-        <button class="primary-button" type="submit" ${accessLocked ? 'disabled aria-describedby="pilot-access-help"' : uploadBlocked ? 'disabled aria-describedby="upload-optimization-status"' : ""}>${t("home.start")} ${icons.arrow}</button>
+        <button class="primary-button analyze-submit" type="submit" ${accessLocked ? 'disabled aria-describedby="pilot-access-help"' : uploadBlocked ? 'disabled aria-describedby="upload-optimization-status"' : ""}><span id="analyze-submit-label">${homeSubmitLabel()}</span> ${icons.arrow}</button>
       </form>
       ${currentLocale() !== "ja" ? `<aside class="language-beta-note"><strong>${t("language.beta")}</strong><span>${t("result.originalLanguageNotice")}</span></aside>` : ""}
       <details class="examples">
@@ -324,6 +327,7 @@ function renderHome() {
     }
     syncSettings();
     state.analysisError = "";
+    state.analysisErrorTarget = "";
     showToast(t("home.accessSaved"));
     renderHome();
     document.querySelector("#clue")?.focus();
@@ -343,9 +347,12 @@ function renderHome() {
     state.input = event.currentTarget.value;
     state.exampleInput = false;
     state.analysisError = "";
+    state.analysisErrorTarget = "";
     state.homeRecoveryNotice = "";
     event.currentTarget.removeAttribute("aria-invalid");
     document.querySelector("#analysis-error")?.remove();
+    const submitLabel = document.querySelector("#analyze-submit-label");
+    if (submitLabel) submitLabel.textContent = homeSubmitLabel();
   });
   document.querySelector("#remove-upload")?.addEventListener("click", clearUpload);
   document.querySelectorAll("[data-open-recent]").forEach((button) => button.addEventListener("click", () => openRecentAnalysis(button.dataset.openRecent)));
@@ -360,8 +367,10 @@ async function attachScreenshotFile(file, { pasted = false } = {}) {
   const validation = validateScreenshotFile(file);
   if (!validation.ok) {
     state.analysisError = currentLocale() === "ja" ? validation.error : t("error.imageUnsupported");
+    state.analysisErrorTarget = "upload";
     showToast(t("error.imageUnsupported"));
     renderHome();
+    requestAnimationFrame(() => document.querySelector("#upload-trigger")?.focus());
     return;
   }
   uploadOptimizationController?.abort();
@@ -374,6 +383,7 @@ async function attachScreenshotFile(file, { pasted = false } = {}) {
   state.uploadPreviewUrl = URL.createObjectURL(file);
   state.uploadOptimization = { status: "optimizing", phase: "decoding" };
   state.analysisError = "";
+  state.analysisErrorTarget = "";
   renderHome();
   try {
     const result = await optimizeScreenshotFile(file, {
@@ -392,6 +402,7 @@ async function attachScreenshotFile(file, { pasted = false } = {}) {
     state.uploadPreviewUrl = URL.createObjectURL(result.file);
     state.uploadOptimization = result.optimized ? { status: "complete", ...result } : null;
     state.analysisError = "";
+    state.analysisErrorTarget = "";
     showToast(result.optimized ? t("home.screenshotPrepared") : (pasted ? t("error.imagePasted") : t("error.imageAdded")));
   } catch (error) {
     if (job !== uploadOptimizationJob) return;
@@ -400,9 +411,16 @@ async function attachScreenshotFile(file, { pasted = false } = {}) {
     state.uploadFile = null;
     state.uploadOptimization = { status: "failed" };
     state.analysisError = t("error.imageOptimizeFailed");
+    state.analysisErrorTarget = "upload";
     showToast(t("error.imageOptimizeFailed"));
   }
   renderHome();
+  if (state.analysisErrorTarget === "upload") requestAnimationFrame(() => document.querySelector("#upload-trigger")?.focus());
+}
+
+function homeSubmitLabel() {
+  if (state.uploadName) return t("home.startScreenshot");
+  return /^https?:\/\/\S+$/i.test(state.input.trim()) ? t("home.startClue") : t("home.startName");
 }
 
 function renderUploadOptimizationStatus() {
@@ -437,6 +455,7 @@ async function handleAnalyze(event) {
   const value = new FormData(event.currentTarget).get("clue").trim();
   if (!value && !state.uploadFile) {
     state.analysisError = t("error.inputRequired");
+    state.analysisErrorTarget = "clue";
     renderHome();
     requestAnimationFrame(() => document.querySelector("#clue")?.focus());
     return;
@@ -448,12 +467,14 @@ async function handleAnalyze(event) {
   const capabilities = await getCapabilities();
   if (capabilities.capabilitiesUnavailable) {
     state.analysisError = t("error.service");
+    state.analysisErrorTarget = "form";
     renderHome();
     return;
   }
   if (pilotAccessLocked(capabilities, state.settings)) {
     state.capabilities = capabilities;
     state.analysisError = "";
+    state.analysisErrorTarget = "";
     renderHome();
     document.querySelector("#pilot-access-code")?.focus();
     showToast(t("error.accessFirst"));
@@ -464,6 +485,7 @@ async function handleAnalyze(event) {
   state.activePendingId = null;
   state.userProvidedReservationLinks = [];
   state.analysisError = "";
+  state.analysisErrorTarget = "";
   state.homeRecoveryNotice = "";
   state.searchRecovery = null;
   state.restaurant = null;
@@ -498,9 +520,11 @@ async function handleAnalyze(event) {
       render();
     } catch (error) {
       state.analysisError = error.message || t("error.retryOrName");
+      state.analysisErrorTarget = "upload";
       state.loadingMode = "";
       state.view = "home";
       render();
+      requestAnimationFrame(() => document.querySelector("#upload-trigger")?.focus());
     }
     return;
   }
@@ -541,6 +565,7 @@ async function handleAnalyze(event) {
   } catch (error) {
     if (recoverFromPilotAccessError(error)) return;
     state.analysisError = error.message || t("error.searchUnavailable");
+    state.analysisErrorTarget = "clue";
     state.view = "home";
     render();
   }
@@ -637,6 +662,7 @@ function renderSearchRecovery() {
 function returnToClues(reason = "no_match") {
   state.homeRecoveryNotice = reason === "example" ? "" : t(reason === "unavailable" ? "home.searchUnavailableNotice" : "home.noMatchNotice");
   state.analysisError = "";
+  state.analysisErrorTarget = "";
   state.searchRecovery = null;
   state.view = "home";
   render();
@@ -1154,6 +1180,7 @@ function clearUpload() {
   state.extractionMode = "";
   state.extractionMeta = null;
   state.analysisError = "";
+  state.analysisErrorTarget = "";
   renderHome();
 }
 
@@ -1350,6 +1377,7 @@ function recoverFromPilotAccessError(error) {
   state.settings = settingsWithoutPilotAccess(state.settings);
   state.loadingMode = "";
   state.analysisError = t("error.accessInvalidBody");
+  state.analysisErrorTarget = "access";
   state.view = "home";
   syncSettings();
   render();

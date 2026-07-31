@@ -11,6 +11,27 @@ test("keeps the home screen focused on input instead of explanatory panels", () 
   assert.doesNotMatch(appSource, /<aside class="demo-banner/);
 });
 
+test("makes screenshots primary and restaurant-name input secondary on the homepage", () => {
+  const homeStart = appSource.indexOf("function renderHome()");
+  const homeEnd = appSource.indexOf("function renderUploadOptimizationStatus()");
+  const homeSource = appSource.slice(homeStart, homeEnd);
+  assert.ok(homeSource.indexOf("primary-input-method") < homeSource.indexOf("secondary-input-method"));
+  assert.match(homeSource, /home\.primaryBadge/);
+  assert.match(homeSource, /home\.nameMethod/);
+  assert.doesNotMatch(homeSource, /home\.sources/);
+  assert.doesNotMatch(homeSource, /home\.textMethod/);
+  assert.match(appSource, /function homeSubmitLabel\(\)/);
+  assert.match(appSource, /home\.startClue/);
+  assert.match(homeSource, /id="analyze-submit-label">\$\{homeSubmitLabel\(\)\}/);
+});
+
+test("associates screenshot errors with the primary upload control", () => {
+  assert.match(appSource, /const uploadError = state\.analysisError && state\.analysisErrorTarget === "upload"/);
+  assert.match(appSource, /id="upload-trigger"[^\n]*uploadError \? 'aria-invalid="true" aria-describedby="analysis-error"'/);
+  assert.match(appSource, /state\.analysisErrorTarget = "upload"[^]*#upload-trigger/);
+  assert.match(appSource, /const clueError = state\.analysisError && state\.analysisErrorTarget === "clue"/);
+});
+
 test("uses progressive disclosure through confirmation, result, and feedback", () => {
   assert.match(appSource, /<details class="review-more"/);
   assert.doesNotMatch(appSource, /<details class="review-more"[^>]*open/);
@@ -30,7 +51,7 @@ test("requires only the helpfulness answer in the default feedback path", () => 
 
 test("ships the new novice-flow labels in all supported languages", () => {
   for (const locale of ["ja", "en", "zh-CN"]) {
-    for (const key of ["review.more", "candidate.why", "result.why", "result.moreTitle", "result.otherActions", "feedback.more", "result.actionMap", "result.currentStatus", "result.currentStatusOpen", "result.currentStatusClosed", "result.currentStatusUnknown"]) {
+    for (const key of ["review.more", "candidate.why", "result.why", "result.moreTitle", "result.otherActions", "feedback.more", "result.actionMap", "result.currentStatus", "result.currentStatusOpen", "result.currentStatusClosed", "result.currentStatusUnknown", "home.primaryBadge", "home.or", "home.nameMethod", "home.startScreenshot", "home.startName", "home.startClue"]) {
       assert.notEqual(translate(locale, key), key);
     }
   }
