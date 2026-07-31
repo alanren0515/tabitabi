@@ -38,7 +38,7 @@ export async function runDeploymentSmoke({ baseUrl, allowedOrigin = "https://tab
   checks.pilot = await expectDocument("pilot", fetchImpl, `${origin}/pilot`);
   checks.pilotContent = await expectTextMarkers("pilotContent", fetchImpl, `${origin}/src/app.js`, releaseMode === "public"
     ? ["公開ベータ", "招待コードは不要です", "店舗を確認する"]
-    : ["クローズドテスト参加者募集", "予約の確定、支払い、電話は必要ありません", "メールで参加を相談する"]);
+    : ["クローズドテスト", "予約・支払い・電話は不要です", "メールで参加を申し込む"]);
   checks.privacy = await expectDocument("privacy", fetchImpl, `${origin}/privacy`);
   checks.terms = await expectDocument("terms", fetchImpl, `${origin}/terms`);
   if (live) {

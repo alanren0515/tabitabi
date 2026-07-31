@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { runDeploymentSmoke, validateSmokeImageMetadata } from "../server/deployment-smoke.mjs";
+
+const currentPilotBundle = await readFile(new URL("../src/app.js", import.meta.url), "utf8");
 
 test("checks public production surfaces without consuming provider calls", async () => {
   const requested = [];
@@ -10,7 +13,7 @@ test("checks public production surfaces without consuming provider calls", async
     if (path === "/healthz") return Response.json({ status: "ok" });
     if (path === "/readyz") return Response.json({ ready: true });
     if (path === "/api/capabilities") return Response.json({ visionExtraction: true, placesSearch: true, pilotAccessRequired: true });
-    if (path === "/src/app.js") return new Response("クローズドテスト参加者募集 予約の確定、支払い、電話は必要ありません メールで参加を相談する");
+    if (path === "/src/app.js") return new Response(currentPilotBundle);
     return new Response('<main id="app"></main>', { headers: { "content-type": "text/html", "x-tabitabi-document": path.slice(1) } });
   };
   const result = await runDeploymentSmoke({ baseUrl: "https://tabitabi.example", allowedOrigin: "https://tabitabi.example", fetchImpl });
@@ -24,7 +27,7 @@ test("requires an explicit screenshot before live Qwen and Places smoke", async 
     if (path === "/healthz") return Response.json({ status: "ok" });
     if (path === "/readyz") return Response.json({ ready: true });
     if (path === "/api/capabilities") return Response.json({ visionExtraction: true, placesSearch: true, pilotAccessRequired: true });
-    if (path === "/src/app.js") return new Response("クローズドテスト参加者募集 予約の確定、支払い、電話は必要ありません メールで参加を相談する");
+    if (path === "/src/app.js") return new Response(currentPilotBundle);
     return new Response('<main id="app"></main>', { headers: { "x-tabitabi-document": path.slice(1) } });
   };
   await assert.rejects(() => runDeploymentSmoke({ baseUrl: "https://tabitabi.example", allowedOrigin: "https://tabitabi.example", live: true, fetchImpl }), /SMOKE_SCREENSHOT_PATH/);
@@ -37,7 +40,7 @@ test("live smoke sends the access code only to protected provider requests", asy
     if (path === "/healthz") return Response.json({ status: "ok" });
     if (path === "/readyz") return Response.json({ ready: true });
     if (path === "/api/capabilities") return Response.json({ visionExtraction: true, placesSearch: true, pilotAccessRequired: true });
-    if (path === "/src/app.js") return new Response("クローズドテスト参加者募集 予約の確定、支払い、電話は必要ありません メールで参加を相談する");
+    if (path === "/src/app.js") return new Response(currentPilotBundle);
     if (["/pilot", "/privacy", "/terms"].includes(path)) return new Response('<main id="app"></main>', { headers: { "x-tabitabi-document": path.slice(1) } });
     protectedRequests.push({ path, access: options.headers?.["X-Pilot-Access"] });
     if (path === "/api/extract-screenshot") return Response.json({ extraction: { restaurant: { name: "ホームズパスタ" } } });
