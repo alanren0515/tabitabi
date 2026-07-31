@@ -2,13 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { localizedLegalContent } from "../src/legal-content.js";
 
-test("provides product-authored English and Simplified Chinese legal and pilot content", () => {
+test("provides compact product-authored English and Simplified Chinese pilot content", () => {
   for (const locale of ["en", "zh-CN"]) {
     const content = localizedLegalContent(locale);
     assert.equal(content.terms.sections.length, 5);
     assert.equal(content.privacy.cards.length, 4);
-    assert.equal(content.pilot.criteria.length, 3);
-    assert.equal(content.pilot.tasks.length, 4);
+    assert.equal(content.pilot.tasks.length, 3);
+    assert.match(content.pilot.taskTitle, locale === "en" ? /three/i : /三件事/);
+    assert.match(content.pilot.safetyBody, locale === "en" ? /No booking, payment, or phone call/i : /不需要预约、付款或打电话/);
+    assert.match(content.pilot.safetyBody, /server disk|服务器磁盘/);
     assert.match(content.terms.highlightBody, locale === "en" ? /does not confirm a reservation/i : /不代表预约已经成立/);
     assert.match(content.privacy.providersBody, /Qwen/);
   }

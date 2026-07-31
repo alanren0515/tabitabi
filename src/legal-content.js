@@ -21,11 +21,10 @@ const CONTENT = {
       deleteTitle: "Delete data on this device", deleteBody: "Deletes local plans, pending clues, history, and settings. It does not delete data held by Google, Hot Pepper, Qwen, OpenAI, restaurants, or booking services.", deleteButton: "Delete data on this device", confirm: "Permanently delete all data on this device?", cancel: "Cancel", deleteAll: "Delete all"
     },
     pilot: {
-      step: "Invitation-only pilot", title: "Turn an SNS find into a usable next step.", intro: "We invite people living in Japan who discover restaurants on Instagram, TikTok, and other SNS to try a 15–20 minute prototype.",
-      criteria: [["18+ and living in Japan", "Use your usual iPhone or Android device."], ["Try a real restaurant search", "Use a public SNS screenshot or a restaurant name you genuinely want to check."], ["No purchase or booking required", "Confirm the restaurant and next step, then send feedback from the result page."]],
-      taskTitle: "Check 2–4 restaurants", tasks: ["Add a public SNS screenshot or restaurant name.", "Confirm the extracted name and branch, then select the correct restaurant.", "Review official-site, phone, and booking-service guidance.", "Answer whether the result was helpful and accurate."],
-      safetyTitle: "Safety and privacy", safetyBody: "Do not confirm a booking, pay, or call for this test. Do not use images containing DMs, notifications, private posts, or another person's personal information. Images are processed in the request and are not stored on TabiTabi's server disk.",
-      joinTitle: "Contact us to receive an invitation code", joinBody: "After confirming the eligibility and safety notes, we will provide a pilot access code. Do not post the code publicly.", email: "Ask to join by email", haveCode: "I already have a code"
+      step: "Invitation-only pilot", title: "A friend sent you a restaurant clue? Try TabiTabi.", intro: "Spend about 15 minutes checking one real restaurant you found on public SNS.",
+      taskTitle: "Just three things", tasks: ["Add the restaurant name or a public SNS screenshot.", "Confirm the correct restaurant.", "Tell us what you thought on the result page."],
+      safetyBody: "No booking, payment, or phone call. Use public content only. Images are not saved to TabiTabi’s server disk.",
+      email: "Email to get your code", haveCode: "I already have a code"
     }
   },
   "zh-CN": {
@@ -50,11 +49,10 @@ const CONTENT = {
       deleteTitle: "删除当前设备的数据", deleteBody: "删除本机计划、待确认线索、历史和设置；不会删除 Google、Hot Pepper、Qwen、OpenAI、餐厅或预约平台持有的数据。", deleteButton: "删除当前设备的数据", confirm: "确定永久删除当前设备的全部数据吗？", cancel: "取消", deleteAll: "全部删除"
     },
     pilot: {
-      step: "邀请测试招募", title: "把 SNS 里发现的店，变成可以行动的信息。", intro: "我们邀请居住在日本、会从 Instagram、TikTok 等 SNS 发现餐厅的用户，参加约15–20分钟的原型测试。",
-      criteria: [["年满18岁并居住在日本", "使用你平时的 iPhone 或 Android。"], ["用真实需求测试", "使用公开 SNS 截图，或输入你真正想去的餐厅名称。"], ["无需购买或完成预约", "确认餐厅和下一步后，在结果页提交反馈即可。"]],
-      taskTitle: "确认2–4家餐厅", tasks: ["添加公开 SNS 截图或餐厅名称。", "确认识别出的店名和分店，并选择正确餐厅。", "查看官网、电话和预约平台说明。", "回答结果是否有帮助、信息是否准确。"],
-      safetyTitle: "安全与隐私", safetyBody: "测试不需要完成预约、付款或打电话。请勿使用包含私信、通知、非公开帖子或他人个人信息的图片。图片只在识别请求中处理，不保存到 TabiTabi 服务器磁盘。",
-      joinTitle: "联系后获取邀请访问码", joinBody: "确认参与条件和注意事项后，我们会提供测试访问码。请勿公开发布访问码。", email: "通过邮件咨询参与", haveCode: "我已有访问码"
+      step: "邀请测试", title: "朋友发来一家店？用 TabiTabi 确认一下。", intro: "用大约15分钟，确认一家你在公开 SNS 上发现的真实餐厅。",
+      taskTitle: "只做三件事", tasks: ["添加餐厅名称或公开 SNS 截图。", "确认正确的餐厅。", "在结果页告诉我们你的感受。"],
+      safetyBody: "不需要预约、付款或打电话；只使用公开内容；图片不会保存到 TabiTabi 服务器磁盘。",
+      email: "邮件获取访问码", haveCode: "我已有访问码"
     }
   }
 };

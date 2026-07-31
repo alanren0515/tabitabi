@@ -1662,13 +1662,18 @@ function renderPilot() {
     const subject = encodeURIComponent(currentLocale() === "en" ? "TabiTabi pilot participation" : "申请参加 TabiTabi 测试");
     const body = encodeURIComponent(currentLocale() === "en" ? "I would like to join the TabiTabi pilot.\n\nSNS I use:\nDevice: iPhone / Android\n" : "我希望参加 TabiTabi 测试。\n\n常用 SNS：\n设备：iPhone / Android\n");
     const mailto = contact ? `mailto:${encodeURIComponent(contact)}?subject=${subject}&body=${body}` : "";
+    const legalNote = currentLocale() === "en"
+      ? ["Before you join, read ", "Privacy and data", " and ", "Terms of use", "."]
+      : currentLocale() === "zh-CN"
+        ? ["参加前请阅读", "隐私与数据", "和", "使用条款", "。"]
+        : ["参加前に", "プライバシーとデータ", "と", "利用条件", "をご確認ください。"];
     app.innerHTML = `<section class="content-view narrow pilot-view">
       <button class="back-button" data-action="home">${t("common.backHome")}</button>
       <div class="pilot-hero"><span class="step-chip">${localized.step}</span><h1>${localized.title}</h1><p>${localized.intro}</p></div>
-      <section class="pilot-criteria">${localized.criteria.map((item, index) => `<article><span>0${index + 1}</span><strong>${item[0]}</strong><p>${item[1]}</p></article>`).join("")}</section>
-      <section class="panel pilot-task"><h2>${localized.taskTitle}</h2><ol>${localized.tasks.map((item) => `<li>${item}</li>`).join("")}</ol></section>
-      <aside class="pilot-safety"><strong>${localized.safetyTitle}</strong><p>${localized.safetyBody}</p></aside>
-      <section class="panel pilot-join"><div><h2>${localized.joinTitle}</h2><p>${localized.joinBody}</p></div><div class="pilot-actions">${mailto ? `<a class="${isPublicRelease() ? "secondary-button" : "primary-button"}" href="${esc(mailto)}">${localized.email}${isPublicRelease() ? "" : ` ${icons.arrow}`}</a>` : ""}<a class="${isPublicRelease() ? "primary-button" : "secondary-button"}" href="/" data-action="home">${localized.haveCode}${isPublicRelease() ? ` ${icons.arrow}` : ""}</a></div></section>
+      <section class="pilot-steps" aria-label="${localized.taskTitle}"><h2>${localized.taskTitle}</h2><ol>${localized.tasks.map((item, index) => `<li><span>0${index + 1}</span><p>${item}</p></li>`).join("")}</ol></section>
+      <aside class="pilot-safety"><p>${localized.safetyBody}</p></aside>
+      <div class="pilot-actions">${mailto ? `<a class="${isPublicRelease() ? "secondary-button" : "primary-button"}" href="${esc(mailto)}">${localized.email}${isPublicRelease() ? "" : ` ${icons.arrow}`}</a>` : ""}<a class="${isPublicRelease() ? "primary-button" : "secondary-button"}" href="/" data-action="home">${localized.haveCode}${isPublicRelease() ? ` ${icons.arrow}` : ""}</a></div>
+      ${isPublicRelease() ? "" : `<p class="terms-footer-note">${legalNote[0]}<a href="/privacy" data-action="privacy">${legalNote[1]}</a>${legalNote[2]}<a href="/terms" data-action="terms">${legalNote[3]}</a>${legalNote[4]}</p>`}
     </section>`;
     return;
   }
@@ -1689,26 +1694,14 @@ function renderPilot() {
   app.innerHTML = `<section class="content-view narrow pilot-view">
     <button class="back-button" data-action="home">← ホームへ</button>
     <div class="pilot-hero">
-      <span class="step-chip">クローズドテスト参加者募集</span>
-      <h1>SNSで見つけた店を、<br>行ける情報に。</h1>
-      <p>日本国内にお住まいで、InstagramやTikTokなどから飲食店を探す方に、15〜20分の試作テストをお願いしています。</p>
+      <span class="step-chip">クローズドテスト</span>
+      <h1>友だちから届いた店、<br>TabiTabiで確かめよう。</h1>
+      <p>公開SNSで見つけた実在の飲食店を1件、15分ほどで確認するテストです。</p>
     </div>
-    <section class="pilot-criteria" aria-label="参加条件">
-      <article><span>01</span><strong>18歳以上・日本国内在住</strong><p>普段使っているiPhoneまたはAndroidから参加できます。</p></article>
-      <article><span>02</span><strong>自分の本当の店探しで試す</strong><p>公開SNSのスクリーンショットや、覚えている店名を使います。</p></article>
-      <article><span>03</span><strong>予約や購入は不要</strong><p>店舗と次の行動を確認し、結果ページから感想を送るところまでです。</p></article>
-    </section>
-    <section class="panel pilot-task">
-      <p class="overline">お願いすること</p>
-      <h2>2〜4件の飲食店を確認</h2>
-      <ol><li>Instagram・TikTokなどの公開投稿スクリーンショット、または店名を入力</li><li>抽出された店名と支店を確認し、正しい店舗を選択</li><li>公式サイト、電話、予約サービスなどの案内を確認</li><li>結果ページで「役に立ったか」「情報が正確か」を回答</li></ol>
-    </section>
-    <aside class="pilot-safety"><strong>安全とプライバシー</strong><p>予約の確定、支払い、電話は必要ありません。DM、通知、非公開投稿、他人の個人情報を含む画像は使用しないでください。画像は解析リクエスト内で処理し、TabiTabiのサーバーディスクには保存しません。</p></aside>
-    <section class="panel pilot-join">
-      <div><p class="overline">参加方法</p><h2>連絡後、招待コードをお送りします</h2><p>参加条件と注意事項を確認したうえで、テスト用アクセスコードをご案内します。コードを公開投稿へ転載しないでください。</p></div>
-      <div class="pilot-actions">${mailto ? `<a class="primary-button" href="${esc(mailto)}">メールで参加を相談する ${icons.arrow}</a>` : `<p class="inline-error">連絡先を準備中です。しばらくしてからもう一度ご確認ください。</p>`}<a class="secondary-button" href="/" data-action="home">招待コードをお持ちの方</a></div>
-    </section>
-    <p class="terms-footer-note">参加前に<a href="/privacy" data-action="privacy">プライバシーとデータ</a>と<a href="/terms" data-action="terms">利用条件</a>をご確認ください。テスト謝礼の有無や条件は、個別の募集案内で事前にお伝えします。</p>
+    <section class="pilot-steps" aria-label="やることは3つだけ"><h2>やることは、3つだけ</h2><ol><li><span>01</span><p>店名または公開SNSのスクリーンショットを追加</p></li><li><span>02</span><p>正しい店舗を確認</p></li><li><span>03</span><p>結果ページで感想を送る</p></li></ol></section>
+    <aside class="pilot-safety"><p>予約・支払い・電話は不要です。公開情報だけを使い、画像はTabiTabiのサーバーディスクに保存しません。</p></aside>
+    <div class="pilot-actions">${mailto ? `<a class="primary-button" href="${esc(mailto)}">メールで参加を申し込む ${icons.arrow}</a>` : `<p class="inline-error">連絡先を準備中です。しばらくしてからもう一度ご確認ください。</p>`}<a class="secondary-button" href="/" data-action="home">アクセスコードをお持ちの方</a></div>
+    <p class="terms-footer-note">参加前に<a href="/privacy" data-action="privacy">プライバシーとデータ</a>と<a href="/terms" data-action="terms">利用条件</a>をご確認ください。</p>
   </section>`;
 }
 
