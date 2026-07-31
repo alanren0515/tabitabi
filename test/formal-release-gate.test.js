@@ -52,6 +52,23 @@ test("rejects a forged passing pilot and local-report provenance", () => {
   assert.equal(evaluateFormalReleaseGate({ ...valid, pilotEvidence: { ...valid.pilotEvidence, metrics: { ...valid.pilotEvidence.metrics, releaseRevision: "c".repeat(40) } } }).gates.productionPilot, false);
 });
 
+test("fails closed for a current-revision Fly audit error report", () => {
+  const pilotEvidence = {
+    schemaVersion: 2,
+    source: "fly-audit-error",
+    generatedAt,
+    app: "tabitabi-jp",
+    auditRevision: revision,
+    repositoryClean: true,
+    gatePassed: false,
+    errorCategory: "timeout"
+  };
+  const report = evaluateFormalReleaseGate({ ...valid, pilotEvidence });
+  assert.equal(report.gates.productionPilot, false);
+  assert.equal(report.gates.releaseRevision, false);
+  assert.equal(report.gatePassed, false);
+});
+
 test("rejects top-level pass flags without complete check schemas", () => {
   assert.equal(evaluateFormalReleaseGate({ ...valid, releaseEvidence: { ...valid.releaseEvidence, gates: {} } }).gates.technicalRelease, false);
   assert.equal(evaluateFormalReleaseGate({ ...valid, preflightEvidence: { ...valid.preflightEvidence, checks: {} } }).gates.deploymentPreflight, false);

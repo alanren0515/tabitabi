@@ -2,6 +2,8 @@
 
 招募渠道、样本配额、SNS 内容、预算与合规方案见 [TabiTabi 日本用户 Pilot 招募与 SNS 扩散方案](./pilot-acquisition-plan.md)。
 
+向认识的日本用户一对一邀请时，可直接使用 [日文 DM、回复与 4 回测试模板](./closed-pilot-japanese-invitation-templates.md)。模板不包含访问码；访问码仍须在对方确认参加条件后单独发送。
+
 公开的日文参加说明页为 `https://tabitabi-jp.fly.dev/pilot`。可以在 SNS 招募文案或一对一邀请中分享该页面，但不要把 `PILOT_ACCESS_CODE` 放进公开帖子、URL、二维码或截图。参与者先通过页面中的公开联系邮箱申请，再由运营者单独发送访问码。
 
 这一步只在 30/30 风险场景发布门槛通过后开始。目标不是重复内部审计，而是确认真实用户能从自己的餐厅线索走到安全、可执行的下一步。
@@ -51,6 +53,8 @@ npm run release:formal-gate
 ```
 
 `release:pilot-remote` 在 Fly 容器内聚合 `/app/data/events.jsonl`，只把计数、比例和 gate 结果写回本机，不输出原始事件。该命令可能短暂唤醒现有 Machine，但不会调用 Qwen、Google Places 或 Hot Pepper。
+
+Fly 审计必须由拥有当前 Fly 登录配置的同一 macOS 用户运行。脚本会把 `config.yml` 临时复制到权限受限的可写目录，使受限 Codex/自动化环境可以创建 flyctl 锁文件和日志；结束后会删除该目录。不要为排错打印、手工复制或提交 Fly token。远端审计失败时会覆盖写入当前 revision 的脱敏失败证据，避免正式门禁继续使用旧报告。
 
 `pilot:gate` 要求：20 次不同 live 输入、10 次有效反馈、分析完成率至少 80%、行动率至少 35%、有帮助比例至少 60%。命令在尚未达标时返回非零是正常现象，并仍会更新 `eval/latest-pilot-results.json`。
 

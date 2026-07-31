@@ -96,6 +96,8 @@ After the Machine has started and the health check is passing, run the read-only
 npm run release:fly-audit
 ```
 
+Run Fly audits as the same OS user that owns the active Fly login. The audit scripts create an isolated writable `FLY_CONFIG_DIR`, copy only the existing `config.yml` into it with mode `0600`, and delete it after flyctl exits; this lets restricted automation create local locks and logs without changing the account configuration. Never repair audit access by printing a token, committing Fly configuration, or copying it into the project.
+
 It reads only Fly's JSON status output and fails unless there is exactly one started `nrt` shared 1-CPU/512 MB Machine, exactly one created 1 GB `tabitabi_data` Volume attached and mounted at `/app/data` with scheduled snapshots retained for 7 days, and every health check belongs to that Machine and is passing. Warning or missing fields fail closed. It never creates, scales, restarts or deletes resources. A passing remote audit does not replace the direct provider-free `/readyz` smoke because Fly's reported check timestamp can be stale.
 
 After deployment, first run the provider-free smoke test. It checks liveness, readiness, capabilities, privacy and terms without calling Qwen or Google Places. It can wake an auto-stopped Fly Machine and therefore may incur a small amount of Fly compute/network usage:

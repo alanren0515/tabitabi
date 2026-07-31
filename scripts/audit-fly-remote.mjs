@@ -1,8 +1,10 @@
 import { execFile } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { flyApplicationName } from "../server/deployment-preflight.mjs";
 import { evaluateFlyRemoteState, parseFlyChecksJson, parseFlyJson } from "../server/fly-remote-audit.mjs";
+import { classifyFlyCliError, createFlyCliRuntime } from "../server/fly-cli-runtime.mjs";
+import { invalidateReleaseEvidence, writeReleaseEvidence } from "../server/release-evidence-store.mjs";
 import { currentGitState } from "../server/release-revision.mjs";
 
 const run = promisify(execFile);
@@ -10,46 +12,46 @@ const run = promisify(execFile);
 try {
   const app = flyApplicationName(await readFile("fly.toml", "utf8"));
   if (!app) throw new Error("fly.toml must contain a valid committed app name");
-  const [machineResult, volumeResult, checkResult, secretResult, releaseResult] = await Promise.all([
-    flyJson(["machine", "list", "-a", app, "--json"]),
-    flyJson(["volumes", "list", "-a", app, "--json"]),
-    flyChecksJson(["checks", "list", "-a", app, "--json"]),
-    flyJson(["secrets", "list", "-a", app, "--json"]),
-    flyJson(["releases", "-a", app, "--json"])
-  ]);
+  await invalidateReleaseEvidence("data/release-evidence/latest-fly.json");
+  const runtime = await createFlyCliRuntime();
+  let machineResult;
+  let volumeResult;
+  let checkResult;
+  let secretResult;
+  let releaseResult;
+  try {
+    machineResult = await flyJson(["machine", "list", "-a", app, "--json"], runtime.env);
+    volumeResult = await flyJson(["volumes", "list", "-a", app, "--json"], runtime.env);
+    checkResult = await flyChecksJson(["checks", "list", "-a", app, "--json"], runtime.env);
+    secretResult = await flyJson(["secrets", "list", "-a", app, "--json"], runtime.env);
+    releaseResult = await flyJson(["releases", "-a", app, "--json"], runtime.env);
+  } finally {
+    await runtime.cleanup();
+  }
   const result = evaluateFlyRemoteState({ machines: machineResult, volumes: volumeResult, checks: checkResult, secrets: secretResult, releases: releaseResult });
   const git = await currentGitState();
   const report = { generatedAt: new Date().toISOString(), app, revision: git.revision, repositoryClean: git.clean, ...result };
-  await mkdir("data/release-evidence", { recursive: true });
-  await writeFile("data/release-evidence/latest-fly.json", `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  await writeReleaseEvidence("data/release-evidence/latest-fly.json", report);
   console.log(JSON.stringify(report, null, 2));
   if (!result.passed) process.exitCode = 1;
 } catch (error) {
   const report = { generatedAt: new Date().toISOString(), passed: false, error: safeMessage(error) };
-  await mkdir("data/release-evidence", { recursive: true }).catch(() => {});
-  await writeFile("data/release-evidence/latest-fly.json", `${JSON.stringify(report, null, 2)}\n`, "utf8").catch(() => {});
+  await writeReleaseEvidence("data/release-evidence/latest-fly.json", report);
   console.error(JSON.stringify(report, null, 2));
   process.exitCode = 1;
 }
 
-async function flyJson(args) {
+async function flyJson(args, env) {
   const label = `flyctl ${args[0]} ${args[1]}`;
-  const { stdout } = await run("flyctl", args, { timeout: 30_000, maxBuffer: 2 * 1024 * 1024 });
+  const { stdout } = await run("flyctl", args, { env, timeout: 30_000, maxBuffer: 2 * 1024 * 1024 });
   return parseFlyJson(stdout, label);
 }
 
-async function flyChecksJson(args) {
-  const { stdout } = await run("flyctl", args, { timeout: 30_000, maxBuffer: 2 * 1024 * 1024 });
+async function flyChecksJson(args, env) {
+  const { stdout } = await run("flyctl", args, { env, timeout: 30_000, maxBuffer: 2 * 1024 * 1024 });
   return parseFlyChecksJson(stdout);
 }
 
 export function safeMessage(error) {
-  const message = `${String(error?.message || "Fly remote audit failed")} ${String(error?.stderr || "")}`;
-  if (error?.code === "ENOENT") return "flyctl is not installed or is not on PATH.";
-  if (/operation not permitted|permission denied/i.test(message)) return "Fly CLI cannot read its local config directory; verify local permissions without changing cloud resources.";
-  if (/could not find app|failed to get app/i.test(message)) return "Fly app does not exist yet. Create it only after cost authorization.";
-  if (/not logged in|unauthorized|authentication/i.test(message)) return "Fly CLI login is missing or expired.";
-  if (/valid JSON|JSON array|checks map/i.test(message)) return "Fly CLI JSON shape is unsupported; check flyctl version and update the audit parser before trusting results.";
-  if (/timed out|timeout/i.test(message)) return "Fly remote audit timed out; retry without changing resources.";
-  return "Fly remote audit failed; inspect flyctl status without pasting secrets into chat.";
+  return classifyFlyCliError(error).message;
 }
