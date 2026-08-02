@@ -198,6 +198,12 @@ footer button { min-height:44px; border:0; background:none; color:var(--green); 
 .decision-boundary p { margin:7px 0 0; font-size:12px; line-height:1.5; }
 .decision-boundary small { opacity:.72; }
 .decision-card.unknown { background:#786f61; }
+.result-view .action-card { border:2px solid color-mix(in srgb,var(--green) 46%,var(--line)); box-shadow:0 12px 28px rgba(31,91,74,.08); }
+.result-view .secondary-decision-card { background:var(--card); color:var(--ink); border-color:var(--line); padding:22px; }
+.result-view .secondary-decision-card.walk_in_ok,.result-view .secondary-decision-card.temporarily_unavailable,.result-view .secondary-decision-card.unknown { background:var(--card); color:var(--ink); }
+.secondary-decision-card .status-row { color:var(--muted); }
+.secondary-decision-card h2 { font-size:clamp(24px,2.8vw,32px); }
+.secondary-decision-card>p:not(.overline) { color:var(--muted); opacity:1; }
 .status-row { display:flex; gap:7px; align-items:center; font-size:12px; opacity:.82; }
 .status-dot { width:7px; height:7px; border-radius:50%; background:#c6f6da; }
 .decision-card h2 { font-size:clamp(28px,3.2vw,40px); line-height:1.18; letter-spacing:-.03em; margin:8px 0 12px; }
@@ -222,6 +228,14 @@ footer button { min-height:44px; border:0; background:none; color:var(--green); 
 .action-more>summary { min-height:44px; padding:11px 2px; cursor:pointer; color:var(--muted); font-size:12px; font-weight:700; }
 .action-more>summary::marker { color:var(--green); }
 .action-more>div { display:grid; gap:8px; padding-top:4px; }
+.result-home-button { display:inline-flex; align-items:center; min-height:44px; padding:0 12px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink); font-weight:700; }
+.result-home-button:hover { border-color:var(--green); color:var(--green); }
+.result-nav { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.candidate-return-button { display:inline-flex; align-items:center; min-height:44px; padding:0 12px; border:1px solid var(--line); border-radius:999px; background:transparent; color:var(--muted); font-weight:700; }
+.candidate-return-button:hover { border-color:var(--green); color:var(--green); }
+.pilot-report-unavailable { display:grid; gap:6px; margin:0 0 14px; padding:14px 16px; border:1px solid #e6c878; border-radius:12px; background:#fff7df; color:#5c4b1d; }
+.pilot-report-unavailable span { line-height:1.55; }
+.pilot-report-unavailable code { width:max-content; padding:4px 7px; border-radius:6px; background:rgba(92,75,29,.08); }
 .conflict { background:var(--surface-warning); color:#6f3d28; border:1px solid var(--border-warning); border-radius:14px; padding:16px 20px; margin-bottom:16px; display:flex; gap:20px; }
 .conflict p { margin:0; }
 .reservation-options { margin-bottom:16px; }

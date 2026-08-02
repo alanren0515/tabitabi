@@ -1,9 +1,20 @@
 import { evaluateReleaseEvidence } from "./release-evidence.mjs";
 
 export function selectCurrentPilotReport({ remoteReport = null, localReport = null, revision = "" } = {}) {
-  return remoteReport?.source === "fly-volume" && remoteReport?.releaseRevision === revision
-    ? remoteReport
-    : localReport;
+  if (remoteReport?.source === "fly-volume" && remoteReport?.releaseRevision === revision && remoteReport.metrics) {
+    return { ...remoteReport, reportStatus: "available", reportSource: "remote" };
+  }
+  if (remoteReport?.source === "fly-volume") {
+    return unavailablePilotReport("stale", "远端报告属于其他版本或结构不完整；当前试点件数不明。", remoteReport.generatedAt);
+  }
+  if (remoteReport?.source === "fly-audit-error") {
+    return unavailablePilotReport("unavailable", "远端报告生成失败；当前试点件数不明，不代表今天没有用户使用。", remoteReport.generatedAt);
+  }
+  return unavailablePilotReport("unavailable", "尚未取得远端试点报告；当前试点件数不明，不代表今天没有用户使用。", null);
+}
+
+function unavailablePilotReport(reportStatus, note, generatedAt) {
+  return { reportStatus, reportSource: "remote", generatedAt: generatedAt || null, gatePassed: false, metrics: null, gates: {}, note };
 }
 
 export function buildProjectStatus({
@@ -13,16 +24,17 @@ export function buildProjectStatus({
   const decisionAudits = audits.filter((item) => ["audited", "decision_audited"].includes(item?.status)).length;
   const completedScenarios = matrix.filter((item) => item?.status === "confirmed").length;
   const confirmedCases = cases.filter((item) => item?.verificationStatus === "confirmed").length;
-  const pilot = pilotReport?.metrics || {};
+  const pilotAvailable = pilotReport?.metrics && !["unavailable", "stale"].includes(pilotReport.reportStatus);
+  const pilot = pilotAvailable ? pilotReport.metrics : {};
   const releaseEvidence = evaluateReleaseEvidence({ cases, matrix, audits, candidateResults: candidateReport, decisionResults: decisionReport, testResults: testReport, revision });
   const remaining = {
     mobileAudits: Math.max(30 - fullAudits, 0),
     riskScenarios: Math.max(30 - completedScenarios, 0),
-    liveInputRuns: Math.max(20 - (Number(pilot.inputRuns) || 0), 0),
-    feedbackRuns: Math.max(10 - (Number(pilot.feedbackRuns) || 0), 0)
+    liveInputRuns: pilotAvailable ? Math.max(20 - Number(pilot.inputRuns), 0) : null,
+    feedbackRuns: pilotAvailable ? Math.max(10 - Number(pilot.feedbackRuns), 0) : null
   };
   const releaseReady = releaseEvidence.gatePassed;
-  const pilotReady = remaining.liveInputRuns === 0 && remaining.feedbackRuns === 0 && pilotReport?.gatePassed === true;
+  const pilotReady = pilotAvailable && remaining.liveInputRuns === 0 && remaining.feedbackRuns === 0 && pilotReport?.gatePassed === true;
   return {
     status: releaseReady && pilotReady ? "ready" : "external_evidence_required",
     providers: {
@@ -38,13 +50,16 @@ export function buildProjectStatus({
       completedRiskScenarios: completedScenarios,
       candidateTop3Recall: candidateReport?.top3Recall ?? null,
       safeDecisionCases: decisionReport?.safeDecisionPassed ?? null,
-      pilotInputRuns: Number(pilot.inputRuns) || 0,
-      pilotFeedbackRuns: Number(pilot.feedbackRuns) || 0
+      pilotInputRuns: pilotAvailable ? Number(pilot.inputRuns) : null,
+      pilotFeedbackRuns: pilotAvailable ? Number(pilot.feedbackRuns) : null
     },
+    pilotReportStatus: pilotReport?.reportStatus || "unavailable",
     releaseEvidence: { gatePassed: releaseEvidence.gatePassed, blockedBy: releaseEvidence.blockedBy, errors: releaseEvidence.errors },
     remaining,
     optional: providers.openAiFallback ? [] : ["配置 OPENAI_API_KEY 以启用 GPT-5.4 mini 质量备用；Qwen 主流程不因此停止。"],
-    nextCommands: remaining.mobileAudits || remaining.riskScenarios
+    nextCommands: !pilotAvailable
+      ? ["npm run release:pilot-remote"]
+      : remaining.mobileAudits || remaining.riskScenarios
       ? ["npm run audit:mobile", "npm run eval:release-gate"]
       : remaining.liveInputRuns || remaining.feedbackRuns
         ? ["npm run pilot:gate"]

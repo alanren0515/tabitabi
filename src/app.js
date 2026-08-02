@@ -948,6 +948,40 @@ async function openConfirmedCandidate(focus) {
   state.analysisStartedAt = null;
 }
 
+function renderResultDecisionCard(r) {
+  return `<article class="decision-card secondary-decision-card ${esc(r.recommendation)}">
+    <div class="status-row"><span class="status-dot"></span><span>${localizedConfidenceLabel(r.confidence)}</span></div>
+    <p class="overline">${t("result.checkResult")}</p><h2>${esc(localizedRecommendationLabel(r.recommendation))}</h2>${currentLocale() === "ja" ? `<p>${esc(r.summary)}</p>` : `<p>${t("result.dynamicNotice")}</p>`}
+    ${r.planAdvisory ? `<aside class="plan-advisory"><strong>${t("result.planAdvisory")}</strong><p lang="ja">${esc(r.planAdvisory)}</p></aside>` : ""}
+    <details class="decision-details"><summary>${t("result.why")}</summary><div>${currentLocale() === "ja" ? `<div class="reason-list">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div>` : `<div class="source-language-details"><p lang="ja">${esc(r.summary)}</p><div class="reason-list" lang="ja">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div></div>`}${r.decisionEvidence?.length ? `<div class="decision-boundary"><strong>${t("result.boundary")}</strong>${r.decisionEvidence.map((item) => `<p lang="ja">${esc(item.claim)} · ${t("result.confidence", { level: localizedConfidenceLevel(item.certainty) })}<br><small>${esc(item.limitation)}</small></p>`).join("")}</div>` : ""}</div></details>
+  </article>`;
+}
+
+function renderResultActionCard(r, { primaryAction, mapUrl, mapsIsPrimary, savedPlan, saved } = {}) {
+  return `<article class="action-card"><p class="overline">${t("result.next")}</p><h3>${t(primaryAction?.type === "phone" ? "result.actionPhone" : primaryAction ? "result.actionBooking" : "result.actionMap")}</h3>
+    ${renderCurrentOpeningStatus(r.currentOpeningHours)}
+    ${primaryAction ? `<a class="primary-button" id="primary-action" data-action-type="${esc(primaryAction.type || "external")}" href="${esc(actionHref(primaryAction))}" ${primaryAction.type === "phone" ? "" : 'target="_blank" rel="noreferrer"'}>${currentLocale() === "ja" ? esc(primaryAction.label) : t(primaryAction.type === "phone" ? "result.actionPhone" : "result.actionBooking")} ${primaryAction.type === "phone" ? icons.phone : icons.arrow}</a>` : r.phone ? `<a class="primary-button" id="primary-action" data-action-type="phone" href="tel:${esc(r.phone)}">${icons.phone} ${t("result.actionPhone")}</a>` : `<a class="primary-button" id="primary-action" data-action-type="map" href="${esc(safeExternalUrl(r.mapSearchUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address}`)}`))}" target="_blank" rel="noreferrer">${t("result.actionMap")} ${icons.arrow}</a>`}
+    ${mapUrl !== "#" && !mapsIsPrimary ? `<a class="secondary-button map-action" id="map-action" data-action-type="map" href="${esc(mapUrl)}" target="_blank" rel="noreferrer">${t("result.actionMap")} ${icons.arrow}</a>` : ""}
+    <details class="action-more" ${state.planEditorOpen ? "open" : ""}><summary>${t("result.otherActions")}</summary><div>
+      ${r.phone && primaryAction?.type !== "phone" ? `<a class="secondary-button" id="phone-action" href="tel:${esc(r.phone)}">${icons.phone} ${esc(r.phone)} · ${t("result.phone")}</a>` : ""}
+      <button class="secondary-button" id="share-result">${t("result.share")}</button>
+      <button class="secondary-button" id="save-button">${icons.bookmark} ${saved ? t("result.editPlan") : t("result.savePlan")}</button>
+      ${state.planEditorOpen ? renderPlanForm(savedPlan, r) : ""}
+    </div></details>
+  </article>`;
+}
+
+function returnToCandidates() {
+  if (!state.candidates.length) return;
+  state.confirmedCandidate = null;
+  state.restaurant = null;
+  state.planEditorOpen = false;
+  state.deleteConfirmOpen = false;
+  state.resultFocus = "";
+  state.view = "candidates";
+  render();
+}
+
 function renderResult() {
   const r = state.restaurant;
   const exampleMode = isExampleRestaurant(r);
@@ -960,30 +994,12 @@ function renderResult() {
   const displayedReservationOptions = reservationOptions.filter((option) => option.provider !== "google_maps");
   const savedPlan = state.saved.find((item) => item.id === r.id);
   app.innerHTML = `<section class="content-view result-view">
-    <button class="back-button" data-action="home">${t("result.back")}</button>
+    <div class="result-nav">${state.candidates.length ? `<button class="back-button candidate-return-button" id="choose-another-candidate">${t("result.chooseCandidate")}</button>` : ""}<button class="back-button result-home-button" data-action="home">${t("result.newSearch")}</button></div>
     ${exampleMode ? `<aside class="example-mode-banner result-example-banner" role="status"><strong>${t("example.bannerTitle")}</strong><span>${t("example.resultBody")}</span></aside>` : ""}
     ${currentLocale() !== "ja" ? `<aside class="language-beta-note result-language-note"><strong>${t("language.beta")}</strong><span>${t("result.dynamicNotice")}</span></aside>` : ""}
     ${state.pending.length ? `<aside class="result-queue"><div><strong>${t("result.moreQueue", { count: state.pending.length })}</strong><span>${t("result.moreQueueBody")}</span></div><button id="continue-pending">${t("result.nextQueue")} ${icons.arrow}</button></aside>` : ""}
     <div class="result-title"><div><span class="category-line">${[r.category, r.price].filter(Boolean).map(esc).join(" · ")}</span><h1>${esc(r.name)}</h1><p>${[r.reading, r.area].filter(Boolean).map(esc).join(" · ")}</p></div>${exampleMode ? `<span class="demo-pill">${t("example.badge")}</span>` : ""}</div>
-    <div class="decision-grid">
-      <article class="decision-card ${esc(r.recommendation)}">
-        <div class="status-row"><span class="status-dot"></span><span>${localizedConfidenceLabel(r.confidence)}</span></div>
-        <p class="overline">${t("result.checkResult")}</p><h2>${esc(localizedRecommendationLabel(r.recommendation))}</h2>${currentLocale() === "ja" ? `<p>${esc(r.summary)}</p>` : `<p>${t("result.dynamicNotice")}</p>`}
-        ${r.planAdvisory ? `<aside class="plan-advisory"><strong>${t("result.planAdvisory")}</strong><p lang="ja">${esc(r.planAdvisory)}</p></aside>` : ""}
-        <details class="decision-details"><summary>${t("result.why")}</summary><div>${currentLocale() === "ja" ? `<div class="reason-list">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div>` : `<div class="source-language-details"><p lang="ja">${esc(r.summary)}</p><div class="reason-list" lang="ja">${r.reasons.map((reason) => `<span>${icons.check}${esc(reason)}</span>`).join("")}</div></div>`}${r.decisionEvidence?.length ? `<div class="decision-boundary"><strong>${t("result.boundary")}</strong>${r.decisionEvidence.map((item) => `<p lang="ja">${esc(item.claim)} · ${t("result.confidence", { level: localizedConfidenceLevel(item.certainty) })}<br><small>${esc(item.limitation)}</small></p>`).join("")}</div>` : ""}</div></details>
-      </article>
-      <article class="action-card"><p class="overline">${t("result.next")}</p><h3>${t(primaryAction?.type === "phone" ? "result.actionPhone" : primaryAction ? "result.actionBooking" : "result.actionMap")}</h3>
-        ${renderCurrentOpeningStatus(r.currentOpeningHours)}
-        ${primaryAction ? `<a class="primary-button" id="primary-action" data-action-type="${esc(primaryAction.type || "external")}" href="${esc(actionHref(primaryAction))}" ${primaryAction.type === "phone" ? "" : 'target="_blank" rel="noreferrer"'}>${currentLocale() === "ja" ? esc(primaryAction.label) : t(primaryAction.type === "phone" ? "result.actionPhone" : "result.actionBooking")} ${primaryAction.type === "phone" ? icons.phone : icons.arrow}</a>` : r.phone ? `<a class="primary-button" id="primary-action" data-action-type="phone" href="tel:${esc(r.phone)}">${icons.phone} ${t("result.actionPhone")}</a>` : `<a class="primary-button" id="primary-action" data-action-type="map" href="${esc(safeExternalUrl(r.mapSearchUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address}`)}`))}" target="_blank" rel="noreferrer">${t("result.actionMap")} ${icons.arrow}</a>`}
-        ${mapUrl !== "#" && !mapsIsPrimary ? `<a class="secondary-button map-action" id="map-action" data-action-type="map" href="${esc(mapUrl)}" target="_blank" rel="noreferrer">${t("result.actionMap")} ${icons.arrow}</a>` : ""}
-        <details class="action-more" ${state.planEditorOpen ? "open" : ""}><summary>${t("result.otherActions")}</summary><div>
-          ${r.phone && primaryAction?.type !== "phone" ? `<a class="secondary-button" id="phone-action" href="tel:${esc(r.phone)}">${icons.phone} ${esc(r.phone)} · ${t("result.phone")}</a>` : ""}
-          <button class="secondary-button" id="share-result">${t("result.share")}</button>
-          <button class="secondary-button" id="save-button">${icons.bookmark} ${saved ? t("result.editPlan") : t("result.savePlan")}</button>
-          ${state.planEditorOpen ? renderPlanForm(savedPlan, r) : ""}
-        </div></details>
-      </article>
-    </div>
+    <div class="decision-grid">${renderResultActionCard(r, { primaryAction, mapUrl, mapsIsPrimary, savedPlan, saved })}${renderResultDecisionCard(r)}</div>
     ${r.conflict ? `<aside class="conflict"><strong>${currentLocale() === "ja" ? esc(r.conflictTitle || "情報が一致していません") : t("result.conflict")}</strong><p lang="ja">${esc(r.conflict)}</p></aside>` : ""}
     <details class="result-more"><summary><span>${t("result.moreTitle")}</span><small>${t("result.moreBody")}</small></summary><div class="result-more-body">
     ${r.reservationGuidance ? `<section class="panel reservation-guidance"><div><p class="overline">${t("result.reservationRules")}</p><h2 lang="ja">${esc(r.reservationGuidance.label)}</h2><p lang="ja">${esc(r.reservationGuidance.excerpt)}</p><small>${t("result.ruleBoundary")}</small></div><a href="${esc(safeExternalUrl(r.reservationGuidance.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.openOriginal")} ${icons.arrow}</a></section>` : ""}
@@ -1012,6 +1028,7 @@ function renderResult() {
       <button type="submit" disabled>${t("feedback.submit")}</button>
     </form></section>
   </section>`;
+  document.querySelector("#choose-another-candidate")?.addEventListener("click", returnToCandidates);
   document.querySelector("#save-button").addEventListener("click", toggleSaved);
   document.querySelector("#continue-pending")?.addEventListener("click", () => openPendingAnalysis(state.pending[0]?.id));
   document.querySelector("#plan-form")?.addEventListener("submit", savePlanFromForm);
@@ -1167,7 +1184,7 @@ function savePlanFromForm(event) {
   render();
 }
 
-function clearUpload() {
+function clearUpload({ renderView = true } = {}) {
   uploadOptimizationJob += 1;
   uploadOptimizationController?.abort();
   uploadOptimizationController = null;
@@ -1181,7 +1198,36 @@ function clearUpload() {
   state.extractionMeta = null;
   state.analysisError = "";
   state.analysisErrorTarget = "";
-  renderHome();
+  if (renderView) renderHome();
+}
+
+function resetCurrentSearchState() {
+  clearUpload({ renderView: false });
+  state.input = "";
+  state.sharedInputPending = false;
+  state.textExtraction = null;
+  state.currentPlanIntent = {};
+  state.loadingMode = "";
+  state.candidateMode = "demo";
+  state.currentClues = {};
+  state.userProvidedReservationLinks = [];
+  state.candidates = [];
+  state.candidatePreviews = {};
+  state.candidatePreviewLoadingId = "";
+  state.analysisStartedAt = null;
+  state.analysisRunId = "";
+  state.analysisSourceMode = "";
+  state.analysisInputType = "";
+  state.exampleInput = false;
+  state.searchRecovery = null;
+  state.homeRecoveryNotice = "";
+  state.rejectedCandidateIds = [];
+  state.confirmedCandidate = null;
+  state.resultFocus = "";
+  state.restaurant = null;
+  state.planEditorOpen = false;
+  state.deleteConfirmOpen = false;
+  state.activePendingId = null;
 }
 
 async function extractScreenshot(file) {
@@ -1848,7 +1894,10 @@ document.addEventListener("click", (event) => {
   const action = event.target.closest("[data-action]")?.dataset.action;
   if (!action) return;
   event.preventDefault();
-  if (action === "home") state.view = "home";
+  if (action === "home") {
+    resetCurrentSearchState();
+    state.view = "home";
+  }
   if (action === "saved") state.view = "saved";
   if (action === "history") state.view = "history";
   if (action === "queue") state.view = "queue";
@@ -1856,7 +1905,6 @@ document.addEventListener("click", (event) => {
   if (action === "privacy") state.view = "privacy";
   if (action === "terms") state.view = "terms";
   if (action === "settings") state.view = "settings";
-  if (action === "home") state.activePendingId = null;
   const nextPath = pathnameForView(state.view);
   if (window.location.pathname !== nextPath) history.pushState(null, "", nextPath);
   render();

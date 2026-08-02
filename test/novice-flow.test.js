@@ -51,7 +51,7 @@ test("requires only the helpfulness answer in the default feedback path", () => 
 
 test("ships the new novice-flow labels in all supported languages", () => {
   for (const locale of ["ja", "en", "zh-CN"]) {
-    for (const key of ["review.more", "candidate.why", "result.why", "result.moreTitle", "result.otherActions", "feedback.more", "result.actionMap", "result.currentStatus", "result.currentStatusOpen", "result.currentStatusClosed", "result.currentStatusUnknown", "home.primaryBadge", "home.or", "home.nameMethod", "home.startScreenshot", "home.startName", "home.startClue"]) {
+    for (const key of ["review.more", "candidate.why", "result.why", "result.moreTitle", "result.otherActions", "result.chooseCandidate", "result.newSearch", "feedback.more", "result.actionMap", "result.currentStatus", "result.currentStatusOpen", "result.currentStatusClosed", "result.currentStatusUnknown", "home.primaryBadge", "home.or", "home.nameMethod", "home.startScreenshot", "home.startName", "home.startClue"]) {
       assert.notEqual(translate(locale, key), key);
     }
   }
@@ -67,6 +67,20 @@ test("keeps candidate and result actions focused on one primary choice", () => {
   assert.match(appSource, /class="secondary-button map-action"/);
   assert.match(appSource, /displayedReservationOptions = reservationOptions\.filter\(\(option\) => option\.provider !== "google_maps"\)/);
   assert.ok(appSource.indexOf("renderCurrentOpeningStatus(r.currentOpeningHours)") < appSource.indexOf('<details class="action-more"'));
+});
+
+test("makes the next action primary and gives result pages a clear reset-to-home path", () => {
+  assert.match(appSource, /class="result-nav"[^]*id="choose-another-candidate"[^]*result-home-button/);
+  assert.match(appSource, /function returnToCandidates\(\)/);
+  assert.match(appSource, /choose-another-candidate[^]*returnToCandidates/);
+  assert.match(appSource, /function resetCurrentSearchState\(\)/);
+  assert.match(appSource, /resetCurrentSearchState\(\);\s*state\.view = "home"/);
+  assert.match(appSource, /state\.input = "";[^]*state\.textExtraction = null;[^]*state\.currentClues = \{\};/);
+  assert.match(cssSource, /\.result-nav \{ display:flex;/);
+  assert.doesNotMatch(cssSource, /\.result-view \.decision-grid \.action-card \{ order:-1; \}/);
+  const resultRenderSource = appSource.slice(appSource.indexOf("function renderResult()"), appSource.indexOf("function focusResultSection()"));
+  assert.ok(resultRenderSource.indexOf("renderResultActionCard(r") < resultRenderSource.indexOf("renderResultDecisionCard(r)"));
+  assert.match(appSource, /class="decision-card secondary-decision-card/);
 });
 
 test("makes every new disclosure visibly interactive and touch-sized", () => {

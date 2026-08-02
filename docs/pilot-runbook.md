@@ -54,6 +54,8 @@ npm run release:formal-gate
 
 `release:pilot-remote` 在 Fly 容器内聚合 `/app/data/events.jsonl`，只把计数、比例和 gate 结果写回本机，不输出原始事件。该命令可能短暂唤醒现有 Machine，但不会调用 Qwen、Google Places 或 Hot Pepper。
 
+审计工作台会优先显示 `data/release-evidence/latest-remote-pilot.json` 中的远端聚合报告。若该报告生成失败，工作台必须显示“报告不可用”，不能把缺失的指标显示为 0；先重新运行 `release:pilot-remote`，再点击工作台的“重新读取”。因此“0”只代表报告中明确统计出的 0，不代表监测失败。
+
 Fly 审计必须由拥有当前 Fly 登录配置的同一 macOS 用户运行。脚本会把 `config.yml` 临时复制到权限受限的可写目录，使受限 Codex/自动化环境可以创建 flyctl 锁文件和日志；结束后会删除该目录。不要为排错打印、手工复制或提交 Fly token。远端审计失败时会覆盖写入当前 revision 的脱敏失败证据，避免正式门禁继续使用旧报告。
 
 `pilot:gate` 要求：20 次不同 live 输入、10 次有效反馈、分析完成率至少 80%、行动率至少 35%、有帮助比例至少 60%。命令在尚未达标时返回非零是正常现象，并仍会更新 `eval/latest-pilot-results.json`。

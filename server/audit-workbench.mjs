@@ -1,7 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { loadPilotReport } from "./pilot-report.mjs";
 
 export class AuditWorkbenchError extends Error {
   constructor(message, status = 400) {
@@ -52,12 +51,13 @@ export function auditSessionCookie(env = process.env) {
 }
 
 export async function readAuditBundle(root) {
-  const [cases, audits, matrix, pilot] = await Promise.all([
+  const [cases, audits, matrix, remotePilot] = await Promise.all([
     readJson(join(root, "eval/cases.json")),
     readJson(join(root, "eval/manual-audits.json")),
     readJson(join(root, "eval/coverage-matrix.json")),
-    loadPilotReport(join(root, "data/events.jsonl"))
+    readOptionalJson(join(root, "data/release-evidence/latest-remote-pilot.json"))
   ]);
+  const pilot = selectPilotReport(remotePilot);
   return { cases, audits, matrix, pilot, progress: summarizeAuditProgress({ cases, audits, matrix }) };
 }
 
@@ -232,6 +232,43 @@ function validImageSignature(type, content) {
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
+}
+
+async function readOptionalJson(path) {
+  try {
+    return JSON.parse(await readFile(path, "utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    return { source: "audit-report-error", reportStatus: "unavailable", errorCategory: "invalid_report" };
+  }
+}
+
+function selectPilotReport(remotePilot) {
+  if (remotePilot?.source === "fly-volume" && remotePilot.metrics) {
+    return { ...remotePilot, reportSource: "remote", reportStatus: "available" };
+  }
+  if (remotePilot?.source === "fly-audit-error" || remotePilot?.reportStatus === "unavailable") {
+    return {
+      generatedAt: remotePilot.generatedAt || null,
+      gatePassed: false,
+      gates: {},
+      metrics: null,
+      reportSource: "remote",
+      reportStatus: "unavailable",
+      errorCategory: remotePilot.errorCategory || "remote_unavailable",
+      note: "远端报告暂时无法读取；空值不代表今天没有用户使用。"
+    };
+  }
+  return {
+    generatedAt: null,
+    gatePassed: false,
+    gates: {},
+    metrics: null,
+    reportSource: "remote",
+    reportStatus: "unavailable",
+    errorCategory: "remote_missing",
+    note: "尚未取得远端试点报告；当前件数不明，不代表今天没有用户使用。"
+  };
 }
 
 async function writeJsonAtomically(path, value) {

@@ -56,13 +56,47 @@ test("saves sanitized complete audits and confirmed scenarios atomically", async
   assert.equal(result.matrix[0].implementationEvidence[0], "test/example.test.js");
 });
 
-test("exposes only aggregate live pilot progress in the local audit bundle", async () => {
+test("does not use local event logs as production pilot metrics", async () => {
   const root = await fixtureRoot();
   const bundle = await readAuditBundle(root);
-  assert.equal(bundle.pilot.metrics.inputRuns, 1);
-  assert.equal(bundle.pilot.metrics.excludedAuditEvents, 1);
+  assert.equal(bundle.pilot.metrics, null);
+  assert.equal(bundle.pilot.reportStatus, "unavailable");
   assert.equal(bundle.pilot.gatePassed, false);
+  assert.equal(bundle.pilot.reportSource, "remote");
   assert.equal(JSON.stringify(bundle.pilot).includes("restaurant name"), false);
+});
+
+test("prefers the latest aggregate remote report over stale local events", async () => {
+  const root = await fixtureRoot();
+  await mkdir(join(root, "data/release-evidence"));
+  await writeFile(join(root, "data/release-evidence/latest-remote-pilot.json"), JSON.stringify({
+    schemaVersion: 2,
+    source: "fly-volume",
+    generatedAt: "2026-08-02T12:00:00.000Z",
+    auditRevision: "a".repeat(40),
+    gatePassed: false,
+    gates: { inputSample: false },
+    metrics: { inputRuns: 2, feedbackRuns: 1, excludedAuditEvents: 0 }
+  }));
+  const bundle = await readAuditBundle(root);
+  assert.equal(bundle.pilot.reportSource, "remote");
+  assert.equal(bundle.pilot.reportStatus, "available");
+  assert.equal(bundle.pilot.metrics.inputRuns, 2);
+});
+
+test("does not turn a failed remote report into zero usage", async () => {
+  const root = await fixtureRoot();
+  await mkdir(join(root, "data/release-evidence"));
+  await writeFile(join(root, "data/release-evidence/latest-remote-pilot.json"), JSON.stringify({
+    schemaVersion: 2,
+    source: "fly-audit-error",
+    generatedAt: "2026-08-02T12:00:00.000Z",
+    errorCategory: "remoteUnavailable",
+    gatePassed: false
+  }));
+  const bundle = await readAuditBundle(root);
+  assert.equal(bundle.pilot.reportStatus, "unavailable");
+  assert.equal(bundle.pilot.metrics, null);
 });
 
 test("keeps decision-only audits out of completed mobile audit count", async () => {

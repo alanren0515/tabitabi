@@ -98,15 +98,18 @@ function renderAccessMode(access = {}) {
 function renderPilotOverview(pilot = {}) {
   const metrics = pilot.metrics || {};
   const gates = pilot.gates || {};
+  const unavailable = pilot.reportStatus === "unavailable";
+  const sourceLabel = pilot.reportSource === "remote" ? "远端 Fly 试点报告" : "未指定来源";
+  const generatedAt = pilot.generatedAt ? ` · ${formatAuditTime(pilot.generatedAt)}` : "";
   return `<section class="pilot-overview">
-    <div class="pilot-heading"><div><span>REAL PRODUCT TRAFFIC</span><h2>真实试运行</h2><p>${pilot.gatePassed ? "当前试运行门槛已通过" : "只读统计；审计、演示和旧版事件已排除"}</p></div><button type="button" data-refresh-pilot>刷新数据</button></div>
-    <div class="pilot-grid">
+    <div class="pilot-heading"><div><span>REAL PRODUCT TRAFFIC</span><h2>真实试运行</h2><p>${unavailable ? "远端报告暂时无法读取；不能把空值当成 0" : `当前版本累计 · 只读统计；${sourceLabel} · 审计、演示和旧版事件已排除${generatedAt}`}</p></div><button type="button" data-refresh-pilot>重新读取</button></div>
+    ${unavailable ? `<aside class="pilot-report-unavailable" role="status"><strong>监测报告不可用</strong><span>${esc(pilot.note || "请重新生成远端试点报告后再判断今天的使用量。")}</span><code>npm run release:pilot-remote</code></aside>` : `<div class="pilot-grid">
       ${pilotCount(metrics.inputRuns, 20, "live 输入", gates.inputSample)}
       ${pilotCount(metrics.feedbackRuns, 10, "有效反馈", gates.feedbackSample)}
       ${pilotRate(metrics.analysisCompletionRate, 0.8, "分析完成率", gates.analysisCompletion)}
       ${pilotRate(metrics.actionRate, 0.35, "行动率", gates.actionRate)}
       ${pilotRate(metrics.helpfulRate, 0.6, "有帮助比例", gates.helpfulRate)}
-    </div>
+    </div>`}
   </section>`;
 }
 
@@ -404,7 +407,9 @@ function progressCard(value, total, label) {
 }
 
 function pilotCount(value, target, label, passed) {
-  return `<article class="${passed ? "passed" : ""}"><strong>${Number(value) || 0}<small>/${target}</small></strong><span>${esc(label)}</span><progress value="${Number(value) || 0}" max="${target}"></progress></article>`;
+  const available = value !== null && value !== undefined && Number.isFinite(Number(value));
+  const numeric = available ? Number(value) : 0;
+  return `<article class="${passed ? "passed" : ""}"><strong>${available ? numeric : "—"}<small>/${target}</small></strong><span>${esc(label)}</span><progress ${available ? `value="${numeric}"` : ""} max="${target}"></progress></article>`;
 }
 
 function pilotRate(value, target, label, passed) {
@@ -412,6 +417,11 @@ function pilotRate(value, target, label, passed) {
   const available = typeof value === "number" && Number.isFinite(numeric);
   const percent = available ? Math.round(numeric * 100) : 0;
   return `<article class="${passed ? "passed" : ""}"><strong>${available ? `${percent}%` : "—"}<small>/${Math.round(target * 100)}%</small></strong><span>${esc(label)}</span><progress value="${percent}" max="100"></progress></article>`;
+}
+
+function formatAuditTime(value) {
+  try { return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)); }
+  catch { return String(value || ""); }
 }
 
 function filterButton(value, label) { return `<button data-filter="${value}" class="${state.filter === value ? "active" : ""}">${label}</button>`; }

@@ -6,9 +6,9 @@ test("uses Fly pilot evidence only when it belongs to the current revision", () 
   const revision = "a".repeat(40);
   const localReport = { source: "local", metrics: { inputRuns: 7, feedbackRuns: 2 } };
   const remoteReport = { source: "fly-volume", releaseRevision: revision, metrics: { inputRuns: 0, feedbackRuns: 0 } };
-  assert.equal(selectCurrentPilotReport({ remoteReport, localReport, revision }), remoteReport);
-  assert.equal(selectCurrentPilotReport({ remoteReport: { ...remoteReport, releaseRevision: "b".repeat(40) }, localReport, revision }), localReport);
-  assert.equal(selectCurrentPilotReport({ remoteReport: { ...remoteReport, source: "local" }, localReport, revision }), localReport);
+  assert.equal(selectCurrentPilotReport({ remoteReport, localReport, revision }).reportStatus, "available");
+  assert.equal(selectCurrentPilotReport({ remoteReport: { ...remoteReport, releaseRevision: "b".repeat(40) }, localReport, revision }).reportStatus, "stale");
+  assert.equal(selectCurrentPilotReport({ remoteReport: { ...remoteReport, source: "local" }, localReport, revision }).reportStatus, "unavailable");
 });
 
 test("reports provider booleans and concrete remaining external evidence without secrets", () => {
@@ -17,13 +17,25 @@ test("reports provider booleans and concrete remaining external evidence without
   const matrix = Array.from({ length: 30 }, (_, index) => ({ id: `cv-${index}`, status: index < 21 ? "confirmed" : "planned" }));
   const status = buildProjectStatus({
     providers: { qwenVision: "secret", googlePlaces: "secret", hotPepper: "secret", openAiFallback: "" }, cases, audits, matrix,
-    candidateReport: { top3Recall: 1 }, decisionReport: { safeDecisionPassed: 33 }, pilotReport: { gatePassed: false, metrics: { inputRuns: 0, feedbackRuns: 0 } }
+    candidateReport: { top3Recall: 1 }, decisionReport: { safeDecisionPassed: 33 }, pilotReport: { reportStatus: "available", gatePassed: false, metrics: { inputRuns: 0, feedbackRuns: 0 } }
   });
   assert.equal(status.status, "external_evidence_required");
+  assert.equal(status.pilotReportStatus, "available");
   assert.deepEqual(status.providers, { qwenVision: true, googlePlaces: true, hotPepper: true, openAiFallback: false });
   assert.deepEqual(status.remaining, { mobileAudits: 25, riskScenarios: 9, liveInputRuns: 20, feedbackRuns: 10 });
   assert.deepEqual(status.nextCommands, ["npm run audit:mobile", "npm run eval:release-gate"]);
   assert.equal(JSON.stringify(status).includes("secret"), false);
+});
+
+test("does not report zero pilot usage when the remote report is unavailable", () => {
+  const status = buildProjectStatus({
+    pilotReport: { reportStatus: "unavailable", metrics: null },
+    cases: [], audits: [], matrix: [], candidateReport: null, decisionReport: null, testReport: null, revision: ""
+  });
+  assert.equal(status.evaluation.pilotInputRuns, null);
+  assert.equal(status.evaluation.pilotFeedbackRuns, null);
+  assert.deepEqual(status.remaining, { mobileAudits: 30, riskScenarios: 30, liveInputRuns: null, feedbackRuns: null });
+  assert.deepEqual(status.nextCommands, ["npm run release:pilot-remote"]);
 });
 
 test("becomes ready only after release evidence and pilot thresholds pass", () => {
