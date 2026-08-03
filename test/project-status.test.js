@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildProjectStatus, selectCurrentPilotReport } from "../server/project-status.mjs";
+import { buildProjectStatus, selectCurrentPilotReport, summarizeMonitoringReport } from "../server/project-status.mjs";
 
 test("uses Fly pilot evidence only when it belongs to the current revision", () => {
   const revision = "a".repeat(40);
@@ -36,6 +36,27 @@ test("does not report zero pilot usage when the remote report is unavailable", (
   assert.equal(status.evaluation.pilotFeedbackRuns, null);
   assert.deepEqual(status.remaining, { mobileAudits: 30, riskScenarios: 30, liveInputRuns: null, feedbackRuns: null });
   assert.deepEqual(status.nextCommands, ["npm run release:pilot-remote"]);
+});
+
+test("reports daily monitoring separately from release readiness and marks stale reports", () => {
+  const now = new Date("2026-08-04T12:00:00+09:00");
+  const report = {
+    status: "warning",
+    date: "2026-08-04",
+    generatedAt: "2026-08-04T09:00:00+09:00",
+    dailyAllReleases: { inputRuns: 4, feedbackRuns: 2, analysisCompletedRuns: 3, primaryActionRuns: 1 },
+    dailyCurrentRelease: { inputRuns: 1, feedbackRuns: 1, analysisCompletedRuns: 1, primaryActionRuns: 0 },
+    alerts: [{ severity: "warning" }, { severity: "info" }]
+  };
+  const summary = summarizeMonitoringReport(report, now);
+  assert.equal(summary.status, "warning");
+  assert.equal(summary.freshness, "fresh");
+  assert.deepEqual(summary.alerts, { total: 2, critical: 0, warning: 1, info: 1 });
+  assert.deepEqual(summary.dailyAllReleases, { inputRuns: 4, feedbackRuns: 2, analysisCompletedRuns: 3, primaryActionRuns: 1 });
+  assert.equal(summarizeMonitoringReport({ ...report, generatedAt: "2026-08-02T09:00:00+09:00" }, now).freshness, "stale");
+  const status = buildProjectStatus({ monitoringReport: report, now, pilotReport: { reportStatus: "unavailable", metrics: null } });
+  assert.equal(status.monitoring.status, "warning");
+  assert.equal(status.monitoring.dailyAllReleases.inputRuns, 4);
 });
 
 test("becomes ready only after release evidence and pilot thresholds pass", () => {

@@ -18,6 +18,7 @@
     "eval:validate": "node scripts/validate-eval-cases.mjs",
     "eval:release-gate": "node scripts/release-gate.mjs",
     "metrics:summary": "node scripts/summarize-metrics.mjs",
+    "monitor:daily": "node scripts/daily-monitor.mjs",
     "pilot:gate": "node scripts/pilot-gate.mjs",
     "status": "node scripts/project-status.mjs",
     "release:preflight": "node scripts/predeploy-check.mjs",

@@ -18,7 +18,7 @@ function unavailablePilotReport(reportStatus, note, generatedAt) {
 }
 
 export function buildProjectStatus({
-  providers = {}, cases = [], audits = [], matrix = [], candidateReport = null, decisionReport = null, testReport = null, revision = "", pilotReport = null
+  providers = {}, cases = [], audits = [], matrix = [], candidateReport = null, decisionReport = null, testReport = null, revision = "", pilotReport = null, monitoringReport = null, now = new Date()
 } = {}) {
   const fullAudits = audits.filter((item) => item?.status === "audited").length;
   const decisionAudits = audits.filter((item) => ["audited", "decision_audited"].includes(item?.status)).length;
@@ -54,6 +54,7 @@ export function buildProjectStatus({
       pilotFeedbackRuns: pilotAvailable ? Number(pilot.feedbackRuns) : null
     },
     pilotReportStatus: pilotReport?.reportStatus || "unavailable",
+    monitoring: summarizeMonitoringReport(monitoringReport, now),
     releaseEvidence: { gatePassed: releaseEvidence.gatePassed, blockedBy: releaseEvidence.blockedBy, errors: releaseEvidence.errors },
     remaining,
     optional: providers.openAiFallback ? [] : ["配置 OPENAI_API_KEY 以启用 GPT-5.4 mini 质量备用；Qwen 主流程不因此停止。"],
@@ -64,5 +65,49 @@ export function buildProjectStatus({
       : remaining.liveInputRuns || remaining.feedbackRuns
         ? ["npm run pilot:gate"]
         : ["npm run eval:release-gate", "npm run pilot:gate"]
+  };
+}
+
+export function summarizeMonitoringReport(report, now = new Date(), maxAgeMs = 26 * 60 * 60 * 1_000) {
+  if (!report || typeof report !== "object") {
+    return {
+      status: "unavailable",
+      freshness: "unavailable",
+      date: null,
+      generatedAt: null,
+      alerts: { total: 0, critical: 0, warning: 0, info: 0 },
+      dailyAllReleases: null,
+      dailyCurrentRelease: null,
+      note: "尚未生成每日监测报告；这不代表今天没有用户使用。"
+    };
+  }
+  const alerts = Array.isArray(report.alerts) ? report.alerts : [];
+  const generatedAt = String(report.generatedAt || "");
+  const timestamp = Date.parse(generatedAt);
+  const age = Number.isFinite(timestamp) ? new Date(now).getTime() - timestamp : Infinity;
+  return {
+    status: ["healthy", "warning", "critical"].includes(report.status) ? report.status : "unavailable",
+    freshness: age >= 0 && age <= maxAgeMs ? "fresh" : "stale",
+    date: report.date || null,
+    generatedAt: generatedAt || null,
+    alerts: {
+      total: alerts.length,
+      critical: alerts.filter((alert) => alert?.severity === "critical").length,
+      warning: alerts.filter((alert) => alert?.severity === "warning").length,
+      info: alerts.filter((alert) => alert?.severity === "info").length
+    },
+    dailyAllReleases: compactMonitoringMetrics(report.dailyAllReleases),
+    dailyCurrentRelease: compactMonitoringMetrics(report.dailyCurrentRelease),
+    note: report.status === "critical" ? "每日监测发现需要处理的告警。" : null
+  };
+}
+
+function compactMonitoringMetrics(metrics) {
+  if (!metrics || typeof metrics !== "object") return null;
+  return {
+    inputRuns: Number(metrics.inputRuns) || 0,
+    feedbackRuns: Number(metrics.feedbackRuns) || 0,
+    analysisCompletedRuns: Number(metrics.analysisCompletedRuns) || 0,
+    primaryActionRuns: Number(metrics.primaryActionRuns) || 0
   };
 }

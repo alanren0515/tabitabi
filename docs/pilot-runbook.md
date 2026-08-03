@@ -42,6 +42,38 @@ npm run pilot:gate
 npm run status
 ```
 
+### 每日自动监测
+
+每日监测将“今天所有版本的运营使用量”和“当前部署版本的 pilot 指标”分开显示。这样新部署后当前版本暂时为 0，不会把旧版本的真实使用误判为丢失，也不会把旧版本事件错误计入当前发布门槛。
+
+在已部署新版本、且当前 Fly 登录状态可用的环境中运行：
+
+```bash
+npm run monitor:daily
+npm run status
+```
+
+监测会读取并汇总：
+
+- 东京自然日的真实输入、完成分析、行动点击和有效反馈；审计流量、演示数据和旧版 pilot 事件会按规则排除。
+- Qwen、OpenAI fallback、Google Places、Hot Pepper 的每日预算使用量。
+- 各数据源请求数、缓存命中、延迟、错误率和 p95 延迟。
+- `/healthz`、`/readyz`、`/api/capabilities` 与 Fly Machine/Volume 审计。
+
+报告写入本机 `data/monitoring/YYYY-MM-DD.json` 和 `data/monitoring/latest.json`；远端历史写入 Fly Volume 的 `/app/data/daily-monitoring/`，保留 90 个自然日。原始事件、截图、店名、访问码和 API Key 不会写入监测报告。
+
+告警分级如下：
+
+- `info`：当天还没有真实使用。它不代表故障，也不应触发止损。
+- `warning`：任一预算桶达到 70%，或数据源在至少 5 次请求后的错误率达到 15%。
+- `critical`：任一预算桶达到 90%，数据源错误率达到 30%，服务未就绪、provider circuit 打开、emergency stop 开启，或 Fly 审计失败。
+
+出现 `critical` 时，监测命令返回退出码 2；先停止评测和宣传，检查 `/readyz`、Fly 状态与 [安全事故处理手册](./security-incident-response.md)，必要时设置 `PAID_API_EMERGENCY_STOP=true`。不要因为“今天是 0”而手动重置预算或电路状态。
+
+项目包含 `.github/workflows/daily-monitor.yml`，默认每天 09:00 JST 运行一次，也支持手动触发。它不会创建新的 Fly Machine 或 Volume；要启用它，需要把代码仓库连接到 GitHub，并在仓库 Actions secrets 中设置 `FLY_API_TOKEN`。当前项目没有 Git remote，因此这个工作流目前只是已准备好的配置，不会自动运行。访问令牌不要粘贴到聊天、代码、日志或截图中。
+
+GitHub Actions 的分钟数和 Fly 短暂唤醒产生的计算费用取决于账户套餐与实际运行时间；本轮没有启动工作流、没有调用付费供应商 API、没有新增 Fly 资源，因此没有新增账单。启用前仍需按项目规则重新核对价格与 spending ceiling。
+
 正式 Fly 试运行以线上 Volume 为准。不要把本机日志复制或合并到线上，也不要用本机 `pilot:gate` 代替生产证据。先用 provider-free smoke 唤醒现有 Machine，然后运行：
 
 ```bash

@@ -12,4 +12,5 @@ data/*.jsonl
 data/daily-budget.json
 data/provider-circuit.json
 data/release-evidence/
+data/monitoring/
 eval/latest-*-results.json
