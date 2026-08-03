@@ -42,7 +42,7 @@ export function buildDailyMonitoringReport({
   const dailyEvents = liveEvents.filter((event) => tokyoDate(event.occurredAt) === date);
   const dailyAllReleases = summarizePilotMetrics(dailyEvents);
   const dailyCurrentRelease = summarizePilotMetrics(dailyEvents, { releaseRevision });
-  const budget = budgetState ? dailyBudgetSnapshot(budgetState, budgetLimits) : null;
+  const budget = budgetState ? dailyBudgetSnapshot(budgetState, budgetLimits, { expectedDate: date }) : null;
   const sources = summarizeSourceMetrics(sourceMetrics.filter((record) => tokyoDate(record.occurredAt) === date));
   const alerts = [
     ...budgetAlerts(budget),

@@ -48,6 +48,20 @@ test("exposes only bounded daily usage and remaining counts", () => {
   });
 });
 
+test("resets a stale persisted date when creating a current-day snapshot", () => {
+  assert.deepEqual(dailyBudgetSnapshot({ date: "2026-08-02", counts: { places_search: 89 } }, {
+    places_search: 90,
+    places_details: 90
+  }, { expectedDate: "2026-08-04" }), {
+    date: "2026-08-04",
+    timeZone: "Asia/Tokyo",
+    buckets: {
+      places_search: { used: 0, limit: 90, remaining: 90 },
+      places_details: { used: 0, limit: 90, remaining: 90 }
+    }
+  });
+});
+
 test("fails closed when the persistent budget file is corrupt", async () => {
   const root = await mkdtemp(join(tmpdir(), "tabitabi-budget-"));
   const path = join(root, "budget.json");

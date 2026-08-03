@@ -38,14 +38,16 @@ export function createDailyBudgetStore({ path, timeZone = "Asia/Tokyo", now = ()
   };
 }
 
-export function dailyBudgetSnapshot(current = {}, limits = {}) {
-  const counts = current?.counts && typeof current.counts === "object" ? current.counts : {};
+export function dailyBudgetSnapshot(current = {}, limits = {}, { expectedDate = null } = {}) {
+  const storedDate = String(current?.date || "");
+  const date = expectedDate ? String(expectedDate) : storedDate;
+  const counts = (!expectedDate || storedDate === date) && current?.counts && typeof current.counts === "object" ? current.counts : {};
   const buckets = Object.fromEntries(Object.entries(limits).map(([bucket, limit]) => {
     const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 0;
     const used = Math.min(Math.max(Number(counts[bucket]) || 0, 0), safeLimit);
     return [bucket, { used, limit: safeLimit, remaining: Math.max(safeLimit - used, 0) }];
   }));
-  return { date: String(current?.date || ""), timeZone: "Asia/Tokyo", buckets };
+  return { date, timeZone: "Asia/Tokyo", buckets };
 }
 
 export async function consumeDailyBudget({ path, bucket, limit, timeZone = "Asia/Tokyo", now = new Date() }) {

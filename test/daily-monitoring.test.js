@@ -52,6 +52,17 @@ test("emits budget, circuit, readiness, and source error alerts without treating
   assert.ok(report.alerts.some((item) => item.code === "NO_LIVE_INPUT_TODAY"));
 });
 
+test("does not carry yesterday's budget usage into today's monitoring report", () => {
+  const report = buildDailyMonitoringReport({
+    date: "2026-08-04",
+    budgetState: { date: "2026-08-02", counts: { places_search: 89 } },
+    budgetLimits: { places_search: 90 }
+  });
+  assert.equal(report.budget.date, "2026-08-04");
+  assert.deepEqual(report.budget.buckets.places_search, { used: 0, limit: 90, remaining: 90 });
+  assert.equal(report.alerts.some((item) => item.code === "BUDGET_HIGH" || item.code === "BUDGET_NEAR_LIMIT"), false);
+});
+
 test("merges external health and Fly failures into a critical operator status", () => {
   const report = buildDailyMonitoringReport({ budgetState: { date: "2026-08-04", counts: {} }, budgetLimits });
   const merged = mergeExternalMonitoring(report, {
