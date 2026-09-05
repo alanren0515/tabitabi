@@ -2,7 +2,9 @@ import { confidenceLabel, recommendationLabel } from "./analyzer.js";
 import { buildRestaurantQuery, extractionReviewState, formatBudget, isKnownSampleScreenshot, mergeScreenshotSupplemental, normalizeExtraction, sampleTikTokExtraction, selectExtractedRestaurant } from "./screenshot-extraction.js";
 import { createSavedPlan, normalizeSavedPlans, PLAN_STATUSES, sortSavedPlansByUrgency, updateSavedPlan } from "./saved-plans.js";
 import { deleteLocalData, LOCAL_STORAGE_KEY, summarizeLocalData, VISIT_STORAGE_KEY } from "./privacy-data.js";
-import { candidateDecision, candidateDecisionCopy, rejectCandidate, restoreCandidates, visibleCandidates } from "./candidate-selection.js";
+import { candidateDecision, rejectCandidate, restoreCandidates, visibleCandidates } from "./candidate-selection.js";
+import { localizedCandidateDecisionCopy as resolveLocalizedCandidateDecisionCopy } from "./candidate-copy.js";
+import { resultActionCopy as resolveResultActionCopy } from "./result-actions.js";
 import { PUBLIC_TERMS_SECTIONS, TERMS_EFFECTIVE_DATE, TERMS_SECTIONS } from "./terms-data.js";
 import { addRecentAnalysis, createRecentAnalysis, normalizeRecentAnalyses, RECENT_STORAGE_KEY } from "./recent-analyses.js";
 import { buildSharePayload } from "./share-result.js";
@@ -269,7 +271,6 @@ function renderHome() {
         <div class="eyebrow">${t("home.eyebrow")}</div>
         <h1>${t("home.title")}</h1>
         <p class="hero-copy">${t("home.copy")}</p>
-        <div class="hero-route" aria-hidden="true"><span>SNS</span><i></i><span>${t("home.routeIdentify")}</span><i></i><span>${t("home.routeAct")}</span></div>
       </div>
       <div class="hero-workbench">
       ${state.sharedInputPending ? `<aside class="shared-input-banner"><strong>${t("home.sharedTitle")}</strong><span>${t("home.sharedBody")}</span></aside>` : ""}
@@ -281,21 +282,22 @@ function renderHome() {
       </form>` : ""}
       ${state.homeRecoveryNotice ? `<aside class="recovery-banner" role="status"><strong>${t("home.noMatchTitle")}</strong><span>${esc(state.homeRecoveryNotice)}</span><small>${t("home.noMatchHelp")}</small></aside>` : ""}
       <form id="analyze-form" class="input-card">
-        <div class="input-intro"><strong>${t("home.clueLabel")}</strong><span>${t("home.methodHelp")}</span></div>
         <div class="input-method-stack">
           <section class="input-method-card image-method primary-input-method" aria-labelledby="image-method-title">
-            <div class="input-method-heading"><span><b class="method-badge">${t("home.primaryBadge")}</b><strong id="image-method-title">${t("home.imageMethod")}</strong><small>${t("home.imageMethodHint")}</small></span></div>
+            <div class="input-method-heading"><span><strong id="image-method-title">${t("home.imageMethod")}</strong></span></div>
             <button type="button" class="upload-button" id="upload-trigger" ${state.uploadOptimization?.status === "optimizing" ? "disabled" : ""} ${uploadError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${icons.upload}<span>${state.uploadOptimization?.status === "optimizing" ? t("home.preparingScreenshot") : state.uploadName ? t("home.replaceScreenshot") : t("home.addScreenshot")}</span></button>
             <input type="file" id="screenshot" hidden accept="${SCREENSHOT_ACCEPT}" />
             ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="${t("home.previewAlt")}"><div><strong>${esc(state.uploadName)}</strong><span>${t("home.previewTitle")}</span></div></div>` : ""}
             ${renderUploadOptimizationStatus()}
             <div class="image-method-footer">${state.uploadName ? `<button type="button" class="remove-upload" id="remove-upload">${t("home.removeScreenshot")}</button>` : `<span class="privacy-note" id="upload-help">${t("home.imagePrivacy")}</span>`}</div>
           </section>
-          <div class="input-method-divider"><span>${t("home.or")}</span></div>
-          <label class="input-method-card text-method secondary-input-method" for="clue">
+          ${state.uploadName ? `<details class="input-method-card text-method supplemental-clue">
+            <summary>${t("home.nameMethod")}</summary>
+            <div><label class="sr-only" for="clue">${t("home.nameMethod")}</label><textarea id="clue" name="clue" rows="2" placeholder="${t("home.cluePlaceholder")}" ${clueError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea></div>
+          </details>` : `<label class="input-method-card text-method secondary-input-method" for="clue">
             <span class="input-method-heading"><span><strong>${t("home.nameMethod")}</strong><small>${t("home.nameMethodHint")}</small></span></span>
             <textarea id="clue" name="clue" rows="2" placeholder="${t("home.cluePlaceholder")}" ${clueError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
-          </label>
+          </label>`}
         </div>
         ${state.analysisError ? `<aside class="inline-error" id="analysis-error" role="alert"><strong>${t("home.errorTitle")}</strong><span>${esc(state.analysisError)}</span></aside>` : ""}
         <button class="primary-button analyze-submit" type="submit" ${accessLocked ? 'disabled aria-describedby="pilot-access-help"' : uploadBlocked ? 'disabled aria-describedby="upload-optimization-status"' : ""}><span id="analyze-submit-label">${homeSubmitLabel()}</span> ${icons.arrow}</button>
@@ -420,7 +422,8 @@ async function attachScreenshotFile(file, { pasted = false } = {}) {
 
 function homeSubmitLabel() {
   if (state.uploadName) return t("home.startScreenshot");
-  return /^https?:\/\/\S+$/i.test(state.input.trim()) ? t("home.startClue") : t("home.startName");
+  if (state.input.trim()) return /^https?:\/\/\S+$/i.test(state.input.trim()) ? t("home.startClue") : t("home.startName");
+  return t("home.startEmpty");
 }
 
 function renderUploadOptimizationStatus() {
@@ -883,7 +886,6 @@ function renderCandidates() {
         const isSystemLead = !exampleMode && !fallback && decision.kind !== "ambiguous" && restaurant.id === decision.leadId;
         const candidateLabel = exampleMode ? t("example.badge") : isSystemLead ? t("candidate.lead") : visible.length === 1 ? t("candidate.confirm") : t("candidate.position", { index: index + 1, count: visible.length });
         return `<article class="candidate-card${isSystemLead ? " system-lead" : ""}${exampleMode ? " example-card" : ""}">
-        <div class="restaurant-avatar">${(restaurant.category || "店").slice(0, 1)}</div>
         <div class="candidate-copy"><span class="candidate-label${isSystemLead ? " lead-label" : ""}">${esc(candidateLabel)}</span><small class="candidate-meta">${esc(restaurant.category || t("common.restaurant"))}${restaurant.price ? ` · ${esc(restaurant.price)}` : ""}</small><h3>${esc(restaurant.name)}</h3><p>${esc(restaurant.address || [restaurant.area, restaurant.station].filter(Boolean).join(" · "))}</p><small class="business-status status-${esc(String(restaurant.businessStatus || "unknown").toLowerCase())}">${esc(businessStatusLabel(restaurant.businessStatus))}</small>${preview ? `<div class="candidate-rating"><strong>${Number.isFinite(preview.rating) ? `★ ${esc(preview.rating.toFixed(1))}` : t("candidate.noRating")}</strong>${Number.isInteger(preview.userRatingCount) ? `<span>Google ${esc(localeNumberFormat(currentLocale()).format(preview.userRatingCount))}</span>` : ""}</div>` : ""}${restaurant.matchReasons?.length || restaurant.attributions?.length ? `<details class="candidate-evidence"><summary>${t("candidate.why")}</summary>${restaurant.matchReasons?.length && currentLocale() === "ja" ? `<div class="match-reasons">${restaurant.matchReasons.map((reason) => `<small>${esc(reason)}</small>`).join("")}</div>` : restaurant.matchScore ? `<small>${t("candidate.match")}</small>` : ""}${restaurant.attributions?.length ? `<small class="provider-attribution">${t("candidate.attribution", { providers: restaurant.attributions.map((item) => esc(item.provider)).join(", ") })}</small>` : ""}</details>` : ""}</div>
         <div class="candidate-actions"><button class="select-button" data-restaurant="${restaurant.id}">${t("candidate.select")} ${icons.arrow}</button><button class="reject-button" data-reject-candidate="${restaurant.id}" aria-label="${esc(restaurant.name)}: ${t("candidate.reject")}">${t("candidate.reject")}</button></div>
       </article>`;
@@ -916,12 +918,7 @@ function renderCandidates() {
 }
 
 function localizedCandidateDecisionCopy({ fallback = false, decision, candidateCount = 0, input = "" } = {}) {
-  if (currentLocale() === "ja") return candidateDecisionCopy({ fallback, decision, candidateCount, input });
-  if (fallback) return { heading: t("candidate.fallbackHeading"), summary: t("candidate.fallbackSummary") };
-  if (decision?.kind === "likely_single") return { heading: t("candidate.singleHeading"), summary: t("candidate.singleSummary", { input }) };
-  if (decision?.kind === "likely_with_alternatives") return { heading: t("candidate.leadHeading"), summary: t("candidate.leadSummary", { input }) };
-  if (candidateCount === 1) return { heading: t("candidate.uncertainHeading"), summary: t("candidate.uncertainSummary", { input }) };
-  return { heading: t("candidate.ambiguousHeading"), summary: t("candidate.ambiguousSummary", { input }) };
+  return resolveLocalizedCandidateDecisionCopy({ locale: currentLocale(), translate: t, fallback, decision, candidateCount, input });
 }
 
 async function openConfirmedCandidate(focus) {
@@ -958,17 +955,23 @@ function renderResultDecisionCard(r) {
 }
 
 function renderResultActionCard(r, { primaryAction, mapUrl, mapsIsPrimary, savedPlan, saved } = {}) {
-  return `<article class="action-card"><p class="overline">${t("result.next")}</p><h3>${t(primaryAction?.type === "phone" ? "result.actionPhone" : primaryAction ? "result.actionBooking" : "result.actionMap")}</h3>
+  const actionCopy = resultActionCopy(primaryAction, r);
+  const actionLabel = currentLocale() === "ja" && actionCopy.label ? esc(actionCopy.label) : t(actionCopy.buttonKey);
+  return `<article class="action-card"><p class="overline">${t("result.next")}</p><h3>${t(actionCopy.headingKey)}</h3>
     ${renderCurrentOpeningStatus(r.currentOpeningHours)}
-    ${primaryAction ? `<a class="primary-button" id="primary-action" data-action-type="${esc(primaryAction.type || "external")}" href="${esc(actionHref(primaryAction))}" ${primaryAction.type === "phone" ? "" : 'target="_blank" rel="noreferrer"'}>${currentLocale() === "ja" ? esc(primaryAction.label) : t(primaryAction.type === "phone" ? "result.actionPhone" : "result.actionBooking")} ${primaryAction.type === "phone" ? icons.phone : icons.arrow}</a>` : r.phone ? `<a class="primary-button" id="primary-action" data-action-type="phone" href="tel:${esc(r.phone)}">${icons.phone} ${t("result.actionPhone")}</a>` : `<a class="primary-button" id="primary-action" data-action-type="map" href="${esc(safeExternalUrl(r.mapSearchUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address}`)}`))}" target="_blank" rel="noreferrer">${t("result.actionMap")} ${icons.arrow}</a>`}
+    <a class="primary-button" id="primary-action" data-action-type="${esc(actionCopy.type)}" href="${esc(actionCopy.href)}" ${actionCopy.type === "phone" ? "" : 'target="_blank" rel="noreferrer"'}>${actionLabel} ${actionCopy.type === "phone" ? icons.phone : icons.arrow}</a>
     ${mapUrl !== "#" && !mapsIsPrimary ? `<a class="secondary-button map-action" id="map-action" data-action-type="map" href="${esc(mapUrl)}" target="_blank" rel="noreferrer">${t("result.actionMap")} ${icons.arrow}</a>` : ""}
     <details class="action-more" ${state.planEditorOpen ? "open" : ""}><summary>${t("result.otherActions")}</summary><div>
-      ${r.phone && primaryAction?.type !== "phone" ? `<a class="secondary-button" id="phone-action" href="tel:${esc(r.phone)}">${icons.phone} ${esc(r.phone)} · ${t("result.phone")}</a>` : ""}
+      ${r.phone && actionCopy.type !== "phone" ? `<a class="secondary-button" id="phone-action" href="tel:${esc(r.phone)}">${icons.phone} ${esc(r.phone)} · ${t("result.phone")}</a>` : ""}
       <button class="secondary-button" id="share-result">${t("result.share")}</button>
       <button class="secondary-button" id="save-button">${icons.bookmark} ${saved ? t("result.editPlan") : t("result.savePlan")}</button>
       ${state.planEditorOpen ? renderPlanForm(savedPlan, r) : ""}
     </div></details>
   </article>`;
+}
+
+function resultActionCopy(action, restaurant) {
+  return resolveResultActionCopy(action, restaurant);
 }
 
 function returnToCandidates() {
@@ -986,10 +989,10 @@ function renderResult() {
   const r = state.restaurant;
   const exampleMode = isExampleRestaurant(r);
   const saved = state.saved.some((item) => item.id === r.id);
-  const primaryAction = r.primaryAction || (r.booking ? { label: r.booking.label, url: r.booking.url } : null);
+  const primaryAction = r.primaryAction || (r.booking ? { label: r.booking.label, url: r.booking.url, type: "open_booking_source" } : null);
+  const resolvedPrimaryAction = resultActionCopy(primaryAction, r);
   const mapUrl = safeExternalUrl(r.mapSearchUrl || r.googleMapsUri || "");
-  const mapsIsFallbackPrimary = !primaryAction && !r.phone;
-  const mapsIsPrimary = mapsIsFallbackPrimary || ["map", "open_map"].includes(primaryAction?.type) || primaryAction?.provider === "google_maps";
+  const mapsIsPrimary = resolvedPrimaryAction.type === "map";
   const reservationOptions = Array.isArray(r.reservationOptions) ? r.reservationOptions : [];
   const displayedReservationOptions = reservationOptions.filter((option) => option.provider !== "google_maps");
   const savedPlan = state.saved.find((item) => item.id === r.id);
@@ -1080,8 +1083,8 @@ function renderResult() {
 }
 
 function focusResultSection() {
-  const selector = state.resultFocus === "reservation" ? ".decision-grid" : ".detail-grid";
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const selector = state.resultFocus === "reservation" ? ".decision-grid" : ".result-title";
   requestAnimationFrame(() => document.querySelector(selector)?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }));
 }
 
@@ -1473,11 +1476,6 @@ function safeExternalUrl(value) {
   } catch {
     return "#";
   }
-}
-
-function actionHref(action = {}) {
-  if (action.type === "phone" && /^tel:[+\d()\-]+$/i.test(String(action.url || ""))) return action.url;
-  return safeExternalUrl(action.url);
 }
 
 function postEvent(event, extra = {}) {
