@@ -265,6 +265,7 @@ function renderHome() {
   const uploadBlocked = ["optimizing", "failed"].includes(state.uploadOptimization?.status);
   const uploadError = state.analysisError && state.analysisErrorTarget === "upload";
   const clueError = state.analysisError && state.analysisErrorTarget === "clue";
+  const nameMethodContext = state.uploadName ? t("home.nameMethodSupplemental") : t("home.nameMethodLabel");
   app.innerHTML = `
     <section class="hero">
       <div class="hero-intro">
@@ -284,18 +285,19 @@ function renderHome() {
       <form id="analyze-form" class="input-card">
         <div class="input-method-stack">
           <section class="input-method-card image-method primary-input-method" aria-labelledby="image-method-title">
-            <div class="input-method-heading"><span><strong id="image-method-title">${t("home.imageMethod")}</strong></span></div>
+            <div class="input-method-heading"><span><small class="method-kicker">${t("home.imagePrimaryLabel")}</small><strong id="image-method-title">${t("home.imageMethod")}</strong><small>${t("home.imageMethodHint")}</small></span></div>
             <button type="button" class="upload-button" id="upload-trigger" ${state.uploadOptimization?.status === "optimizing" ? "disabled" : ""} ${uploadError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${icons.upload}<span>${state.uploadOptimization?.status === "optimizing" ? t("home.preparingScreenshot") : state.uploadName ? t("home.replaceScreenshot") : t("home.addScreenshot")}</span></button>
             <input type="file" id="screenshot" hidden accept="${SCREENSHOT_ACCEPT}" />
             ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="${t("home.previewAlt")}"><div><strong>${esc(state.uploadName)}</strong><span>${t("home.previewTitle")}</span></div></div>` : ""}
             ${renderUploadOptimizationStatus()}
             <div class="image-method-footer">${state.uploadName ? `<button type="button" class="remove-upload" id="remove-upload">${t("home.removeScreenshot")}</button>` : `<span class="privacy-note" id="upload-help">${t("home.imagePrivacy")}</span>`}</div>
           </section>
+          <div class="input-method-divider" aria-hidden="true"><span>${nameMethodContext}</span></div>
           ${state.uploadName ? `<details class="input-method-card text-method supplemental-clue">
-            <summary>${t("home.nameMethod")}</summary>
+            <summary><small class="method-kicker">${nameMethodContext}</small>${t("home.nameMethod")}</summary>
             <div><label class="sr-only" for="clue">${t("home.nameMethod")}</label><textarea id="clue" name="clue" rows="2" placeholder="${t("home.cluePlaceholder")}" ${clueError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea></div>
           </details>` : `<label class="input-method-card text-method secondary-input-method" for="clue">
-            <span class="input-method-heading"><span><strong>${t("home.nameMethod")}</strong><small>${t("home.nameMethodHint")}</small></span></span>
+            <span class="input-method-heading"><span><small class="method-kicker">${nameMethodContext}</small><strong>${t("home.nameMethod")}</strong><small>${t("home.nameMethodHint")}</small></span></span>
             <textarea id="clue" name="clue" rows="2" placeholder="${t("home.cluePlaceholder")}" ${clueError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
           </label>`}
         </div>

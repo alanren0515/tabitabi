@@ -1,4 +1,4 @@
-const CACHE_NAME = "tabitabi-shell-v61";
+const CACHE_NAME = "tabitabi-shell-v62";
 const APP_SHELL = [
   "/",
   "/index.html",

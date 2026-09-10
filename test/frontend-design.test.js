@@ -19,6 +19,10 @@ test("keeps the home hierarchy compact, input-first, and mobile-readable", async
   assert.match(css, /--primary:#1d4b73/);
   assert.match(css, /--success:#2f6d59/);
   assert.match(css, /--accent:#f0a43b/);
+  assert.match(css, /\.primary-input-method \{[^}]*border:2px solid var\(--primary\)[^}]*background:var\(--primary-soft\)/);
+  assert.match(css, /\.upload-button \{[^}]*min-height:164px[^}]*border:2px dashed/);
+  assert.match(css, /\.secondary-input-method \{[^}]*margin-top:12px[^}]*background:var\(--card\)/);
+  assert.match(css, /\.secondary-input-method textarea,.supplemental-clue textarea \{ min-height:76px; \}/);
   assert.doesNotMatch(css, /--green:#(?:28624c|174b3a|e1ebe4)/);
   assert.match(css, /@media \(prefers-reduced-motion:reduce\)/);
 });
@@ -52,7 +56,7 @@ test("uses action-specific result labels and readable secondary reasons", async 
 
 test("bumps the offline shell when core interface assets change", async () => {
   const sw = await readFile(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(sw, /const CACHE_NAME = "tabitabi-shell-v61"/);
+  assert.match(sw, /const CACHE_NAME = "tabitabi-shell-v62"/);
 });
 
 test("keeps key stage headings and empty-input action available in all languages", async () => {

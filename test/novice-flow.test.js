@@ -16,14 +16,18 @@ test("makes screenshots primary and restaurant-name input secondary on the homep
   const homeEnd = appSource.indexOf("function renderUploadOptimizationStatus()");
   const homeSource = appSource.slice(homeStart, homeEnd);
   assert.ok(homeSource.indexOf("primary-input-method") < homeSource.indexOf("secondary-input-method"));
+  assert.match(homeSource, /home\.imagePrimaryLabel/);
+  assert.match(homeSource, /home\.imageMethodHint/);
+  assert.match(homeSource, /input-method-divider/);
+  assert.match(homeSource, /nameMethodContext/);
   assert.doesNotMatch(homeSource, /input-intro/);
   assert.doesNotMatch(homeSource, /home\.primaryBadge/);
-  assert.doesNotMatch(homeSource, /home\.imageMethodHint/);
   assert.match(homeSource, /id="upload-trigger"/);
   assert.match(homeSource, /home\.imagePrivacy/);
   assert.match(homeSource, /home\.nameMethod/);
+  assert.match(homeSource, /home\.nameMethodSupplemental/);
   assert.match(homeSource, /<details class="input-method-card text-method supplemental-clue">/);
-  assert.match(homeSource, /<summary>\$\{t\("home\.nameMethod"\)\}<\/summary>/);
+  assert.match(homeSource, /<summary><small class="method-kicker">\$\{nameMethodContext\}<\/small>\$\{t\("home\.nameMethod"\)\}<\/summary>/);
   assert.match(homeSource, /<label class="sr-only" for="clue">/);
   assert.doesNotMatch(homeSource, /home\.sources/);
   assert.doesNotMatch(homeSource, /home\.textMethod/);
@@ -63,7 +67,7 @@ test("requires only the helpfulness answer in the default feedback path", () => 
 
 test("ships the new novice-flow labels in all supported languages", () => {
   for (const locale of ["ja", "en", "zh-CN"]) {
-    for (const key of ["review.more", "candidate.why", "result.why", "result.moreTitle", "result.otherActions", "result.chooseCandidate", "result.newSearch", "feedback.more", "result.actionMap", "result.currentStatus", "result.currentStatusOpen", "result.currentStatusClosed", "result.currentStatusUnknown", "home.nameMethod", "home.imagePrivacy", "home.startScreenshot", "home.startName", "home.startClue"]) {
+    for (const key of ["review.more", "candidate.why", "result.why", "result.moreTitle", "result.otherActions", "result.chooseCandidate", "result.newSearch", "feedback.more", "result.actionMap", "result.currentStatus", "result.currentStatusOpen", "result.currentStatusClosed", "result.currentStatusUnknown", "home.imagePrimaryLabel", "home.nameMethodLabel", "home.nameMethodSupplemental", "home.nameMethod", "home.imageMethodHint", "home.imagePrivacy", "home.startScreenshot", "home.startName", "home.startClue"]) {
       assert.notEqual(translate(locale, key), key);
     }
   }
