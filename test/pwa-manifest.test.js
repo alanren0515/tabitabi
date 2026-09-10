@@ -7,7 +7,7 @@ test("declares an installable text/link share target with real PNG icons", async
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   assert.equal(manifest.id, "/");
   assert.equal(manifest.scope, "/");
-  assert.equal(manifest.background_color, "#eef3f0");
+  assert.equal(manifest.background_color, "#f2f4f5");
   assert.equal(manifest.theme_color, manifest.background_color);
   assert.match(html, new RegExp(`<meta name="theme-color" content="${manifest.theme_color}"`));
   assert.doesNotMatch(html, /fonts\.(?:googleapis|gstatic)\.com/);

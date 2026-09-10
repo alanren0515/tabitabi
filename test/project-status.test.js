@@ -11,6 +11,18 @@ test("uses Fly pilot evidence only when it belongs to the current revision", () 
   assert.equal(selectCurrentPilotReport({ remoteReport: { ...remoteReport, source: "local" }, localReport, revision }).reportStatus, "unavailable");
 });
 
+test("does not use local pilot evidence when the remote report is missing", () => {
+  const selected = selectCurrentPilotReport({
+    localReport: { source: "local", metrics: { inputRuns: 7, feedbackRuns: 2 } },
+    revision: "a".repeat(40)
+  });
+  assert.equal(selected.reportStatus, "unavailable");
+  assert.equal(selected.reportSource, "remote");
+  assert.equal(selected.metrics, null);
+  assert.match(selected.note, /尚未取得远端试点报告/);
+  assert.match(selected.note, /不代表今天没有用户使用/);
+});
+
 test("reports provider booleans and concrete remaining external evidence without secrets", () => {
   const cases = Array.from({ length: 33 }, (_, index) => ({ id: `case-${index}`, verificationStatus: "confirmed" }));
   const audits = [...Array.from({ length: 5 }, (_, index) => ({ caseId: `case-${index}`, status: "audited" })), ...Array.from({ length: 3 }, (_, index) => ({ caseId: `decision-${index}`, status: "decision_audited" }))];
@@ -57,6 +69,27 @@ test("reports daily monitoring separately from release readiness and marks stale
   const status = buildProjectStatus({ monitoringReport: report, now, pilotReport: { reportStatus: "unavailable", metrics: null } });
   assert.equal(status.monitoring.status, "warning");
   assert.equal(status.monitoring.dailyAllReleases.inputRuns, 4);
+  assert.equal(status.pilotReportNote, "尚未取得远端试点报告；当前试点件数不明，不代表今天没有用户使用。");
+});
+
+test("does not present stale local monitoring alerts as a current production failure", () => {
+  const now = new Date("2026-09-09T12:00:00+09:00");
+  const summary = summarizeMonitoringReport({
+    status: "critical",
+    date: "2026-08-27",
+    generatedAt: "2026-08-27T10:00:00+09:00",
+    alerts: [
+      { severity: "critical", code: "HEALTH_CHECK_FAILED" },
+      { severity: "critical", code: "FLY_AUDIT_FAILED" }
+    ]
+  }, now);
+
+  assert.equal(summary.status, "stale");
+  assert.equal(summary.reportedStatus, "critical");
+  assert.equal(summary.freshness, "stale");
+  assert.deepEqual(summary.alerts, { total: 0, critical: 0, warning: 0, info: 0 });
+  assert.deepEqual(summary.historicalAlerts, { total: 2, critical: 2, warning: 0, info: 0 });
+  assert.match(summary.note, /不代表当前生产故障/);
 });
 
 test("becomes ready only after release evidence and pilot thresholds pass", () => {

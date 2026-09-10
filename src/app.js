@@ -891,7 +891,7 @@ function renderCandidates() {
       </article>`;
       }).join("")}
     </div>
-    ${visible.length ? `<div class="candidate-review-actions"><button data-edit-clues>${t("candidate.edit")}</button>${rejectedCount ? `<button data-restore-candidates>${t("candidate.restore", { count: rejectedCount })}</button>` : ""}</div>` : `<div class="empty-state candidate-empty"><span>?</span><h3>${t("candidate.noneTitle")}</h3><p>${t("candidate.noneBody")}</p><div><button data-restore-candidates>${t("candidate.restoreAll")}</button><button class="primary-button" data-edit-clues>${t("candidate.searchEdit")} ${icons.arrow}</button></div></div>`}
+    ${visible.length ? `<div class="candidate-review-actions"><button class="uncertain-button" data-edit-clues>${t("candidate.edit")}</button>${rejectedCount ? `<button data-restore-candidates>${t("candidate.restore", { count: rejectedCount })}</button>` : ""}</div>` : `<div class="empty-state candidate-empty"><span>?</span><h3>${t("candidate.noneTitle")}</h3><p>${t("candidate.noneBody")}</p><div><button data-restore-candidates>${t("candidate.restoreAll")}</button><button class="primary-button" data-edit-clues>${t("candidate.searchEdit")} ${icons.arrow}</button></div></div>`}
     ${live ? `<div class="google-attribution" translate="no">Google Maps</div>` : `<p class="fine-print">${t("example.candidateNote")}</p>`}
   </section>`;
   document.querySelectorAll("[data-edit-clues]").forEach((button) => button.addEventListener("click", () => returnToClues(exampleMode ? "example" : "no_match")));

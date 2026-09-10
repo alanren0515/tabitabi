@@ -15,7 +15,7 @@ Service Worker 只预缓存应用外壳（HTML、前端模块、样式、manifes
 
 ## 本地运行
 
-随时运行 `npm run status` 可得到不含任何 Key 的当前配置、评估进度、剩余外部证据和下一条命令。它会直接读取当前隐私最小化事件日志计算 live 输入与反馈数量，不再依赖上一次生成的 pilot 报告；自动测试、release gate 和 pilot gate 仍分别承担各自的验证职责。
+随时运行 `npm run status` 可得到不含任何 Key 的当前配置、评估进度、剩余外部证据和下一条命令。正式试点指标只采用与当前 revision 匹配的远端聚合报告；远端报告缺失或不可用时显示未知，不会把本地事件日志当作生产证据或把未知显示为 0。自动测试、release gate 和 pilot gate 仍分别承担各自的验证职责。
 
 ```bash
 npm run dev

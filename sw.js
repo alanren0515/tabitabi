@@ -1,10 +1,11 @@
-const CACHE_NAME = "tabitabi-shell-v60";
+const CACHE_NAME = "tabitabi-shell-v61";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
   "/assets/icon-192.png",
   "/assets/icon-512.png",
+  "/assets/icon.svg",
   "/src/styles.css",
   "/src/app.js",
   "/src/analysis-queue.js",

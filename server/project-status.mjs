@@ -1,6 +1,6 @@
 import { evaluateReleaseEvidence } from "./release-evidence.mjs";
 
-export function selectCurrentPilotReport({ remoteReport = null, localReport = null, revision = "" } = {}) {
+export function selectCurrentPilotReport({ remoteReport = null, revision = "" } = {}) {
   if (remoteReport?.source === "fly-volume" && remoteReport?.releaseRevision === revision && remoteReport.metrics) {
     return { ...remoteReport, reportStatus: "available", reportSource: "remote" };
   }
@@ -54,6 +54,9 @@ export function buildProjectStatus({
       pilotFeedbackRuns: pilotAvailable ? Number(pilot.feedbackRuns) : null
     },
     pilotReportStatus: pilotReport?.reportStatus || "unavailable",
+    pilotReportNote: pilotReport?.note || (["unavailable", "stale"].includes(pilotReport?.reportStatus || "unavailable")
+      ? "尚未取得远端试点报告；当前试点件数不明，不代表今天没有用户使用。"
+      : null),
     monitoring: summarizeMonitoringReport(monitoringReport, now),
     releaseEvidence: { gatePassed: releaseEvidence.gatePassed, blockedBy: releaseEvidence.blockedBy, errors: releaseEvidence.errors },
     remaining,
@@ -72,10 +75,12 @@ export function summarizeMonitoringReport(report, now = new Date(), maxAgeMs = 2
   if (!report || typeof report !== "object") {
     return {
       status: "unavailable",
+      reportedStatus: null,
       freshness: "unavailable",
       date: null,
       generatedAt: null,
       alerts: { total: 0, critical: 0, warning: 0, info: 0 },
+      historicalAlerts: null,
       dailyAllReleases: null,
       dailyCurrentRelease: null,
       note: "尚未生成每日监测报告；这不代表今天没有用户使用。"
@@ -85,20 +90,32 @@ export function summarizeMonitoringReport(report, now = new Date(), maxAgeMs = 2
   const generatedAt = String(report.generatedAt || "");
   const timestamp = Date.parse(generatedAt);
   const age = Number.isFinite(timestamp) ? new Date(now).getTime() - timestamp : Infinity;
+  const freshness = age >= 0 && age <= maxAgeMs ? "fresh" : "stale";
+  const reportedStatus = ["healthy", "warning", "critical"].includes(report.status) ? report.status : "unavailable";
+  const reportedAlerts = countMonitoringAlerts(alerts);
+  const isCurrent = freshness === "fresh";
   return {
-    status: ["healthy", "warning", "critical"].includes(report.status) ? report.status : "unavailable",
-    freshness: age >= 0 && age <= maxAgeMs ? "fresh" : "stale",
+    status: isCurrent ? reportedStatus : "stale",
+    reportedStatus,
+    freshness,
     date: report.date || null,
     generatedAt: generatedAt || null,
-    alerts: {
-      total: alerts.length,
-      critical: alerts.filter((alert) => alert?.severity === "critical").length,
-      warning: alerts.filter((alert) => alert?.severity === "warning").length,
-      info: alerts.filter((alert) => alert?.severity === "info").length
-    },
+    alerts: isCurrent ? reportedAlerts : { total: 0, critical: 0, warning: 0, info: 0 },
+    historicalAlerts: isCurrent ? null : reportedAlerts,
     dailyAllReleases: compactMonitoringMetrics(report.dailyAllReleases),
     dailyCurrentRelease: compactMonitoringMetrics(report.dailyCurrentRelease),
-    note: report.status === "critical" ? "每日监测发现需要处理的告警。" : null
+    note: !isCurrent
+      ? "本地每日监测报告已过期；报告中的告警仅代表历史检查结果，不代表当前生产故障。请重新生成报告后再判断当前状态。"
+      : reportedStatus === "critical" ? "当前每日监测报告发现需要处理的告警。" : null
+  };
+}
+
+function countMonitoringAlerts(alerts) {
+  return {
+    total: alerts.length,
+    critical: alerts.filter((alert) => alert?.severity === "critical").length,
+    warning: alerts.filter((alert) => alert?.severity === "warning").length,
+    info: alerts.filter((alert) => alert?.severity === "info").length
   };
 }
 
