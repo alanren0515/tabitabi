@@ -267,11 +267,15 @@ function renderHome() {
   const clueError = state.analysisError && state.analysisErrorTarget === "clue";
   const nameMethodContext = state.uploadName ? t("home.nameMethodSupplemental") : t("home.nameMethodLabel");
   app.innerHTML = `
-    <section class="hero">
+    <section class="hero home-landing">
       <div class="hero-intro">
-        <div class="eyebrow">${t("home.eyebrow")}</div>
         <h1>${t("home.title")}</h1>
         <p class="hero-copy">${t("home.copy")}</p>
+        <ol class="route-steps" aria-label="${t("home.routeLabel")}">
+          <li class="is-active"><span aria-hidden="true"></span><strong>${t("home.routeFind")}</strong></li>
+          <li><span aria-hidden="true"></span><strong>${t("home.routeConfirm")}</strong></li>
+          <li><span aria-hidden="true"></span><strong>${t("home.routeAct")}</strong></li>
+        </ol>
       </div>
       <div class="hero-workbench">
       ${state.sharedInputPending ? `<aside class="shared-input-banner"><strong>${t("home.sharedTitle")}</strong><span>${t("home.sharedBody")}</span></aside>` : ""}
@@ -284,20 +288,20 @@ function renderHome() {
       ${state.homeRecoveryNotice ? `<aside class="recovery-banner" role="status"><strong>${t("home.noMatchTitle")}</strong><span>${esc(state.homeRecoveryNotice)}</span><small>${t("home.noMatchHelp")}</small></aside>` : ""}
       <form id="analyze-form" class="input-card">
         <div class="input-method-stack">
-          <section class="input-method-card image-method primary-input-method" aria-labelledby="image-method-title">
-            <div class="input-method-heading"><span><small class="method-kicker">${t("home.imagePrimaryLabel")}</small><strong id="image-method-title">${t("home.imageMethod")}</strong><small>${t("home.imageMethodHint")}</small></span></div>
+          <section class="input-method-card image-method primary-input-method" aria-labelledby="image-method-title" data-method-label="${t("home.imagePrimaryLabel")}">
+            <div class="input-method-heading"><span><strong id="image-method-title">${t("home.imageMethod")}</strong><small>${t("home.imageMethodHint")}</small></span></div>
             <button type="button" class="upload-button" id="upload-trigger" ${state.uploadOptimization?.status === "optimizing" ? "disabled" : ""} ${uploadError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${icons.upload}<span>${state.uploadOptimization?.status === "optimizing" ? t("home.preparingScreenshot") : state.uploadName ? t("home.replaceScreenshot") : t("home.addScreenshot")}</span></button>
             <input type="file" id="screenshot" hidden accept="${SCREENSHOT_ACCEPT}" />
             ${state.uploadPreviewUrl ? `<div class="upload-preview"><img src="${state.uploadPreviewUrl}" alt="${t("home.previewAlt")}"><div><strong>${esc(state.uploadName)}</strong><span>${t("home.previewTitle")}</span></div></div>` : ""}
             ${renderUploadOptimizationStatus()}
             <div class="image-method-footer">${state.uploadName ? `<button type="button" class="remove-upload" id="remove-upload">${t("home.removeScreenshot")}</button>` : `<span class="privacy-note" id="upload-help">${t("home.imagePrivacy")}</span>`}</div>
           </section>
-          <div class="input-method-divider" aria-hidden="true"><span>${nameMethodContext}</span></div>
+          <div class="input-method-divider" aria-hidden="true"><span>${t("home.or")}</span></div>
           ${state.uploadName ? `<details class="input-method-card text-method supplemental-clue">
             <summary><small class="method-kicker">${nameMethodContext}</small>${t("home.nameMethod")}</summary>
             <div><label class="sr-only" for="clue">${t("home.nameMethod")}</label><textarea id="clue" name="clue" rows="2" placeholder="${t("home.cluePlaceholder")}" ${clueError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea></div>
           </details>` : `<label class="input-method-card text-method secondary-input-method" for="clue">
-            <span class="input-method-heading"><span><small class="method-kicker">${nameMethodContext}</small><strong>${t("home.nameMethod")}</strong><small>${t("home.nameMethodHint")}</small></span></span>
+            <span class="input-method-heading"><span><strong>${t("home.nameMethod")}</strong><small>${t("home.nameMethodHint")}</small></span></span>
             <textarea id="clue" name="clue" rows="2" placeholder="${t("home.cluePlaceholder")}" ${clueError ? 'aria-invalid="true" aria-describedby="analysis-error"' : ""}>${esc(state.input)}</textarea>
           </label>`}
         </div>
@@ -317,6 +321,11 @@ function renderHome() {
     </section>
     ${state.pending.length ? `<section class="recent-preview queue-preview"><div><p class="overline">${t("home.queueOverline")}</p><h2>${t("home.queueTitle")}</h2></div><div class="recent-preview-list">${state.pending.slice(0, 3).map((item) => `<button data-open-pending="${esc(item.id)}"><strong>${esc(item.clues.name)}</strong><span>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || t("queue.locationUnknown"))}</span></button>`).join("")}</div><button class="text-button" data-action="queue">${t("home.viewAll", { count: state.pending.length })}</button></section>` : ""}
     ${state.recent.length ? `<section class="recent-preview"><div><p class="overline">${t("home.recentOverline")}</p><h2>${t("home.recentTitle")}</h2></div><div class="recent-preview-list">${state.recent.slice(0, 3).map((item) => `<button data-open-recent="${esc(item.id)}"><strong>${esc(item.name)}</strong><span>${esc(item.area || t("history.areaUnknown"))} · ${formatClientTime(item.analyzedAt)}</span></button>`).join("")}</div><button class="text-button" data-action="history">${t("home.viewAll", { count: state.recent.length })}</button></section>` : ""}
+    <section class="promise-strip" aria-label="${t("home.promiseLabel")}">
+      <article><span class="promise-dot" aria-hidden="true"></span><div><strong>${t("home.routeFind")}</strong><small>${t("home.promise1Body")}</small></div></article>
+      <article><span class="promise-dot" aria-hidden="true"></span><div><strong>${t("home.routeConfirm")}</strong><small>${t("home.promise2Body")}</small></div></article>
+      <article><span class="promise-dot" aria-hidden="true"></span><div><strong>${t("home.routeAct")}</strong><small>${t("home.promise3Body")}</small></div></article>
+    </section>
     `;
 
   document.querySelector("#analyze-form").addEventListener("submit", handleAnalyze);

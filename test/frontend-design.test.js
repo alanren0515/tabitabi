@@ -56,7 +56,7 @@ test("uses action-specific result labels and readable secondary reasons", async 
 
 test("bumps the offline shell when core interface assets change", async () => {
   const sw = await readFile(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(sw, /const CACHE_NAME = "tabitabi-shell-v62"/);
+  assert.match(sw, /const CACHE_NAME = "tabitabi-shell-v63"/);
 });
 
 test("keeps key stage headings and empty-input action available in all languages", async () => {
