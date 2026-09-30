@@ -588,6 +588,12 @@ footer { border-top:0; padding:36px 0 42px; color:var(--muted); }
 footer>span:first-child { font-family:var(--font-display); font-size:14px; color:var(--ink); }
 footer button { color:var(--primary); }
 
+@media (min-width:761px) and (max-width:1080px) {
+  .home-landing { grid-template-columns:minmax(0,1fr); gap:34px; }
+  .home-landing .hero-workbench { width:100%; margin:auto; }
+  .home-landing h1,.home-landing h1 em { white-space:normal; }
+}
+
 @media (max-width:760px) {
   .page-shell { padding-left:max(18px,env(safe-area-inset-left)); padding-right:max(18px,env(safe-area-inset-right)); }
   .topbar { height:68px; }
