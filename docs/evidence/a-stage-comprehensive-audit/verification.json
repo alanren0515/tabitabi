@@ -1,0 +1,87 @@
+{
+  "auditDate": "2026-10-05",
+  "checkedAt": "2026-10-04T16:42:45.869644+00:00",
+  "gitHead": "6c1e1567ebb796af2f8dd19e001f3550303fc2c0",
+  "workingTreeCommitted": false,
+  "codeFingerprint": {
+    "algorithm": "SHA256(sorted nonignored git-listed code/config/eval paths + NUL + contents + NUL)",
+    "sha256": "0e9130284ff8f49a9b2c1876728383d022356579bc3730319ac5a7d22b463b0d",
+    "fileCount": 237,
+    "roots": [
+      "index.html",
+      "manifest.webmanifest",
+      "package.json",
+      "server.mjs",
+      "sw.js"
+    ],
+    "directories": [
+      "src",
+      "server",
+      "scripts",
+      "test",
+      "eval"
+    ],
+    "extensions": [
+      ".js",
+      ".mjs",
+      ".json",
+      ".css",
+      ".html"
+    ]
+  },
+  "fullTests": {
+    "passed": 608,
+    "failed": 0,
+    "skipped": 0,
+    "actualLocalHttp": true
+  },
+  "baselineReplay": {
+    "valid": true,
+    "revision": "6c1e1567ebb796af2f8dd19e001f3550303fc2c0",
+    "tests": 49,
+    "apiSmokePassed": true,
+    "paidCalls": 0,
+    "scope": "offline regression and local health/capabilities; no human comparison"
+  },
+  "findings": {
+    "P1": 2,
+    "P2": 2,
+    "fixed": 4
+  },
+  "browser": {
+    "surface": "Codex in-app Browser",
+    "origin": "http://127.0.0.1:4176",
+    "providerMode": "synthetic responses; all other external fetch rejected",
+    "shellVersion": "v79",
+    "viewports": [
+      "default",
+      "320x740"
+    ],
+    "cases": [
+      "failed pending task -> demo -> original name and failed status preserved",
+      "delete -> add another item -> undo keeps both",
+      "reload restores two unfinished items and one previous fixture completed item",
+      "keyboard Tab focus visible (3px outline)"
+    ],
+    "documentWidthAt320": 320,
+    "consoleWarnings": 0,
+    "consoleErrors": 0,
+    "networkPanelExport": false,
+    "realIosSafari": false
+  },
+  "paidSupplierCalls": 0,
+  "deployed": false,
+  "remoteStateMutated": false,
+  "limitations": [
+    "Dirty working tree; no clean candidate release evidence.",
+    "Real provider, human quality, natural retention and commercial gates not established.",
+    "Native download receipt and enabled offer-card browser journey remain unverified.",
+    "Historical reproduction screenshots from October 3; fixed-state browser checks completed October 5."
+  ],
+  "cleanup": {
+    "browserTabClosed": true,
+    "viewportReset": true,
+    "localServerStopped": true,
+    "port4176Listening": false
+  }
+}

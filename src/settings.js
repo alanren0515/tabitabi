@@ -47,21 +47,25 @@ export function persistentSettings(settings = {}) {
 }
 
 export function settingsWithSessionAccess(persistent = {}, sessionStorage) {
-  return normalizeSettings({ ...persistent, pilotAccessCode: sessionStorage?.getItem(PILOT_ACCESS_SESSION_KEY) || "" });
+  let code = "";
+  try { code = sessionStorage?.getItem(PILOT_ACCESS_SESSION_KEY) || ""; } catch {}
+  return normalizeSettings({ ...persistent, pilotAccessCode: code });
 }
 
 export function savePilotAccessForSession(settings = {}, sessionStorage) {
   const code = normalizePilotAccessCode(settings?.pilotAccessCode);
   if (!sessionStorage) return;
-  if (code) sessionStorage.setItem(PILOT_ACCESS_SESSION_KEY, code);
-  else sessionStorage.removeItem(PILOT_ACCESS_SESSION_KEY);
+  try {
+    if (code) sessionStorage.setItem(PILOT_ACCESS_SESSION_KEY, code);
+    else sessionStorage.removeItem(PILOT_ACCESS_SESSION_KEY);
+  } catch {}
 }
 
 export function loadSettingsFromStorage(localStorage, sessionStorage) {
   let stored = {};
   try { stored = JSON.parse(localStorage?.getItem(SETTINGS_STORAGE_KEY) || "{}"); } catch { stored = {}; }
   const settings = settingsWithSessionAccess(stored, sessionStorage);
-  localStorage?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(persistentSettings(settings)));
+  try { localStorage?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(persistentSettings(settings))); } catch {}
   return settings;
 }
 

@@ -9,7 +9,8 @@ test("the homepage blocks analysis until a required session access code is saved
   assert.match(appSource, /id="pilot-access-form"/);
   assert.match(appSource, /pilotAccessLocked\(state\.capabilities, state\.settings\)/);
   assert.match(appSource, /disabled aria-describedby="pilot-access-help"/);
-  assert.match(appSource, /savePilotAccessForSession\(state\.settings, sessionStorage\)/);
+  assert.match(appSource, /const pageSessionStorage = safeStorage\("sessionStorage"\)/);
+  assert.match(appSource, /savePilotAccessForSession\(state\.settings, pageSessionStorage\)/);
 });
 
 test("the homepage access form does not validate by spending a provider request", () => {

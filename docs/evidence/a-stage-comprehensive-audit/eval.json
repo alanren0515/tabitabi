@@ -1,0 +1,8 @@
+{
+  "valid": true,
+  "cases": 35,
+  "confirmed": 35,
+  "target": 30,
+  "coverageComplete": true,
+  "errors": []
+}

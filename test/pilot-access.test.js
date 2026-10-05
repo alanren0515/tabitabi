@@ -20,7 +20,7 @@ test("explicit public mode takes precedence over a staged pilot secret", () => {
 });
 
 test("protects only the expensive pilot APIs", () => {
-  for (const path of ["/api/extract-screenshot", "/api/extract-webpage", "/api/events", "/api/restaurants/search", "/api/restaurants/details"]) {
+  for (const path of ["/api/extract-screenshot", "/api/extract-webpage", "/api/events", "/api/measurement-flows", "/api/research-consent", "/api/restaurants/search", "/api/restaurants/details"]) {
     assert.equal(protectedPilotApiPath("POST", path), true);
   }
   for (const [method, path] of [["GET", "/api/capabilities"], ["POST", "/api/extract-text"], ["POST", "/api/audit/save"]]) {

@@ -1,0 +1,18 @@
+{
+  "valid": true,
+  "studyMode": "synthetic",
+  "protocolFrozen": true,
+  "counts": {
+    "uniqueCases": 30,
+    "validCases": 30,
+    "excludedCases": 0,
+    "attemptRecords": 90,
+    "excludedAttemptRecords": 0,
+    "incompleteAttemptRecords": 0
+  },
+  "errors": [],
+  "baselineArchive": {
+    "required": false,
+    "verified": null
+  }
+}

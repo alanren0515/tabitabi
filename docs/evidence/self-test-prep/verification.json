@@ -1,0 +1,103 @@
+{
+  "checkedAt": "2026-10-03T09:19:28.571Z",
+  "scope": "local self-test preparation; not deployment/human/business gate evidence",
+  "gitHead": "6c1e1567ebb796af2f8dd19e001f3550303fc2c0",
+  "workingTreeCommitted": false,
+  "codeFingerprint": {
+    "algorithm": "sha256 sorted nonignored Git-listed source file path + NUL + contents + NUL; roots: server.mjs/sw.js/index.html/manifest.webmanifest/package.json and src/server/scripts/test/eval .js/.mjs/.json/.css/.html",
+    "files": 237,
+    "value": "db976a9f8de6d2f0e6bd8e478ee15a463cbb2bae2fd0b1459ea0aa4df396db87"
+  },
+  "serviceWorker": "tabitabi-shell-v78",
+  "fullTests": {
+    "exitCode": 0,
+    "tests": 602,
+    "passed": 602,
+    "failures": 0,
+    "skipped": 0
+  },
+  "productionConfigSmoke": {
+    "checkedAt": "2026-10-03T09:10:16.991Z",
+    "scope": "local production-config fixture; external network disabled",
+    "fixtureRevision": true,
+    "passed": true,
+    "live": false,
+    "releaseMode": "pilot",
+    "releaseRevision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "checks": {
+      "health": true,
+      "readiness": true,
+      "capabilities": true,
+      "pilot": true,
+      "pilotContent": true,
+      "privacy": true,
+      "terms": true
+    },
+    "guard": {
+      "protectedSearchUnauthenticated": 401,
+      "auditWorkbenchUnavailable": 404,
+      "repositoryPrivate": 404
+    },
+    "paidSupplierCalls": 0
+  },
+  "browser": {
+    "browser": "Codex in-app Browser",
+    "viewportWidths": [
+      1280,
+      320,
+      390
+    ],
+    "locales": [
+      "ja",
+      "en",
+      "zh-CN"
+    ],
+    "flows": [
+      "test mode entry and reload",
+      "text input -> clue confirmation -> mock candidates -> mock result",
+      "settings operations full server-reported revision and budget",
+      "sessionStorage unavailable -> URL marker retained -> privacy navigation and reload",
+      "new ordinary tab has no test mode"
+    ],
+    "consoleWarnErrors": [],
+    "pageHorizontalOverflow": false,
+    "syntheticRevision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "usesSyntheticProviders": true,
+    "realIosSafariVerified": false,
+    "independentNetworkExport": false
+  },
+  "auditFlow": {
+    "legacyEvents": 4,
+    "costRecords": 6,
+    "commercialFlows": [
+      {
+        "trafficType": "audit"
+      }
+    ],
+    "testRecordedActualCost": false
+  },
+  "paidSupplierCalls": 0,
+  "deployed": false,
+  "machineWoken": false,
+  "resourcesCreated": 0,
+  "limitations": [
+    "source not yet frozen as a clean candidate",
+    "current candidate/decision real evaluations not generated",
+    "Docker connection did not complete; image build not performed",
+    "native file download receipt still missing"
+  ],
+  "officialCasePreparation": {
+    "checkedAt": "2026-10-03T09:28:09.812Z",
+    "readOnlyBrowser": "Codex in-app Browser",
+    "pages": [
+      "https://www.tsurutontan.co.jp/roppongi/",
+      "https://map.torikizoku.co.jp/detail/181/",
+      "https://www.kushikatu-daruma.com/location/shinsekai"
+    ],
+    "currentIdentityTextObserved": true,
+    "currentTargetNoReservationRuleObserved": true,
+    "availabilityOrBookingChecked": false,
+    "newHumanConfirmedGroundTruth": false,
+    "originalScreenshotsSaved": false
+  }
+}

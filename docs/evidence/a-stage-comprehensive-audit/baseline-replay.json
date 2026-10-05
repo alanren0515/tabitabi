@@ -1,0 +1,8 @@
+{
+  "valid": true,
+  "revision": "6c1e1567ebb796af2f8dd19e001f3550303fc2c0",
+  "tests": 49,
+  "apiSmokePassed": true,
+  "paidCalls": 0,
+  "scope": "offline regression and local health/capabilities; no human comparison"
+}

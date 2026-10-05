@@ -44,7 +44,8 @@ export async function discoverReservationLinks({ websiteUri, fetchImpl, requestI
     diningNotices: extractOfficialDiningNotices(html, currentUrl),
     queuePolicy: extractOfficialQueuePolicy(html, currentUrl),
     status: "success",
-    sourceUrl: currentUrl
+    sourceUrl: currentUrl,
+    retrievedAt: new Date().toISOString()
   };
 }
 

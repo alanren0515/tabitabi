@@ -132,7 +132,9 @@ function bestHotPepperMatch(shops, clues) {
 
 export function buildRestaurantResult({ place, hotPepperResult, discoveredReservationLinks = [], officialWebsiteDiscovery = null, verifiedOfficialSource = null, userClues = {}, planIntent = {} }) {
   const hp = hotPepperResult?.match || null;
-  const retrievedAt = place.retrievedAt;
+  const resultGeneratedAt = new Date().toISOString();
+  const retrievedAt = validSourceTime(place.retrievedAt, resultGeneratedAt);
+  const officialRetrievedAt = validSourceTime(officialWebsiteDiscovery?.retrievedAt, resultGeneratedAt);
   const officialContact = officialWebsiteDiscovery?.sourceVerified ? officialWebsiteDiscovery.officialContact : null;
   const officialOperationalStatus = officialWebsiteDiscovery?.sourceVerified ? officialWebsiteDiscovery.operationalStatus : null;
   const officialDiningNotices = officialWebsiteDiscovery?.sourceVerified && Array.isArray(officialWebsiteDiscovery.diningNotices) ? officialWebsiteDiscovery.diningNotices : [];
@@ -151,7 +153,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
   const facts = [];
   addFact(facts, "name", place.name, "google_places", place.googleMapsUri, retrievedAt, "medium");
   addFact(facts, "address", place.address, "google_places", place.googleMapsUri, retrievedAt, "medium");
-  addFact(facts, "address", userClues.address, "user_clue", "", retrievedAt, "low");
+  addFact(facts, "address", userClues.address, "user_clue", "", resultGeneratedAt, "low");
   addFact(facts, "business_status", place.businessStatus, "google_places", place.googleMapsUri, retrievedAt, "medium");
   addFact(facts, "phone", place.phone, "google_places", place.googleMapsUri, retrievedAt, "medium");
   addFact(facts, "opening_hours", place.hours.join(" / "), "google_places", place.googleMapsUri, retrievedAt, "medium");
@@ -161,24 +163,24 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
   addFact(facts, "website", place.websiteUri, "google_places", place.googleMapsUri, retrievedAt, "medium");
 
   if (hp) {
-    addFact(facts, "station", hp.station, "hotpepper", hp.url, hotPepperResult.retrievedAt, "medium");
-    addFact(facts, "opening_hours", hp.open, "hotpepper", hp.url, hotPepperResult.retrievedAt, "medium");
-    addFact(facts, "closed", hp.close, "hotpepper", hp.url, hotPepperResult.retrievedAt, "medium");
-    addFact(facts, "budget", hp.budget, "hotpepper", hp.url, hotPepperResult.retrievedAt, "medium");
+    addFact(facts, "station", hp.station, "hotpepper", hp.url, validSourceTime(hotPepperResult.retrievedAt,resultGeneratedAt), "medium");
+    addFact(facts, "opening_hours", hp.open, "hotpepper", hp.url, validSourceTime(hotPepperResult.retrievedAt,resultGeneratedAt), "medium");
+    addFact(facts, "closed", hp.close, "hotpepper", hp.url, validSourceTime(hotPepperResult.retrievedAt,resultGeneratedAt), "medium");
+    addFact(facts, "budget", hp.budget, "hotpepper", hp.url, validSourceTime(hotPepperResult.retrievedAt,resultGeneratedAt), "medium");
   }
   const reservationPolicy = officialWebsiteDiscovery?.sourceVerified ? officialWebsiteDiscovery.reservationPolicy || null : null;
   if (reservationPolicy) {
-    addFact(facts, "reservation_policy", reservationPolicy.status, "official_website", reservationPolicy.sourceUrl || place.websiteUri, retrievedAt, reservationPolicy.certainty || "high");
+    addFact(facts, "reservation_policy", reservationPolicy.status, "official_website", reservationPolicy.sourceUrl || place.websiteUri, officialRetrievedAt, reservationPolicy.certainty || "high");
   }
   if (officialContact?.phone) {
-    addFact(facts, "phone", officialContact.phone, "official_website", officialContact.sourceUrl || verifiedOfficialSource?.url, retrievedAt, "high");
+    addFact(facts, "phone", officialContact.phone, "official_website", officialContact.sourceUrl || verifiedOfficialSource?.url, officialRetrievedAt, "high");
   }
   if (officialOperationalStatus) {
-    addFact(facts, "business_status", officialOperationalStatus.businessStatus, "official_website", officialOperationalStatus.sourceUrl || verifiedOfficialSource?.url, retrievedAt, "high");
+    addFact(facts, "business_status", officialOperationalStatus.businessStatus, "official_website", officialOperationalStatus.sourceUrl || verifiedOfficialSource?.url, officialRetrievedAt, "high");
   }
-  for (const notice of officialDiningNotices) addFact(facts, `dining_notice:${notice.type}`, notice.excerpt || notice.label, "official_website", notice.sourceUrl || verifiedOfficialSource?.url, retrievedAt, notice.certainty || "high");
-  if (officialQueuePolicy) addFact(facts, "queue_policy", officialQueuePolicy.mode, "official_website", officialQueuePolicy.sourceUrl || verifiedOfficialSource?.url, retrievedAt, officialQueuePolicy.certainty || "high");
-  for (const social of officialSocialLinks) addFact(facts, `official_social:${social.provider}`, social.handle || social.url, "official_website", social.url, retrievedAt, "high");
+  for (const notice of officialDiningNotices) addFact(facts, `dining_notice:${notice.type}`, notice.excerpt || notice.label, "official_website", notice.sourceUrl || verifiedOfficialSource?.url, officialRetrievedAt, notice.certainty || "high");
+  if (officialQueuePolicy) addFact(facts, "queue_policy", officialQueuePolicy.mode, "official_website", officialQueuePolicy.sourceUrl || verifiedOfficialSource?.url, officialRetrievedAt, officialQueuePolicy.certainty || "high");
+  for (const social of officialSocialLinks) addFact(facts, `official_social:${social.provider}`, social.handle || social.url, "official_website", social.url, officialRetrievedAt, "high");
 
   const closed = ["CLOSED_PERMANENTLY", "CLOSED_TEMPORARILY"].includes(effectivePlace.businessStatus);
   const sources = [
@@ -210,7 +212,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
       official: false,
       confidence: "medium",
       url: hp.url,
-      retrievedAt: hotPepperResult.retrievedAt
+      retrievedAt: validSourceTime(hotPepperResult.retrievedAt,resultGeneratedAt)
     });
   }
   if (reservationPolicy) {
@@ -220,7 +222,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
       official: true,
       confidence: "high",
       url: reservationPolicy.sourceUrl || place.websiteUri,
-      retrievedAt
+      retrievedAt: officialRetrievedAt
     });
   }
   if (officialContact?.phone && !reservationPolicy) {
@@ -230,7 +232,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
       official: true,
       confidence: "high",
       url: officialContact.sourceUrl || verifiedOfficialSource?.url,
-      retrievedAt
+      retrievedAt: officialRetrievedAt
     });
   }
   if (officialOperationalStatus) {
@@ -240,7 +242,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
       official: true,
       confidence: "high",
       url: officialOperationalStatus.sourceUrl || verifiedOfficialSource?.url,
-      retrievedAt
+      retrievedAt: officialRetrievedAt
     });
   }
   if (officialDiningNotices.length) {
@@ -250,7 +252,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
       official: true,
       confidence: "high",
       url: officialDiningNotices[0].sourceUrl || verifiedOfficialSource?.url,
-      retrievedAt
+      retrievedAt: officialRetrievedAt
     });
   }
   if (officialQueuePolicy) {
@@ -260,7 +262,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
       official: true,
       confidence: "high",
       url: officialQueuePolicy.sourceUrl || verifiedOfficialSource?.url,
-      retrievedAt
+      retrievedAt: officialRetrievedAt
     });
   }
   for (const social of officialSocialLinks) {
@@ -270,7 +272,7 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
       official: true,
       confidence: "high",
       url: social.url,
-      retrievedAt
+      retrievedAt: officialRetrievedAt
     });
   }
 
@@ -332,7 +334,8 @@ export function buildRestaurantResult({ place, hotPepperResult, discoveredReserv
     officialSocialLinks,
     officialInstagramUrl: officialSocialLinks.find((item) => item.provider === "instagram")?.url || "",
     dataLabel: "最新情報",
-    sourceContext: `${formatRetrievedAt(retrievedAt)} に確認`,
+    verification: { schemaVersion: 1, resultGeneratedAt, identityConfirmedAt: null, sources: sources.map(source => ({ name: source.name, retrievedAt: validSourceTime(source.retrievedAt, resultGeneratedAt) })), identityStatus: unresolvedIdentityConflict ? "conflicted" : "confirmed", actionEvidence: sourceConflicts.length ? "conflicted" : decision.confidence === "high" ? "supported" : "unknown" },
+    sourceContext: retrievedAt ? `${formatRetrievedAt(retrievedAt)} に取得` : "取得時刻不明",
     confidence: decision.confidence,
     reasons,
     decisionEvidence: decision.evidence,
@@ -631,9 +634,19 @@ function shortArea(address) {
 }
 
 function formatRetrievedAt(value) {
+  if (!value) return "取得時刻不明";
   try {
     return new Intl.DateTimeFormat("zh-CN", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Tokyo" }).format(new Date(value));
   } catch {
     return value;
   }
+}
+
+function validSourceTime(value, generatedAt) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/.test(value)) return null;
+  const calendar=value.slice(0,10); const day=Date.parse(calendar+"T00:00:00Z");
+  if (!Number.isFinite(day) || new Date(day).toISOString().slice(0,10)!==calendar || Number(value.slice(11,13))>23 || Number(value.slice(14,16))>59 || Number(value.slice(17,19))>59) return null;
+  const time = Date.parse(value);
+  if (!Number.isFinite(time) || time > Date.parse(generatedAt) + 60_000) return null;
+  return new Date(time).toISOString();
 }

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "scope": "observed_request_log_only",
+  "completeOperationalCoverage": false,
+  "billingLedger": false,
+  "observedAttempts": 4,
+  "estimatedAttempts": 3,
+  "unknownCostAttempts": 1,
+  "completeEstimateForObservedAttempts": false,
+  "unfinishedOrOrphanedAttempts": 0,
+  "conflictingAttempts": 0,
+  "unattributedAttempts": 0,
+  "transportFailedAttempts": 1,
+  "fallbackAttempts": 1,
+  "unknownReasons": {
+    "usage_unknown": 1
+  },
+  "currencies": {
+    "USD": {
+      "knownListPriceSubtotal": 0.1028,
+      "estimatedAttempts": 2,
+      "actualBilledAmount": null,
+      "afterFreeTierEstimate": null
+    },
+    "JPY": {
+      "knownListPriceSubtotal": 2,
+      "estimatedAttempts": 1,
+      "actualBilledAmount": null,
+      "afterFreeTierEstimate": null
+    }
+  },
+  "cache": {
+    "accesses": 1,
+    "deliveredWithoutNewLoad": 1,
+    "coalescedFailures": 0,
+    "hitAccesses": 1,
+    "coalescedAccesses": 0,
+    "missingOriginAccesses": 0,
+    "estimatedSavings": null
+  },
+  "tokyoDays": {
+    "2026-10-03": {
+      "attempts": 4,
+      "unknownCostAttempts": 1
+    }
+  },
+  "breakdown": [
+    {
+      "provider": "google_places",
+      "operation": "text_search",
+      "trafficType": "product",
+      "attempts": 1,
+      "unknownCostAttempts": 0
+    },
+    {
+      "provider": "hotpepper",
+      "operation": "shop_search",
+      "trafficType": "audit",
+      "attempts": 1,
+      "unknownCostAttempts": 0
+    },
+    {
+      "provider": "qwen",
+      "operation": "screenshot_extraction",
+      "trafficType": "product",
+      "attempts": 1,
+      "unknownCostAttempts": 0
+    },
+    {
+      "provider": "openai",
+      "operation": "screenshot_extraction",
+      "trafficType": "product",
+      "attempts": 1,
+      "unknownCostAttempts": 1
+    }
+  ],
+  "invalidRecords": 0,
+  "duplicateRecords": 0,
+  "limitations": [
+    "Bounded logs may be pruned, interrupted or fail to persist; observed subtotals are not the account's complete cost.",
+    "Request list prices estimate attempted dispatches, including failures; supplier billing may differ. HTTP success is not a completed product analysis.",
+    "Missing prices or usage stay unknown. Currency totals are separate; no exchange rate or free tier is assumed.",
+    "Cache receipts identify beneficiaries; no monetary saving or shared amortization is inferred.",
+    "Public HTML/network infrastructure, labor and customer-cycle costs are outside A04; A05 must add them."
+  ],
+  "evidenceType": "fixture_only",
+  "realWorldEvidence": false,
+  "releaseGateEvidence": false
+}

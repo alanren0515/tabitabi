@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-09-20T00:00:00.000Z",
+  "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evidenceType": "fixture_only",
+  "releaseGateEvidence": false,
+  "populationUnit": "anonymous_consented_device",
+  "funnel": {
+    "inputRuns": 13,
+    "startedRuns": 0,
+    "cluesExtractedRuns": 0,
+    "candidatesShownRuns": 0,
+    "candidateConfirmedRuns": 0,
+    "completedRuns": 12,
+    "failedRuns": 1,
+    "actionRuns": 0,
+    "bookingOutboundRuns": 0,
+    "savedPlanRuns": 0,
+    "issueReportRuns": 0,
+    "reviewCompletedInteractions": 2,
+    "reviewFailedInteractions": 0,
+    "completionRate": 0.9230769230769231,
+    "actionRate": 0,
+    "bookingOutboundRate": 0,
+    "actionCapabilityRuns": {
+      "direct_booking": 0,
+      "platform_booking": 0,
+      "phone": 0,
+      "map": 0,
+      "listing": 0,
+      "search": 0,
+      "unknown": 0
+    }
+  },
+  "r7": {
+    "retainedDevices": 2,
+    "matureDevices": 6,
+    "rate": 0.3333333333333333,
+    "observedAnchorDevices": 7,
+    "exclusions": {
+      "immatureDevices": 1,
+      "consentWindowIncompleteDevices": 0,
+      "before24hEvents": 0,
+      "after7dEvents": 0,
+      "sameSessionEvents": 1,
+      "sameAnalysisEvents": 0,
+      "initialBatchEvents": 1,
+      "nonRefreshReviewEvents": 1,
+      "differentGrantEvents": 0
+    }
+  },
+  "coverage": {
+    "eligibleEvents": 28,
+    "researchLinkedEvents": 26,
+    "consentedDevices": 8,
+    "inputRuns": 13,
+    "researchLinkedInputRuns": 12,
+    "researchLinkedInputRunRate": 0.9230769230769231,
+    "unknownResearchSourceEvents": 2,
+    "nonNaturalResearchSourceEvents": 0
+  },
+  "exclusions": {
+    "invalidEvents": 0,
+    "duplicateEvents": 1,
+    "conflictingEventIds": 0,
+    "futureEvents": 0,
+    "outsideRetentionEvents": 0,
+    "otherRevisionEvents": 2,
+    "demoEvents": 0,
+    "auditEvents": 0,
+    "unknownEligibilityEvents": 0,
+    "invalidResearchLinks": 2,
+    "duplicateResearchLinks": 1,
+    "ambiguousResearchLinks": 0,
+    "unlinkedNaturalCompletions": 1
+  },
+  "slices": {
+    "channel": {
+      "direct": {
+        "suppressed": false,
+        "consentedDevices": 5,
+        "funnel": {
+          "inputRuns": 9,
+          "startedRuns": 0,
+          "cluesExtractedRuns": 0,
+          "candidatesShownRuns": 0,
+          "candidateConfirmedRuns": 0,
+          "completedRuns": 8,
+          "failedRuns": 1,
+          "actionRuns": 0,
+          "bookingOutboundRuns": 0,
+          "savedPlanRuns": 0,
+          "issueReportRuns": 0,
+          "reviewCompletedInteractions": 2,
+          "reviewFailedInteractions": 0,
+          "completionRate": 0.8888888888888888,
+          "actionRate": 0,
+          "bookingOutboundRate": 0,
+          "actionCapabilityRuns": {
+            "direct_booking": 0,
+            "platform_booking": 0,
+            "phone": 0,
+            "map": 0,
+            "listing": 0,
+            "search": 0,
+            "unknown": 0
+          }
+        },
+        "r7": {
+          "retainedDevices": 2,
+          "matureDevices": 5,
+          "rate": 0.4
+        }
+      },
+      "social": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "search": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "partner": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "unknown": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      }
+    },
+    "researchSource": {
+      "natural": {
+        "suppressed": false,
+        "consentedDevices": 7,
+        "funnel": {
+          "inputRuns": 12,
+          "startedRuns": 0,
+          "cluesExtractedRuns": 0,
+          "candidatesShownRuns": 0,
+          "candidateConfirmedRuns": 0,
+          "completedRuns": 11,
+          "failedRuns": 1,
+          "actionRuns": 0,
+          "bookingOutboundRuns": 0,
+          "savedPlanRuns": 0,
+          "issueReportRuns": 0,
+          "reviewCompletedInteractions": 2,
+          "reviewFailedInteractions": 0,
+          "completionRate": 0.9166666666666666,
+          "actionRate": 0,
+          "bookingOutboundRate": 0,
+          "actionCapabilityRuns": {
+            "direct_booking": 0,
+            "platform_booking": 0,
+            "phone": 0,
+            "map": 0,
+            "listing": 0,
+            "search": 0,
+            "unknown": 0
+          }
+        },
+        "r7": {
+          "retainedDevices": 2,
+          "matureDevices": 6,
+          "rate": 0.3333333333333333
+        }
+      },
+      "benchmark": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "assigned_task": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "incentivized": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "reminded": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "unknown": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      }
+    },
+    "inputType": {
+      "screenshot": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "text": {
+        "suppressed": false,
+        "consentedDevices": 8,
+        "funnel": {
+          "inputRuns": 13,
+          "startedRuns": 0,
+          "cluesExtractedRuns": 0,
+          "candidatesShownRuns": 0,
+          "candidateConfirmedRuns": 0,
+          "completedRuns": 12,
+          "failedRuns": 1,
+          "actionRuns": 0,
+          "bookingOutboundRuns": 0,
+          "savedPlanRuns": 0,
+          "issueReportRuns": 0,
+          "reviewCompletedInteractions": 2,
+          "reviewFailedInteractions": 0,
+          "completionRate": 0.9230769230769231,
+          "actionRate": 0,
+          "bookingOutboundRate": 0,
+          "actionCapabilityRuns": {
+            "direct_booking": 0,
+            "platform_booking": 0,
+            "phone": 0,
+            "map": 0,
+            "listing": 0,
+            "search": 0,
+            "unknown": 0
+          }
+        },
+        "r7": {
+          "retainedDevices": 2,
+          "matureDevices": 6,
+          "rate": 0.3333333333333333
+        }
+      },
+      "social_link": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "webpage": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "restaurant_name": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "unknown": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      }
+    },
+    "deviceCategory": {
+      "mobile": {
+        "suppressed": false,
+        "consentedDevices": 8,
+        "funnel": {
+          "inputRuns": 13,
+          "startedRuns": 0,
+          "cluesExtractedRuns": 0,
+          "candidatesShownRuns": 0,
+          "candidateConfirmedRuns": 0,
+          "completedRuns": 12,
+          "failedRuns": 1,
+          "actionRuns": 0,
+          "bookingOutboundRuns": 0,
+          "savedPlanRuns": 0,
+          "issueReportRuns": 0,
+          "reviewCompletedInteractions": 2,
+          "reviewFailedInteractions": 0,
+          "completionRate": 0.9230769230769231,
+          "actionRate": 0,
+          "bookingOutboundRate": 0,
+          "actionCapabilityRuns": {
+            "direct_booking": 0,
+            "platform_booking": 0,
+            "phone": 0,
+            "map": 0,
+            "listing": 0,
+            "search": 0,
+            "unknown": 0
+          }
+        },
+        "r7": {
+          "retainedDevices": 2,
+          "matureDevices": 6,
+          "rate": 0.3333333333333333
+        }
+      },
+      "desktop": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "tablet": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      },
+      "unknown": {
+        "suppressed": true,
+        "reason": "fewer_than_5_consented_devices"
+      }
+    }
+  },
+  "definitions": {
+    "r7Window": "[24h, 7d] after first observed eligible analysis completion after consent; different session; new analysis or saved_plan_refresh; initial batch excluded",
+    "zeroDenominator": "null",
+    "sliceMinimumConsentedDevices": 5,
+    "funnelPopulation": "live product flows at target revision; research sources remain separate in slices",
+    "coverageUnit": "linked input runs / eligible input runs; not consent rate or unique people"
+  },
+  "limitations": [
+    "Synthetic fixture only; this report is not real usage or retention evidence.",
+    "Consenting devices are not people; storage clearing and cross-device use change counts.",
+    "R7 describes consenting devices only and cannot be extrapolated to all visitors.",
+    "Only the retained 30-day snapshot is observable; the anchor is not lifetime first use.",
+    "Revoked or expired grants and deleted joins cannot contribute, including historical as-of reports.",
+    "No confirmed bookings, revenue, willingness-to-pay, or legacy return lower bound is inferred from v2 events.",
+    "Small slices are suppressed; this internal report is not a customer publication or formal privacy guarantee."
+  ],
+  "realWorldEvidence": false
+}

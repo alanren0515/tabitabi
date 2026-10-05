@@ -1,0 +1,291 @@
+{
+  "reportVersion": "benchmark-summary-v1",
+  "studyMode": "synthetic",
+  "providerFree": true,
+  "counts": {
+    "uniqueCases": 30,
+    "validCases": 30,
+    "excludedCases": 0,
+    "expectedValidAssignments": 90,
+    "totalAssignedTasks": 90,
+    "expectedExcludedAssignments": 0,
+    "attemptRecords": 90,
+    "excludedAttemptRecords": 0,
+    "targetParticipantsObserved": 10,
+    "strata": {
+      "normal": 20,
+      "hard": 10
+    },
+    "assignedStrata": {
+      "normal": 20,
+      "hard": 10
+    }
+  },
+  "routes": {
+    "baseline": {
+      "attemptRecords": 30,
+      "expectedValidAssignments": 30,
+      "validTerminalRecords": 30,
+      "missingAssignments": 0,
+      "incompleteAttemptRecords": 0,
+      "excludedAttemptRecords": 0,
+      "correctCompletions": 30,
+      "correctCompletionRate": 1,
+      "actionableAssignments": 25,
+      "correctActions": 25,
+      "actionableResolutionRate": 1,
+      "terminalCounts": {
+        "correct_action": 25,
+        "justified_unknown": 5,
+        "incorrect_unknown": 0,
+        "wrong_branch": 0,
+        "unsafe_action": 0,
+        "wrong_action": 0,
+        "abandoned": 0,
+        "timed_out": 0
+      },
+      "terminalRates": {
+        "correct_action": 0.8333333333333334,
+        "justified_unknown": 0.16666666666666666,
+        "incorrect_unknown": 0,
+        "wrong_branch": 0,
+        "unsafe_action": 0,
+        "wrong_action": 0,
+        "abandoned": 0,
+        "timed_out": 0
+      },
+      "incompleteOrMissingAssignments": 0,
+      "routeFailuresAfterAssignment": 0,
+      "unknown": {
+        "justified": 5,
+        "incorrect": 0,
+        "unsupportedLabels": 0
+      },
+      "criticalErrors": {
+        "wrongBranch": 0,
+        "unsafeAction": 0,
+        "affectedCaseCount": 0,
+        "denominator": 30,
+        "normal": 0,
+        "hard": 0
+      },
+      "successDurationSeconds": {
+        "sampleCount": 30,
+        "min": 120,
+        "p25": 120,
+        "median": 120,
+        "p75": 120,
+        "max": 120
+      },
+      "normalSuccessDurationSeconds": {
+        "sampleCount": 20,
+        "min": 120,
+        "p25": 120,
+        "median": 120,
+        "p75": 120,
+        "max": 120
+      },
+      "hardSuccessDurationSeconds": {
+        "sampleCount": 10,
+        "min": 120,
+        "p25": 120,
+        "median": 120,
+        "p75": 120,
+        "max": 120
+      }
+    },
+    "candidate": {
+      "attemptRecords": 30,
+      "expectedValidAssignments": 30,
+      "validTerminalRecords": 30,
+      "missingAssignments": 0,
+      "incompleteAttemptRecords": 0,
+      "excludedAttemptRecords": 0,
+      "correctCompletions": 30,
+      "correctCompletionRate": 1,
+      "actionableAssignments": 25,
+      "correctActions": 25,
+      "actionableResolutionRate": 1,
+      "terminalCounts": {
+        "correct_action": 25,
+        "justified_unknown": 5,
+        "incorrect_unknown": 0,
+        "wrong_branch": 0,
+        "unsafe_action": 0,
+        "wrong_action": 0,
+        "abandoned": 0,
+        "timed_out": 0
+      },
+      "terminalRates": {
+        "correct_action": 0.8333333333333334,
+        "justified_unknown": 0.16666666666666666,
+        "incorrect_unknown": 0,
+        "wrong_branch": 0,
+        "unsafe_action": 0,
+        "wrong_action": 0,
+        "abandoned": 0,
+        "timed_out": 0
+      },
+      "incompleteOrMissingAssignments": 0,
+      "routeFailuresAfterAssignment": 0,
+      "unknown": {
+        "justified": 5,
+        "incorrect": 0,
+        "unsupportedLabels": 0
+      },
+      "criticalErrors": {
+        "wrongBranch": 0,
+        "unsafeAction": 0,
+        "affectedCaseCount": 0,
+        "denominator": 30,
+        "normal": 0,
+        "hard": 0
+      },
+      "successDurationSeconds": {
+        "sampleCount": 30,
+        "min": 60,
+        "p25": 60,
+        "median": 60,
+        "p75": 60,
+        "max": 60
+      },
+      "normalSuccessDurationSeconds": {
+        "sampleCount": 20,
+        "min": 60,
+        "p25": 60,
+        "median": 60,
+        "p75": 60,
+        "max": 60
+      },
+      "hardSuccessDurationSeconds": {
+        "sampleCount": 10,
+        "min": 60,
+        "p25": 60,
+        "median": 60,
+        "p75": 60,
+        "max": 60
+      }
+    },
+    "primaryReference": {
+      "attemptRecords": 30,
+      "expectedValidAssignments": 30,
+      "validTerminalRecords": 30,
+      "missingAssignments": 0,
+      "incompleteAttemptRecords": 0,
+      "excludedAttemptRecords": 0,
+      "correctCompletions": 30,
+      "correctCompletionRate": 1,
+      "actionableAssignments": 25,
+      "correctActions": 25,
+      "actionableResolutionRate": 1,
+      "terminalCounts": {
+        "correct_action": 25,
+        "justified_unknown": 5,
+        "incorrect_unknown": 0,
+        "wrong_branch": 0,
+        "unsafe_action": 0,
+        "wrong_action": 0,
+        "abandoned": 0,
+        "timed_out": 0
+      },
+      "terminalRates": {
+        "correct_action": 0.8333333333333334,
+        "justified_unknown": 0.16666666666666666,
+        "incorrect_unknown": 0,
+        "wrong_branch": 0,
+        "unsafe_action": 0,
+        "wrong_action": 0,
+        "abandoned": 0,
+        "timed_out": 0
+      },
+      "incompleteOrMissingAssignments": 0,
+      "routeFailuresAfterAssignment": 0,
+      "unknown": {
+        "justified": 5,
+        "incorrect": 0,
+        "unsupportedLabels": 0
+      },
+      "criticalErrors": {
+        "wrongBranch": 0,
+        "unsafeAction": 0,
+        "affectedCaseCount": 0,
+        "denominator": 30,
+        "normal": 0,
+        "hard": 0
+      },
+      "successDurationSeconds": {
+        "sampleCount": 30,
+        "min": 100,
+        "p25": 100,
+        "median": 100,
+        "p75": 100,
+        "max": 100
+      },
+      "normalSuccessDurationSeconds": {
+        "sampleCount": 20,
+        "min": 100,
+        "p25": 100,
+        "median": 100,
+        "p75": 100,
+        "max": 100
+      },
+      "hardSuccessDurationSeconds": {
+        "sampleCount": 10,
+        "min": 100,
+        "p25": 100,
+        "median": 100,
+        "p75": 100,
+        "max": 100
+      }
+    }
+  },
+  "comparison": {
+    "versusBaseline": {
+      "correctCompletionNonDecreasing": true,
+      "actionableResolutionNonDecreasing": true,
+      "newWrongBranchCaseCount": 0,
+      "newUnsafeActionCaseCount": 0,
+      "noNewCriticalErrors": true
+    },
+    "versusPrimaryReference": {
+      "correctCompletionNonDecreasing": true,
+      "actionableResolutionNonDecreasing": true,
+      "newWrongBranchCaseCount": 0,
+      "newUnsafeActionCaseCount": 0,
+      "noNewCriticalErrors": true
+    },
+    "successMedianTimeReductionVsBaseline": 0.5,
+    "successMedianTimeReductionVsPrimaryReference": 0.4,
+    "normalSuccessMedianTimeIncreaseVsPrimaryReference": -0.4,
+    "hardCriticalErrorReductionVsPrimaryReference": 0,
+    "anyActionableCaseResolved": true,
+    "timeImprovementPath": true,
+    "hardErrorImprovementPath": false
+  },
+  "gq": {
+    "status": "fixture_only",
+    "passed": false,
+    "evidence": {
+      "schemaValid": true,
+      "protocolFrozen": true,
+      "baselineArchiveVerified": null,
+      "minimumUniqueValidCases": true,
+      "targetParticipantRange": true,
+      "frozenCaseMixComplete": true,
+      "completeThreeRouteCoverage": true,
+      "computableActionableRates": true,
+      "computableSuccessTiming": true
+    },
+    "insufficientEvidenceReasons": []
+  },
+  "validation": {
+    "valid": true,
+    "errors": []
+  },
+  "privacy": {
+    "includesRawRecords": false,
+    "includesParticipantOrCaseCodes": false,
+    "includesReviewTextOrSourceContent": false,
+    "expiryDeletionImplemented": false
+  }
+}

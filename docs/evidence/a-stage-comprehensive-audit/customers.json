@@ -1,0 +1,600 @@
+{
+  "schemaVersion": 1,
+  "scope": "internal_customer_cycle_snapshot_only",
+  "billingLedger": false,
+  "realEntitlementsChanged": false,
+  "completeOperationalCoverage": false,
+  "realWorldEvidence": false,
+  "releaseGateEvidence": false,
+  "reports": [
+    {
+      "cycleReference": "cycle-1",
+      "customerReference": "customer-1",
+      "startsAt": "2026-10-01T00:00:00.000Z",
+      "endsAt": "2026-11-01T00:00:00.000Z",
+      "taskCount": 1,
+      "allocatedRequestCount": 3,
+      "work": {
+        "logCount": 3,
+        "knownActualMinutesSubtotal": 40,
+        "explicitZeroMinuteLogs": 1,
+        "unknownMinuteLogs": 0,
+        "completeActualMinutes": true
+      },
+      "currencies": {
+        "JPY": {
+          "quote": {
+            "knownSubtotal": 11000,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "receivedGross": {
+            "knownSubtotal": 10000,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "refunds": {
+            "knownSubtotal": 100,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "apiListPrice": {
+            "knownSubtotal": 2,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "apiBilled": {
+            "knownSubtotal": 3,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "labor": {
+            "knownSubtotal": 600,
+            "knownRecords": 2,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "customerSupport": {
+            "knownSubtotal": 200,
+            "knownRecords": 2,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "channel": {
+            "knownSubtotal": 100,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "fixedAllocation": {
+            "knownSubtotal": 250,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "receivedNet": {
+            "knownSubtotal": 9900,
+            "complete": true,
+            "completeAmount": 9900,
+            "missingComponents": []
+          },
+          "contribution": {
+            "listPriceEstimateBeforeAcquisition": {
+              "knownSubtotal": 8848,
+              "complete": true,
+              "completeAmount": 8848,
+              "missingComponents": [],
+              "missingCycleComponents": [],
+              "knownSubtotalIsNotMargin": false
+            },
+            "listPriceEstimateAfterAcquisition": {
+              "knownSubtotal": 8748,
+              "complete": true,
+              "completeAmount": 8748,
+              "missingComponents": [],
+              "missingCycleComponents": [],
+              "knownSubtotalIsNotMargin": false
+            },
+            "billedBeforeAcquisition": {
+              "knownSubtotal": 8847,
+              "complete": true,
+              "completeAmount": 8847,
+              "missingComponents": [],
+              "missingCycleComponents": [],
+              "knownSubtotalIsNotMargin": false
+            },
+            "billedAfterAcquisition": {
+              "knownSubtotal": 8747,
+              "complete": true,
+              "completeAmount": 8747,
+              "missingComponents": [],
+              "missingCycleComponents": [],
+              "knownSubtotalIsNotMargin": false
+            }
+          }
+        },
+        "USD": {
+          "quote": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "receivedGross": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "refunds": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "apiListPrice": {
+            "knownSubtotal": 0.1028,
+            "knownRecords": 2,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "apiBilled": {
+            "knownSubtotal": 0.114,
+            "knownRecords": 2,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "labor": {
+            "knownSubtotal": 0,
+            "knownRecords": 0,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "customerSupport": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "channel": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "fixedAllocation": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "receivedNet": {
+            "knownSubtotal": 0,
+            "complete": true,
+            "completeAmount": 0,
+            "missingComponents": []
+          },
+          "contribution": {
+            "listPriceEstimateBeforeAcquisition": {
+              "knownSubtotal": -0.1028,
+              "complete": true,
+              "completeAmount": -0.1028,
+              "missingComponents": [],
+              "missingCycleComponents": [],
+              "knownSubtotalIsNotMargin": false
+            },
+            "listPriceEstimateAfterAcquisition": {
+              "knownSubtotal": -0.1028,
+              "complete": true,
+              "completeAmount": -0.1028,
+              "missingComponents": [],
+              "missingCycleComponents": [],
+              "knownSubtotalIsNotMargin": false
+            },
+            "billedBeforeAcquisition": {
+              "knownSubtotal": -0.114,
+              "complete": true,
+              "completeAmount": -0.114,
+              "missingComponents": [],
+              "missingCycleComponents": [],
+              "knownSubtotalIsNotMargin": false
+            },
+            "billedAfterAcquisition": {
+              "knownSubtotal": -0.114,
+              "complete": true,
+              "completeAmount": -0.114,
+              "missingComponents": [],
+              "missingCycleComponents": [],
+              "knownSubtotalIsNotMargin": false
+            }
+          }
+        }
+      },
+      "completeCostForDeclaredCycle": true,
+      "scopeGaps": {}
+    },
+    {
+      "cycleReference": "cycle-2",
+      "customerReference": "customer-2",
+      "startsAt": "2026-10-01T00:00:00.000Z",
+      "endsAt": "2026-11-01T00:00:00.000Z",
+      "taskCount": 1,
+      "allocatedRequestCount": 1,
+      "work": {
+        "logCount": 1,
+        "knownActualMinutesSubtotal": 0,
+        "explicitZeroMinuteLogs": 0,
+        "unknownMinuteLogs": 1,
+        "completeActualMinutes": false
+      },
+      "currencies": {
+        "JPY": {
+          "quote": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "receivedGross": {
+            "knownSubtotal": 0,
+            "knownRecords": 0,
+            "complete": false,
+            "missingReasons": {
+              "unknown_money_amount": 1
+            }
+          },
+          "refunds": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "apiListPrice": {
+            "knownSubtotal": 0,
+            "knownRecords": 0,
+            "complete": false,
+            "missingReasons": {
+              "unknown_api_list_price": 1
+            }
+          },
+          "apiBilled": {
+            "knownSubtotal": 0,
+            "knownRecords": 0,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "labor": {
+            "knownSubtotal": 0,
+            "knownRecords": 0,
+            "complete": false,
+            "missingReasons": {
+              "actual_minutes_unknown": 1
+            }
+          },
+          "customerSupport": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "channel": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "fixedAllocation": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "receivedNet": {
+            "knownSubtotal": 0,
+            "complete": false,
+            "completeAmount": null,
+            "missingComponents": [
+              "receivedGross"
+            ]
+          },
+          "contribution": {
+            "listPriceEstimateBeforeAcquisition": {
+              "knownSubtotal": 0,
+              "complete": false,
+              "completeAmount": null,
+              "missingComponents": [
+                "receivedNet",
+                "apiListPrice",
+                "labor"
+              ],
+              "missingCycleComponents": [
+                "JPY:receivedGross",
+                "JPY:apiListPrice",
+                "JPY:labor",
+                "USD:apiListPrice",
+                "USD:apiBilled"
+              ],
+              "knownSubtotalIsNotMargin": true
+            },
+            "listPriceEstimateAfterAcquisition": {
+              "knownSubtotal": 0,
+              "complete": false,
+              "completeAmount": null,
+              "missingComponents": [
+                "receivedNet",
+                "apiListPrice",
+                "labor"
+              ],
+              "missingCycleComponents": [
+                "JPY:receivedGross",
+                "JPY:apiListPrice",
+                "JPY:labor",
+                "USD:apiListPrice",
+                "USD:apiBilled"
+              ],
+              "knownSubtotalIsNotMargin": true
+            },
+            "billedBeforeAcquisition": {
+              "knownSubtotal": 0,
+              "complete": false,
+              "completeAmount": null,
+              "missingComponents": [
+                "receivedNet",
+                "labor",
+                "apiListPrice"
+              ],
+              "missingCycleComponents": [
+                "JPY:receivedGross",
+                "JPY:apiListPrice",
+                "JPY:labor",
+                "USD:apiListPrice",
+                "USD:apiBilled"
+              ],
+              "knownSubtotalIsNotMargin": true
+            },
+            "billedAfterAcquisition": {
+              "knownSubtotal": 0,
+              "complete": false,
+              "completeAmount": null,
+              "missingComponents": [
+                "receivedNet",
+                "labor",
+                "apiListPrice"
+              ],
+              "missingCycleComponents": [
+                "JPY:receivedGross",
+                "JPY:apiListPrice",
+                "JPY:labor",
+                "USD:apiListPrice",
+                "USD:apiBilled"
+              ],
+              "knownSubtotalIsNotMargin": true
+            }
+          }
+        },
+        "USD": {
+          "quote": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "receivedGross": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "refunds": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "apiListPrice": {
+            "knownSubtotal": 0,
+            "knownRecords": 0,
+            "complete": false,
+            "missingReasons": {
+              "unknown_api_list_price": 1
+            }
+          },
+          "apiBilled": {
+            "knownSubtotal": 0,
+            "knownRecords": 0,
+            "complete": false,
+            "missingReasons": {
+              "unknown_api_bill_amount": 1
+            }
+          },
+          "labor": {
+            "knownSubtotal": 0,
+            "knownRecords": 0,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "customerSupport": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "channel": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "fixedAllocation": {
+            "knownSubtotal": 0,
+            "knownRecords": 1,
+            "complete": true,
+            "missingReasons": {}
+          },
+          "receivedNet": {
+            "knownSubtotal": 0,
+            "complete": true,
+            "completeAmount": 0,
+            "missingComponents": []
+          },
+          "contribution": {
+            "listPriceEstimateBeforeAcquisition": {
+              "knownSubtotal": 0,
+              "complete": false,
+              "completeAmount": null,
+              "missingComponents": [
+                "apiListPrice",
+                "apiBilled"
+              ],
+              "missingCycleComponents": [
+                "JPY:receivedGross",
+                "JPY:apiListPrice",
+                "JPY:labor",
+                "USD:apiListPrice",
+                "USD:apiBilled"
+              ],
+              "knownSubtotalIsNotMargin": true
+            },
+            "listPriceEstimateAfterAcquisition": {
+              "knownSubtotal": 0,
+              "complete": false,
+              "completeAmount": null,
+              "missingComponents": [
+                "apiListPrice",
+                "apiBilled"
+              ],
+              "missingCycleComponents": [
+                "JPY:receivedGross",
+                "JPY:apiListPrice",
+                "JPY:labor",
+                "USD:apiListPrice",
+                "USD:apiBilled"
+              ],
+              "knownSubtotalIsNotMargin": true
+            },
+            "billedBeforeAcquisition": {
+              "knownSubtotal": 0,
+              "complete": false,
+              "completeAmount": null,
+              "missingComponents": [
+                "apiBilled",
+                "apiListPrice"
+              ],
+              "missingCycleComponents": [
+                "JPY:receivedGross",
+                "JPY:apiListPrice",
+                "JPY:labor",
+                "USD:apiListPrice",
+                "USD:apiBilled"
+              ],
+              "knownSubtotalIsNotMargin": true
+            },
+            "billedAfterAcquisition": {
+              "knownSubtotal": 0,
+              "complete": false,
+              "completeAmount": null,
+              "missingComponents": [
+                "apiBilled",
+                "apiListPrice"
+              ],
+              "missingCycleComponents": [
+                "JPY:receivedGross",
+                "JPY:apiListPrice",
+                "JPY:labor",
+                "USD:apiListPrice",
+                "USD:apiBilled"
+              ],
+              "knownSubtotalIsNotMargin": true
+            }
+          }
+        }
+      },
+      "completeCostForDeclaredCycle": false,
+      "scopeGaps": {
+        "unknown_api_list_price": 1
+      }
+    }
+  ],
+  "diagnostics": {
+    "duplicateRecords": 0,
+    "conflictingRecords": 0,
+    "invalidRecords": {},
+    "unallocatedTasks": 0,
+    "unallocatedRequests": 0,
+    "unallocatedWorkLogs": 0,
+    "unallocatedMoneyEntries": 0,
+    "unallocatedApiBills": 0,
+    "allocationConflicts": 0,
+    "conflictingLaborRateVersions": 0
+  },
+  "completeCostForDeclaredSnapshot": false,
+  "limitations": [
+    "All completeness assertions describe only the supplied bounded snapshot; no account-wide billing or business coverage is verified.",
+    "List-price and observed supplier-billed contributions are separate. Free tiers and exchange rates are not inferred; currencies cannot be added.",
+    "Contribution subtracts assigned API, labor, support, fixed allocation and (after acquisition) channel costs. It is not company-wide profit.",
+    "Missing receipts, actual minutes, valid rates, bills, required cost entries or allocation evidence leave complete amounts null.",
+    "Repeated records are deduplicated; conflicting allocations are withheld. Known subtotals are not complete costs or margins.",
+    "This tool cannot establish paid renewal, customer delivery, acceptance, G1/GB or release evidence."
+  ],
+  "evidenceType": "fixture_only",
+  "snapshotBoundary": {
+    "maxBytes": 10485760,
+    "maxRecords": 50000,
+    "maxCycles": 100,
+    "inputFormat": "single_json_snapshot",
+    "accountCoverageVerified": false,
+    "suppliedCoverageAssertionsVerified": false
+  },
+  "shadowFixture": [
+    {
+      "scenario": "available",
+      "shadowOnly": true,
+      "realEntitlementsChanged": false,
+      "available": 3,
+      "reserved": 0,
+      "committed": 0,
+      "released": 0,
+      "expired": 0,
+      "expiredOperations": 0,
+      "heldUnknownDeliveryOperations": 0,
+      "operationCount": 0,
+      "realWorldEvidence": false,
+      "releaseGateEvidence": false
+    },
+    {
+      "scenario": "committed_released_and_unknown_reserved",
+      "shadowOnly": true,
+      "realEntitlementsChanged": false,
+      "available": 1,
+      "reserved": 1,
+      "committed": 1,
+      "released": 1,
+      "expired": 0,
+      "expiredOperations": 0,
+      "heldUnknownDeliveryOperations": 0,
+      "operationCount": 3,
+      "realWorldEvidence": false,
+      "releaseGateEvidence": false
+    },
+    {
+      "scenario": "allowance_expired_unknown_delivery_held",
+      "shadowOnly": true,
+      "realEntitlementsChanged": false,
+      "available": 0,
+      "reserved": 1,
+      "committed": 1,
+      "released": 1,
+      "expired": 1,
+      "expiredOperations": 0,
+      "heldUnknownDeliveryOperations": 1,
+      "operationCount": 3,
+      "realWorldEvidence": false,
+      "releaseGateEvidence": false
+    }
+  ]
+}

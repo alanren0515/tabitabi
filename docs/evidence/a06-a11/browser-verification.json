@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "local_synthetic_browser_verification",
+  "checkedAt": "2026-10-03T08:23:51Z",
+  "baseGitRevision": "6c1e1567ebb796af2f8dd19e001f3550303fc2c0",
+  "workingTreeCommitted": false,
+  "workingCodeSha256": "e8a9fe860fb605abee7ee2b0cce9d3ab6452c2abfae2454a522dc197c000517d",
+  "workingCodeFileCount": 238,
+  "fingerprintScope": "root server/sw/index/manifest/package plus js,mjs,json,css,html under src,server,scripts,test,eval; sorted relative path + NUL + contents + NUL",
+  "shellVersion": "v77",
+  "browser": "Codex in-app Browser",
+  "deviceSafariEvidence": false,
+  "origin": "http://127.0.0.1:4174",
+  "viewports": [
+    {
+      "width": 1280,
+      "height": "default"
+    },
+    {
+      "width": 390,
+      "height": 844
+    },
+    {
+      "width": 320,
+      "height": 740
+    }
+  ],
+  "languages": [
+    "ja",
+    "en",
+    "zh-CN"
+  ],
+  "consoleCapturedWarnings": 0,
+  "consoleCapturedErrors": 0,
+  "supplierCalls": "isolated fixed responses; every other external fetch rejected",
+  "actualPaidCalls": 0,
+  "productionDataUsed": false,
+  "deployed": false,
+  "checks": [
+    "legacy whitelist migration and distinct UUID plans for the same place on different days",
+    "local open, note edits, user-recorded booked status and name/note search without an upstream fetch",
+    "explicit review success updates only the selected matching plan; failure preserves prior time and note",
+    "same-name branch A then branch B saves distinct plans with distinct placeIds and notes",
+    "first saved-list read throws, empty rendering remains non-authoritative, manual retry restores all four original plans",
+    "incomplete export warning; visible safe JSON; native modal keyboard focus; no provider snapshots",
+    "domain clear and undo restores four plans after reload while history remains four records",
+    "draft editing, pause, reload and explicit per-item resume preserves edited clues",
+    "failure survives navigation; correction retries only the failed item; completed items have no resume action",
+    "batch keeps two checked of three and one skipped; later separate batch one of one checked",
+    "budget limit explains Tokyo midnight, keeps clues and local lists available",
+    "separate result computation, source retrieval and client restaurant-selection timestamps",
+    "strict issue-category feedback acknowledges record without changing facts",
+    "320px date and progress clipping fixed by one-column form; 320/390/1280 have no document overflow"
+  ],
+  "limitations": [
+    "Browser download event and downloadMedia yielded no file receipt. Visible JSON and manual-copy fallback verified; native file saving not verified.",
+    "manual-export-synthetic.json was saved from the visible textarea for review; it is not a native browser-download receipt.",
+    "No independent network export or physical iOS Safari evidence.",
+    "Consumer offer registry remains empty and research card disabled; enabled renderer uses only unit fixtures, no real price research.",
+    "Source clocks with fresh Places/older official pages are verified deterministically, not through a live official-site request.",
+    "All GQ/G1/GB/GR and public-release evidence remain unestablished."
+  ],
+  "screenshots": [
+    "saved-desktop.png",
+    "saved-search-mobile.png",
+    "local-record-320-fixed.png",
+    "budget-mobile.png",
+    "result-times-mobile.png",
+    "batch-mobile.png",
+    "export-mobile.png",
+    "storage-recovered-desktop.png"
+  ],
+  "shellsDuringChecks": [
+    "v71",
+    "v72",
+    "v73",
+    "v75",
+    "v76"
+  ],
+  "finalReloadShell": "v77"
+}

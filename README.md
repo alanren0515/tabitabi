@@ -67,6 +67,8 @@ POST /api/restaurants/search
 POST /api/restaurants/candidate-preview
 POST /api/restaurants/details
 POST /api/events
+POST /api/measurement-flows
+POST /api/research-consent
 ```
 
 `/api/events` 记录输入类型、识别成功、候选确认、候选评分预览、分析完成、预约/电话行动、来源冲突、保存计划状态和用户主动提交的反馈。每次新分析只附带一个短期、随机的 `analysisRunId`，用于把同一次流程里的重复点击去重；它不是用户 ID。审计工作台打开的主产品页会标记 `trafficType=audit`，不会进入真实试用指标。分析耗时定义为“确认候选到行动建议出现”，上限 5 分钟；历史/清单刷新不计作新分析。事件不记录截图、原始搜索输入、具体用餐日期、评分值或第三方餐厅详情。反馈可包含用户主动填写的最多 500 字说明。开发环境写入 `data/events.jsonl`，该文件已被 Git 忽略。
@@ -181,4 +183,19 @@ npm run release:formal-gate
 - 一张截图识别出多家餐厅时，用户可以把其余餐厅加入本机待分析队列，随后逐家确认真实店铺；队列最多 30 家，只保存餐厅名、分店和位置线索，不保存截图、帖子正文或互动数字，完成分析后自动移除。
 - 待分析页支持旅行前批量粘贴，每行一家，或使用“店名｜分店｜地区/地址”格式；批量导入只建立本机线索队列，不会立即并发调用视觉、Places 或 Hot Pepper API。
 
+下一轮功能的优先级、阶段和开发任务见 [功能开发清单](./docs/next-feature-roadmap.md)，各模块的用户流程、数据、异常和验收标准见 [功能模块设计](./docs/feature-module-designs.md)。两份文档已综合商业模式与竞品研究为 v0.2，首批聚焦核心核对、批次恢复、成本／需求及同案例评估，业务维护先运营协助。实际完成范围及每步自审／修复见 [实施记录](./docs/implementation-progress.md)，规格不代表全部已实现或已获发布授权。
+
+首个增量已提供 [CommercialEvent v2 契约](./docs/commercial-event-contract.md) 和 [三路线评估工具](./docs/benchmark-protocol.md)。运行 `npm run benchmark:validate`、`npm run benchmark:summary` 使用 30 案例／90 任务的离线合成 fixture；fixture 不证明真人 GQ 通过。`npm run benchmark:baseline -- --replay` 在独立临时目录验证已保留旧版，不调用付费供应商。[A02 后端接口](./docs/commercial-measurement-api.md) 已提供持久幂等、服务器流程校核与研究同意／撤销，v2 状态与旧 pilot 日志分开；A03 已接入客户端 v2、可选研究同意与 R7 离线统计，原 v1 口径保留；尚未部署。
+
+A04 已提供 [请求成本归属与离线汇总](./docs/request-cost-accounting.md)，运行 `npm run costs:summary` 默认只读合成 fixture。实际请求日志保留失败、回退和 audit；真实价格登记表为空，未知金额不记为零。本地交付未部署。当前状态及遗漏修复见 [进度审核](./docs/progress-audit-2026-10-03.md)。
+
+A05–A12 已完成本地成本报告、白名单存储迁移、备注／搜索、自记进度、逐项暂停恢复、来源时间摘要、报价研究准备和字段／交付 fixture；2026-10-05 UI 与版本整合后的全量 619 项测试通过，本地整合提交已冻结，未推送、未部署。运行 `npm run costs:customers`、`npm run offers:summary`、`npm run review:validate` 默认使用合成数据，不证明收入或真实门槛通过。详见 [最新整合验收](./docs/ui-version-integration-2026-10-05.md)、[下一阶段进入包](./docs/next-stage-entry-pack.md) 和 [真人验证准备](./docs/real-validation-runbook.md)。
+
+日本及国际竞品的公开能力、收费信号、项目前景和优先级调整建议见 [2026 年 10 月竞品分析](./docs/competitive-landscape-2026-10.md)。该判断基于官方公开资料，尚未经过竞品同案例实测或最新生产商业指标验证。
+
 产品与架构判断见 [docs/mvp-decisions.md](./docs/mvp-decisions.md)，预约平台能力矩阵见 [docs/reservation-platforms.md](./docs/reservation-platforms.md)，原始 PRD 的逐项完成与缺口证据见 [docs/prd-gap-audit.md](./docs/prd-gap-audit.md)。本机发布审计运行 `npm run audit`，真实手机审计运行带随机会话令牌的 `npm run audit:mobile`；具体素材与记录流程见 [docs/manual-audit.md](./docs/manual-audit.md)。普通服务和生产镜像均不开放审计入口。
+## 部署后自行测试
+
+部署含最新改动后，从 `https://tabitabi-jp.fly.dev/?audit=1` 进入并确认“测试模式”提示；设置的运行信息显示实际服务器版本。按 [15 项个人自测清单](docs/self-test-guide.md) 使用 [记录模板](docs/self-test-record-template.md)。当前本机回归为 619/619，shell v85，本轮整合已冻结为本地 Git 提交，未推送、未部署；[部署准备状态](docs/self-test-deployment-readiness.md) 列出历史准备和运行检查缺口，费用须在实际部署前重新核对。
+
+最新验收：[UI 与版本整合（2026-10-05）](docs/ui-version-integration-2026-10-05.md)，619 项回归通过；此前 [A01–A12 全面审核](docs/a-stage-comprehensive-audit-2026-10-05.md) 的 4 项修复与 608 项回归保留。

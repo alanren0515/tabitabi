@@ -12,6 +12,17 @@ export function actionHref(action) {
   return safeExternalUrl(action?.url);
 }
 
+// Render all result-page destinations through the same safety boundary.
+// Example destinations are local buttons, never callable or navigable links.
+export function resultLinkHtml({ href, labelHtml, className, id, actionType, reservationProvider, example = false }) {
+  const escape = value => String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+  const attributes = [["class", className], ["id", id], ["data-action-type", actionType], ["data-reservation-provider", reservationProvider]]
+    .filter(([, value]) => value).map(([name, value]) => ` ${name}="${escape(value)}"`).join("");
+  if (example) return `<button type="button" data-example-action aria-describedby="example-action-status"${attributes}>${labelHtml}</button>`;
+  const destination = actionHref({ type: href?.startsWith("tel:") ? "phone" : "external", url: href });
+  return `<a href="${escape(destination)}"${attributes}${destination.startsWith("tel:") ? "" : ' target="_blank" rel="noreferrer"'}>${labelHtml}</a>`;
+}
+
 function mapHref(restaurant = {}) {
   return safeExternalUrl(restaurant.mapSearchUrl || restaurant.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${restaurant.name || ""} ${restaurant.address || ""}`.trim())}`);
 }

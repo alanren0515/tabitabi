@@ -4,7 +4,7 @@ The app is a single Node.js service that serves the frontend and keeps all provi
 
 ## Hosting decision for the first pilot
 
-**Selected host: Fly.io in Tokyo (`nrt`).** Deploy the existing Dockerfile as one `shared-cpu-1x` Machine with 512 MB RAM, attach a 1 GB Fly Volume at `/app/data`, and keep exactly one Machine. The Machine automatically stops when idle and starts on the next request. Fly.io does not charge CPU or RAM while it is stopped; at the price verified on 2026-07-17, a full month of continuously running Tokyo compute is approximately USD 3.19. The 1 GB volume is USD 0.15/month, and a stopped Machine's root filesystem is USD 0.15/GB-month. Volume snapshots are USD 0.08/GB-month after Fly's first 10 GB of snapshot storage; outbound traffic can add usage charges. Actual compute should be lower when autostop is effective.
+**Selected host: Fly.io in Tokyo (`nrt`).** Deploy the existing Dockerfile as one `shared-cpu-1x` Machine with 512 MB RAM, attach a 1 GB Fly Volume at `/app/data`, and keep exactly one Machine. The Machine automatically stops when idle and starts on the next request. Fly.io does not charge CPU or RAM while it is stopped; pricing rechecked on 2026-10-03 is approximately USD 4.83 per 30 continuously running days in Tokyo (USD 0.00000186/second). The historical July estimate is not a current quote. The 1 GB volume is USD 0.15/month, and a stopped Machine's root filesystem is USD 0.15/GB-month. Volume snapshots are USD 0.08/GB-month after Fly's first 10 GB of snapshot storage; Tokyo public egress is USD 0.04/GB. Actual compute should be lower when autostop is effective; account allowances, rootfs size, snapshot usage, tax and actual billing remain unverified. See the current [self-test deployment readiness](self-test-deployment-readiness.md) for verified state and pending conditions.
 
 **Domain decision: use `tabitabi-jp.fly.dev` for the closed pilot.** Fly automatically supplies the app-name-based `fly.dev` hostname and HTTPS. Do not buy a custom domain before the pilot proves value. After 20 live inputs and 10 valid feedback records pass the pilot gate, register a short branded domain and attach it with a Fly-managed certificate.
 
@@ -12,7 +12,7 @@ The checked-in [`fly.toml`](../fly.toml) fixes the production region, one 512 MB
 
 **Why not Railway or Render for this phase:** Railway's current Hobby minimum is USD 5/month. Render's free web service does not preserve pilot metrics, while a paid web service plus persistent disk costs more than this Fly configuration. Both remain viable fallbacks if Fly capacity or account setup becomes a problem.
 
-Official references checked on 2026-07-17: [Fly.io resource pricing](https://fly.io/docs/about/pricing/) and [Fly.io custom domains](https://fly.io/docs/networking/custom-domain/).
+Pricing rechecked on 2026-10-03: [Fly.io resource pricing](https://docs.fly.io/about/pricing). Custom-domain reference previously checked on 2026-07-17: [Fly.io custom domains](https://fly.io/docs/networking/custom-domain/).
 
 This decision is for the first closed pilot, not a claim that Railway is the permanent production platform. Before public launch, re-evaluate data residency, backup requirements, traffic volume, and whether the local JSONL store should move to shared managed storage.
 

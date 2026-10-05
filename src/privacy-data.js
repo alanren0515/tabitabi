@@ -1,5 +1,6 @@
 import { PENDING_STORAGE_KEY } from "./analysis-queue.js";
 import { PILOT_ACCESS_SESSION_KEY } from "./settings.js";
+import { LOCAL_TASK_BACKUP_KEYS } from "./local-task-storage.js";
 
 export const LOCAL_STORAGE_KEY = "tabitabi-saved";
 export const RECENT_STORAGE_KEY = "tabitabi-recent";
@@ -24,6 +25,7 @@ export function deleteLocalData(storage, sessionStorage) {
   storage.removeItem(SETTINGS_STORAGE_KEY);
   storage.removeItem(PENDING_STORAGE_KEY);
   storage.removeItem(VISIT_STORAGE_KEY);
+  for (const key of Object.values(LOCAL_TASK_BACKUP_KEYS)) storage.removeItem(key);
   sessionStorage?.removeItem(PILOT_ACCESS_SESSION_KEY);
-  return { deletedKeys: [LOCAL_STORAGE_KEY, RECENT_STORAGE_KEY, SETTINGS_STORAGE_KEY, PENDING_STORAGE_KEY, VISIT_STORAGE_KEY, PILOT_ACCESS_SESSION_KEY] };
+  return { deletedKeys: [LOCAL_STORAGE_KEY, RECENT_STORAGE_KEY, SETTINGS_STORAGE_KEY, PENDING_STORAGE_KEY, VISIT_STORAGE_KEY, ...Object.values(LOCAL_TASK_BACKUP_KEYS), PILOT_ACCESS_SESSION_KEY] };
 }

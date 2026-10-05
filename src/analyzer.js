@@ -30,8 +30,8 @@ export function recommendationLabel(value) {
     recommended: "予約がおすすめ",
     walk_in_ok: "直接来店を検討",
     temporarily_unavailable: "来店は一旦見送り",
-    unknown: "情報を確認中"
-  }[value] || "情報を確認中";
+    unknown: "店舗への確認が必要です"
+  }[value] || "店舗への確認が必要です";
 }
 
 export function confidenceLabel(value) {

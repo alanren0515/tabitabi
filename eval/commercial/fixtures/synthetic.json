@@ -1,0 +1,1104 @@
+{
+  "fixtureOnly": true,
+  "description": "Synthetic boundary, exclusion, and suppression scenarios; no observed people or product evidence.",
+  "asOf": "2026-09-20T00:00:00.000Z",
+  "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "state": {
+    "version": 1,
+    "events": [
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000005",
+          "sessionId": "00000000-0000-4000-8000-000000000004",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-09T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000003"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000005"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000006",
+          "sessionId": "00000000-0000-4000-8000-000000000004",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-10T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000003"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000006"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000009",
+          "sessionId": "00000000-0000-4000-8000-000000000008",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-10T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000007"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000009"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000010",
+          "sessionId": "00000000-0000-4000-8000-000000000008",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-11T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000007"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000010"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000015",
+          "sessionId": "00000000-0000-4000-8000-000000000014",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-09T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000013"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000015"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000016",
+          "sessionId": "00000000-0000-4000-8000-000000000014",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-10T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000013"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000016"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000019",
+          "sessionId": "00000000-0000-4000-8000-000000000018",
+          "event": "review_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-17T00:00:00.000Z",
+          "interactionId": "00000000-0000-4000-8000-000000000017"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000019"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000024",
+          "sessionId": "00000000-0000-4000-8000-000000000023",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-09T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000022"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000024"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000025",
+          "sessionId": "00000000-0000-4000-8000-000000000023",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-10T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000022"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000025"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000028",
+          "sessionId": "00000000-0000-4000-8000-000000000027",
+          "event": "review_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-12T00:00:00.000Z",
+          "interactionId": "00000000-0000-4000-8000-000000000026"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000028"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000033",
+          "sessionId": "00000000-0000-4000-8000-000000000032",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-09T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000031"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000033"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000034",
+          "sessionId": "00000000-0000-4000-8000-000000000032",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-10T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000031"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000034"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000036",
+          "sessionId": "00000000-0000-4000-8000-000000000032",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-11T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000035"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000036"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000037",
+          "sessionId": "00000000-0000-4000-8000-000000000032",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-12T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000035"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000037"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000042",
+          "sessionId": "00000000-0000-4000-8000-000000000041",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-09T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000040"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000042"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000043",
+          "sessionId": "00000000-0000-4000-8000-000000000041",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-10T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000040"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000043"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000046",
+          "sessionId": "00000000-0000-4000-8000-000000000045",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-11T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000044"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000046"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000047",
+          "sessionId": "00000000-0000-4000-8000-000000000045",
+          "event": "analysis_failed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-12T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000044",
+          "failureStage": "search"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000047"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000053",
+          "sessionId": "00000000-0000-4000-8000-000000000052",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "social",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-09T23:59:59.000Z",
+          "batchId": "00000000-0000-4000-8000-000000000050",
+          "analysisRunId": "00000000-0000-4000-8000-000000000051"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000053"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000054",
+          "sessionId": "00000000-0000-4000-8000-000000000052",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "social",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-10T00:00:00.000Z",
+          "batchId": "00000000-0000-4000-8000-000000000050",
+          "analysisRunId": "00000000-0000-4000-8000-000000000051"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000054"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000057",
+          "sessionId": "00000000-0000-4000-8000-000000000056",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "social",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-11T23:59:59.000Z",
+          "batchId": "00000000-0000-4000-8000-000000000050",
+          "analysisRunId": "00000000-0000-4000-8000-000000000055"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000057"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000058",
+          "sessionId": "00000000-0000-4000-8000-000000000056",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "social",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-12T00:00:00.000Z",
+          "batchId": "00000000-0000-4000-8000-000000000050",
+          "analysisRunId": "00000000-0000-4000-8000-000000000055"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000058"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000063",
+          "sessionId": "00000000-0000-4000-8000-000000000062",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "unknown",
+          "researchSource": "unknown",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-09T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000061"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000063"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000064",
+          "sessionId": "00000000-0000-4000-8000-000000000062",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "unknown",
+          "researchSource": "unknown",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-10T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000061"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000064"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000069",
+          "sessionId": "00000000-0000-4000-8000-000000000068",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-09T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000067"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000069"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000070",
+          "sessionId": "00000000-0000-4000-8000-000000000068",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-10T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000067"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000070"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000075",
+          "sessionId": "00000000-0000-4000-8000-000000000074",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "partner",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "occurredAt": "2026-09-09T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000073"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000075"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000076",
+          "sessionId": "00000000-0000-4000-8000-000000000074",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "partner",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "occurredAt": "2026-09-10T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000073"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000076"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000079",
+          "sessionId": "00000000-0000-4000-8000-000000000078",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "partner",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-15T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000077"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000079"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000080",
+          "sessionId": "00000000-0000-4000-8000-000000000078",
+          "event": "analysis_completed",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "partner",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-16T00:00:00.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000077"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000080"
+      },
+      {
+        "record": {
+          "schemaVersion": 2,
+          "eventId": "00000000-0000-4000-8000-000000000005",
+          "sessionId": "00000000-0000-4000-8000-000000000004",
+          "event": "input_submitted",
+          "sourceMode": "live",
+          "trafficType": "product",
+          "channel": "direct",
+          "researchSource": "natural",
+          "inputType": "text",
+          "deviceCategory": "mobile",
+          "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "occurredAt": "2026-09-09T23:59:59.000Z",
+          "analysisRunId": "00000000-0000-4000-8000-000000000003"
+        },
+        "fingerprint": "0000000000000000000000000000000000000000000000000000000000000005"
+      }
+    ],
+    "flows": {
+      "00000000-0000-4000-8000-000000000003": {
+        "id": "00000000-0000-4000-8000-000000000003",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000004",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791590400000
+      },
+      "00000000-0000-4000-8000-000000000007": {
+        "id": "00000000-0000-4000-8000-000000000007",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000008",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791676800000
+      },
+      "00000000-0000-4000-8000-000000000013": {
+        "id": "00000000-0000-4000-8000-000000000013",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000014",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791590400000
+      },
+      "00000000-0000-4000-8000-000000000017": {
+        "id": "00000000-0000-4000-8000-000000000017",
+        "kind": "review",
+        "sessionId": "00000000-0000-4000-8000-000000000018",
+        "reviewIntent": "saved_plan_refresh",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "trafficType": "product",
+        "stages": {},
+        "retainUntil": 1792195200000
+      },
+      "00000000-0000-4000-8000-000000000022": {
+        "id": "00000000-0000-4000-8000-000000000022",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000023",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791590400000
+      },
+      "00000000-0000-4000-8000-000000000026": {
+        "id": "00000000-0000-4000-8000-000000000026",
+        "kind": "review",
+        "sessionId": "00000000-0000-4000-8000-000000000027",
+        "reviewIntent": "history_open",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "trafficType": "product",
+        "stages": {},
+        "retainUntil": 1791763200000
+      },
+      "00000000-0000-4000-8000-000000000031": {
+        "id": "00000000-0000-4000-8000-000000000031",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000032",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791590400000
+      },
+      "00000000-0000-4000-8000-000000000035": {
+        "id": "00000000-0000-4000-8000-000000000035",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000032",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791763200000
+      },
+      "00000000-0000-4000-8000-000000000040": {
+        "id": "00000000-0000-4000-8000-000000000040",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000041",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791590400000
+      },
+      "00000000-0000-4000-8000-000000000044": {
+        "id": "00000000-0000-4000-8000-000000000044",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000045",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791763200000
+      },
+      "00000000-0000-4000-8000-000000000051": {
+        "id": "00000000-0000-4000-8000-000000000051",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000052",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": "00000000-0000-4000-8000-000000000050",
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791590400000
+      },
+      "00000000-0000-4000-8000-000000000055": {
+        "id": "00000000-0000-4000-8000-000000000055",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000056",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": "00000000-0000-4000-8000-000000000050",
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791763200000
+      },
+      "00000000-0000-4000-8000-000000000061": {
+        "id": "00000000-0000-4000-8000-000000000061",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000062",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "unknown",
+        "stages": {},
+        "retainUntil": 1791590400000
+      },
+      "00000000-0000-4000-8000-000000000067": {
+        "id": "00000000-0000-4000-8000-000000000067",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000068",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791590400000
+      },
+      "00000000-0000-4000-8000-000000000073": {
+        "id": "00000000-0000-4000-8000-000000000073",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000074",
+        "releaseRevision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1791590400000
+      },
+      "00000000-0000-4000-8000-000000000077": {
+        "id": "00000000-0000-4000-8000-000000000077",
+        "kind": "analysis",
+        "sessionId": "00000000-0000-4000-8000-000000000078",
+        "releaseRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "batchId": null,
+        "inputType": "text",
+        "trafficType": "product",
+        "demo": false,
+        "researchSource": "natural",
+        "stages": {},
+        "retainUntil": 1792108800000
+      }
+    },
+    "consents": {
+      "0000000000000000000000000000000000000000000000000000000000000002": {
+        "consentVersion": "research-v1",
+        "state": "accepted",
+        "deviceId": "00000000-0000-4000-8000-000000000001",
+        "occurredAt": "2026-09-09T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z",
+        "retainUntil": 1791504000000
+      },
+      "0000000000000000000000000000000000000000000000000000000000000012": {
+        "consentVersion": "research-v1",
+        "state": "accepted",
+        "deviceId": "00000000-0000-4000-8000-000000000011",
+        "occurredAt": "2026-09-09T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z",
+        "retainUntil": 1791504000000
+      },
+      "0000000000000000000000000000000000000000000000000000000000000021": {
+        "consentVersion": "research-v1",
+        "state": "accepted",
+        "deviceId": "00000000-0000-4000-8000-000000000020",
+        "occurredAt": "2026-09-09T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z",
+        "retainUntil": 1791504000000
+      },
+      "0000000000000000000000000000000000000000000000000000000000000030": {
+        "consentVersion": "research-v1",
+        "state": "accepted",
+        "deviceId": "00000000-0000-4000-8000-000000000029",
+        "occurredAt": "2026-09-09T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z",
+        "retainUntil": 1791504000000
+      },
+      "0000000000000000000000000000000000000000000000000000000000000039": {
+        "consentVersion": "research-v1",
+        "state": "accepted",
+        "deviceId": "00000000-0000-4000-8000-000000000038",
+        "occurredAt": "2026-09-09T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z",
+        "retainUntil": 1791504000000
+      },
+      "0000000000000000000000000000000000000000000000000000000000000049": {
+        "consentVersion": "research-v1",
+        "state": "accepted",
+        "deviceId": "00000000-0000-4000-8000-000000000048",
+        "occurredAt": "2026-09-09T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z",
+        "retainUntil": 1791504000000
+      },
+      "0000000000000000000000000000000000000000000000000000000000000060": {
+        "consentVersion": "research-v1",
+        "state": "accepted",
+        "deviceId": "00000000-0000-4000-8000-000000000059",
+        "occurredAt": "2026-09-09T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z",
+        "retainUntil": 1791504000000
+      },
+      "0000000000000000000000000000000000000000000000000000000000000066": {
+        "consentVersion": "research-v1",
+        "state": "revoked",
+        "deviceId": "00000000-0000-4000-8000-000000000065",
+        "occurredAt": "2026-09-09T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z",
+        "retainUntil": 1791504000000
+      },
+      "0000000000000000000000000000000000000000000000000000000000000072": {
+        "consentVersion": "research-v1",
+        "state": "accepted",
+        "deviceId": "00000000-0000-4000-8000-000000000071",
+        "occurredAt": "2026-09-09T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z",
+        "retainUntil": 1791504000000
+      }
+    },
+    "researchLinks": [
+      {
+        "eventId": "00000000-0000-4000-8000-000000000005",
+        "deviceId": "00000000-0000-4000-8000-000000000001",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000002",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-09T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000006",
+        "deviceId": "00000000-0000-4000-8000-000000000001",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000002",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-10T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000009",
+        "deviceId": "00000000-0000-4000-8000-000000000001",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000002",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-10T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000010",
+        "deviceId": "00000000-0000-4000-8000-000000000001",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000002",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-11T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000015",
+        "deviceId": "00000000-0000-4000-8000-000000000011",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000012",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-09T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000016",
+        "deviceId": "00000000-0000-4000-8000-000000000011",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000012",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-10T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000019",
+        "deviceId": "00000000-0000-4000-8000-000000000011",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000012",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-17T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000024",
+        "deviceId": "00000000-0000-4000-8000-000000000020",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000021",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-09T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000025",
+        "deviceId": "00000000-0000-4000-8000-000000000020",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000021",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-10T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000028",
+        "deviceId": "00000000-0000-4000-8000-000000000020",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000021",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-12T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000033",
+        "deviceId": "00000000-0000-4000-8000-000000000029",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000030",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-09T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000034",
+        "deviceId": "00000000-0000-4000-8000-000000000029",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000030",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-10T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000036",
+        "deviceId": "00000000-0000-4000-8000-000000000029",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000030",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-11T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000037",
+        "deviceId": "00000000-0000-4000-8000-000000000029",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000030",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-12T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000042",
+        "deviceId": "00000000-0000-4000-8000-000000000038",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000039",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-09T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000043",
+        "deviceId": "00000000-0000-4000-8000-000000000038",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000039",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-10T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000046",
+        "deviceId": "00000000-0000-4000-8000-000000000038",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000039",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-11T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000047",
+        "deviceId": "00000000-0000-4000-8000-000000000038",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000039",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-12T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000053",
+        "deviceId": "00000000-0000-4000-8000-000000000048",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000049",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-09T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000054",
+        "deviceId": "00000000-0000-4000-8000-000000000048",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000049",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-10T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000057",
+        "deviceId": "00000000-0000-4000-8000-000000000048",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000049",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-11T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000058",
+        "deviceId": "00000000-0000-4000-8000-000000000048",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000049",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-12T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000063",
+        "deviceId": "00000000-0000-4000-8000-000000000059",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000060",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-09T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000064",
+        "deviceId": "00000000-0000-4000-8000-000000000059",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000060",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-10T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000069",
+        "deviceId": "00000000-0000-4000-8000-000000000065",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000066",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-09T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000070",
+        "deviceId": "00000000-0000-4000-8000-000000000065",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000066",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-10T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000075",
+        "deviceId": "00000000-0000-4000-8000-000000000071",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000072",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-09T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000076",
+        "deviceId": "00000000-0000-4000-8000-000000000071",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000072",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-10T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000079",
+        "deviceId": "00000000-0000-4000-8000-000000000071",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000072",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-15T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000080",
+        "deviceId": "00000000-0000-4000-8000-000000000071",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000072",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-16T00:00:00.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      },
+      {
+        "eventId": "00000000-0000-4000-8000-000000000005",
+        "deviceId": "00000000-0000-4000-8000-000000000001",
+        "grantKey": "0000000000000000000000000000000000000000000000000000000000000002",
+        "consentVersion": "research-v1",
+        "occurredAt": "2026-09-09T23:59:59.000Z",
+        "expiresAt": "2026-10-09T00:00:00.000Z"
+      }
+    ]
+  }
+}

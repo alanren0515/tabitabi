@@ -71,3 +71,10 @@ test("removes legacy persistent access codes synchronously and recovers malforme
   localValues.set(SETTINGS_STORAGE_KEY, "{bad-json");
   assert.deepEqual(loadSettingsFromStorage(localStorage, sessionStorage), DEFAULT_SETTINGS);
 });
+
+test("unavailable storage does not prevent local settings or session editing", () => {
+  const blocked = { getItem() { throw new Error("blocked"); }, setItem() { throw new Error("quota"); }, removeItem() { throw new Error("blocked"); } };
+  assert.deepEqual(loadSettingsFromStorage(blocked, blocked), DEFAULT_SETTINGS);
+  assert.doesNotThrow(() => savePilotAccessForSession({pilotAccessCode:"stub-session"}, blocked));
+  assert.doesNotThrow(() => savePilotAccessForSession({}, blocked));
+});

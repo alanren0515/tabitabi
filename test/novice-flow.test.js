@@ -81,12 +81,12 @@ test("keeps candidate and result actions focused on one primary choice", () => {
   assert.match(appSource, /const resolvedPrimaryAction = resultActionCopy\(primaryAction, r\)/);
   assert.match(appSource, /const mapsIsPrimary = resolvedPrimaryAction\.type === "map"/);
   assert.match(appSource, /mapUrl !== "#" && !mapsIsPrimary/);
-  assert.match(appSource, /class="secondary-button map-action"/);
+  assert.match(appSource, /className:"secondary-button map-action"/);
   assert.match(appSource, /displayedReservationOptions = reservationOptions\.filter\(\(option\) => option\.provider !== "google_maps"\)/);
   assert.ok(appSource.indexOf("renderCurrentOpeningStatus(r.currentOpeningHours)") < appSource.indexOf('<details class="action-more"'));
 });
 
-test("makes the next action primary and gives result pages a clear reset-to-home path", () => {
+test("shows the decision before the prominent next action and retains reset-to-home", () => {
   assert.match(appSource, /class="result-nav"[^]*id="choose-another-candidate"[^]*result-home-button/);
   assert.match(appSource, /function returnToCandidates\(\)/);
   assert.match(appSource, /choose-another-candidate[^]*returnToCandidates/);
@@ -96,7 +96,7 @@ test("makes the next action primary and gives result pages a clear reset-to-home
   assert.match(cssSource, /\.result-nav \{ display:flex;/);
   assert.doesNotMatch(cssSource, /\.result-view \.decision-grid \.action-card \{ order:-1; \}/);
   const resultRenderSource = appSource.slice(appSource.indexOf("function renderResult()"), appSource.indexOf("function focusResultSection()"));
-  assert.ok(resultRenderSource.indexOf("renderResultActionCard(r") < resultRenderSource.indexOf("renderResultDecisionCard(r)"));
+  assert.ok(resultRenderSource.indexOf("renderResultDecisionCard(r)") < resultRenderSource.indexOf("renderResultActionCard(r"));
   assert.match(appSource, /class="decision-card secondary-decision-card/);
 });
 

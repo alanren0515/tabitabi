@@ -27,6 +27,9 @@ export const ALLOWED_EVENTS = new Set([
 ]);
 
 export function sanitizeEvent(body = {}, now = new Date(), { releaseRevision = "" } = {}) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  // Explicit versions must not fall back to legacy sanitization (including its free-text feedback).
+  if (Object.hasOwn(body, "schemaVersion") && body.schemaVersion !== 1) return null;
   if (!ALLOWED_EVENTS.has(body.event)) return null;
   const willingnessToPay = allowedValue(body.willingnessToPay, ["consider", "depends_on_price", "would_not", "unsure"]);
   const trustedRevision = /^[a-f0-9]{40}$/.test(String(releaseRevision)) ? String(releaseRevision) : "";

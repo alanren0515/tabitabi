@@ -860,3 +860,24 @@ test("upstream network failures are classified by data source", async () => {
     (error) => error instanceof DataSourceError && error.source === "google_places" && error.status === 502 && /network request failed/.test(error.message)
   );
 });
+
+test("separates result computation, Places retrieval and cached official retrieval times", () => {
+  const googleTime="2026-09-30T10:00:00.000Z";
+  const officialTime="2026-09-29T02:00:00.000Z";
+  const place={placeId:"time-test",name:"時刻検証店",address:"東京都千代田区",businessStatus:"OPERATIONAL",websiteUri:"https://restaurant.example/",googleMapsUri:"https://maps.google.com/?cid=test",hours:[],category:"飲食店",retrievedAt:googleTime,attributions:[]};
+  const build = (time) => buildRestaurantResult({place,hotPepperResult:{available:false,match:null},officialSource:{verified:true,url:place.websiteUri},officialWebsiteDiscovery:{sourceVerified:true,retrievedAt:time,links:[],reservationPolicy:{status:"not_accepted",excerpt:"予約を受け付けておりません",sourceUrl:place.websiteUri}}});
+  const result=build(officialTime);
+  assert.ok(Date.parse(result.verification.resultGeneratedAt)>Date.parse(googleTime));
+  assert.equal(result.verification.identityConfirmedAt,null); // Server retrieval cannot infer a user's selection time.
+  assert.equal(result.sources.find(source=>source.name==="Google Maps").retrievedAt,googleTime);
+  assert.ok(result.sources.some(source=>source.name==="店舗公式サイト"));
+  assert.ok(result.evidenceFacts.some(fact=>fact.field==="reservation_policy"));
+  assert.ok(result.sources.filter(source=>source.name==="店舗公式サイト").every(source=>source.retrievedAt===officialTime));
+  assert.ok(result.evidenceFacts.filter(fact=>fact.sourceUrl===place.websiteUri && fact.field==="reservation_policy").every(fact=>fact.retrievedAt===officialTime));
+  const cached=build(officialTime);
+  assert.deepEqual(cached.verification.sources,result.verification.sources);
+  for(const invalid of [null,"2026-02-30T10:00:00Z","2099-01-01T00:00:00Z","2026-01-01T24:00:00Z"]) {
+    const unknown=build(invalid);
+    assert.ok(unknown.verification.sources.filter(source=>source.name==="店舗公式サイト").every(source=>source.retrievedAt===null));
+  }
+});

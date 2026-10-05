@@ -26,6 +26,14 @@
     "release:fly-audit": "node scripts/audit-fly-remote.mjs",
     "release:pilot-remote": "node scripts/audit-remote-pilot.mjs",
     "release:formal-gate": "node scripts/formal-release-gate.mjs",
-    "release:public-gate": "node scripts/public-launch-gate.mjs"
+    "release:public-gate": "node scripts/public-launch-gate.mjs",
+    "benchmark:baseline": "node scripts/benchmark-baseline.mjs",
+    "benchmark:validate": "node scripts/benchmark-validate.mjs",
+    "costs:summary": "node scripts/summarize-request-costs.mjs",
+    "commercial:summary": "node scripts/summarize-commercial.mjs",
+    "benchmark:summary": "node scripts/benchmark-summary.mjs",
+    "costs:customers": "node scripts/summarize-customer-costs.mjs",
+    "review:validate": "node scripts/validate-review-workflow.mjs",
+    "offers:summary": "node scripts/summarize-offer-research.mjs"
   }
 }

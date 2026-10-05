@@ -1,4 +1,4 @@
-const CACHE_NAME = "tabitabi-shell-v64";
+const CACHE_NAME = "tabitabi-shell-v85";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -8,6 +8,13 @@ const APP_SHELL = [
   "/assets/icon.svg",
   "/src/styles.css",
   "/src/app.js",
+  "/src/audit-session.js",
+  "/src/offer-research-ui.js",
+  "/src/task-copy.js",
+  "/src/local-task-ui.js",
+  "/src/local-task-storage.js",
+  "/src/measurement-client.js",
+  "/src/research-copy.js",
   "/src/analysis-queue.js",
   "/src/analyzer.js",
   "/src/candidate-copy.js",

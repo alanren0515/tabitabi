@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "fixtureOnly": true,
+  "providerFree": true,
+  "storageWrites": 0,
+  "networkRequestsAttempted": 0,
+  "workspaceEnabled": false,
+  "realWorldEvidence": false,
+  "gqEvidence": false,
+  "g1Evidence": false,
+  "releaseGateEvidence": false,
+  "passed": true,
+  "checks": [
+    {
+      "name": "strict_field_purpose_scope_license_retention",
+      "passed": true
+    },
+    {
+      "name": "private_whitelist_and_time_provenance",
+      "passed": true
+    },
+    {
+      "name": "unknown_remains_unresolved_without_source_value",
+      "passed": true
+    },
+    {
+      "name": "conflict_requires_explicit_human_decision",
+      "passed": true
+    },
+    {
+      "name": "revision_scope_restricted_field_and_missing_evidence_rejected",
+      "passed": true
+    },
+    {
+      "name": "expired_evidence_cannot_be_exported",
+      "passed": true
+    },
+    {
+      "name": "new_delivery_revision_does_not_inherit_acceptance",
+      "passed": true
+    },
+    {
+      "name": "provider_identity_does_not_confirm_branch",
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "revision": "6c1e1567ebb796af2f8dd19e001f3550303fc2c0",
+  "archivePath": "data/benchmark-baselines/6c1e1567ebb796af2f8dd19e001f3550303fc2c0.tar",
+  "archiveSha256": "ae4399d4fbb4ed2cd6abe9cb4d10f8b1b4a30c589d526c9e83ca0939b4b1dbd5",
+  "createdAt": "2026-10-02T10:14:02.467Z",
+  "nodeVersion": "v26.0.0",
+  "configurationFixturePath": "eval/benchmark/provider-free-config.json",
+  "sourcePaths": [
+    "server.mjs",
+    "server",
+    "src",
+    "assets",
+    "index.html",
+    "manifest.webmanifest",
+    "sw.js",
+    "package.json",
+    "test"
+  ],
+  "replayCommand": "node scripts/benchmark-baseline.mjs --replay"
+}

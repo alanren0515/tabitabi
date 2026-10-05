@@ -1,15 +1,18 @@
+import { getOfferResearchConfig, validateConsumerPriceSignal } from "./server/offer-research.mjs";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
 import { networkInterfaces } from "node:os";
 import { buildRestaurantResult, DataSourceError, getGooglePlaceDetails, searchGooglePlaces, searchHotPepper } from "./server/restaurant-sources.mjs";
 import { extractScreenshotWithFallback, getVisionCapabilities, validateImageDataUrl, VisionExtractionError } from "./server/vision-extraction.mjs";
+import { createRequestCostTracker } from "./server/request-costs.mjs";
 import { createRequestCache } from "./server/request-cache.mjs";
 import { createFixedWindowRateLimiter, createSlidingWindowRateLimiter, requestClientKey } from "./server/rate-limiter.mjs";
 import { discoverReservationLinks } from "./server/reservation-link-discovery.mjs";
 import { findVerifiedOfficialSource } from "./server/verified-official-sources.mjs";
 import { parseTextInput, TextInputError } from "./server/text-input.mjs";
 import { sanitizeEvent } from "./server/event-sanitizer.mjs";
+import { CommercialStoreError, createCommercialStore } from "./server/commercial-store.mjs";
 import { extractPublicWebpageClues, WebpageExtractionError } from "./server/webpage-extraction.mjs";
 import { normalizeUserProvidedReservationLinks } from "./server/reservation-options.mjs";
 import { browserSecurityHeaders } from "./server/http-headers.mjs";
@@ -26,6 +29,8 @@ import { createProviderCircuitBreaker, ProviderCircuitOpenError } from "./server
 import { publicReleaseMode, releaseAccessConfigured, releaseAccessMode } from "./server/release-mode.mjs";
 
 const ROOT = resolve(process.cwd());
+const offerResearchConfig = getOfferResearchConfig();
+const priceSignalLog = createJsonlStore({path:join(ROOT,"data","price-signals.jsonl"),maxAgeMs:30*24*60*60*1000,maxLines:10_000,maxBytes:1024*1024});
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
 const placesSearchCache = createRequestCache({ ttlMs: 60_000, maxEntries: 200 });
 const placesDetailsCache = createRequestCache({ ttlMs: 60_000, maxEntries: 300 });
@@ -46,6 +51,10 @@ await loadLocalEnv();
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || "0.0.0.0";
 const auditWorkbench = auditWorkbenchEnabled(process.env);
+const commercialStore = createCommercialStore({ path: join(ROOT, "data", "commercial-state.json"), releaseRevision: process.env.RELEASE_REVISION, audit: auditWorkbench });
+await commercialStore.prune().catch(() => console.error("COMMERCIAL_STORE_UNAVAILABLE"));
+const commercialCleanup = setInterval(() => commercialStore.prune().catch(() => console.error("COMMERCIAL_CLEANUP_FAILED")), 5 * 60_000);
+commercialCleanup.unref();
 const lanAudit = auditLanMode(process.env);
 const visionCapabilities = getVisionCapabilities(process.env);
 const dataStoreWritable = await probeWritableDataStore(join(ROOT, "data"));
@@ -63,6 +72,11 @@ const sourceMetricLog = createJsonlStore({
   maxLines: boundedEnvInteger(process.env.SOURCE_LOG_MAX_LINES, 100, 500_000, 50_000),
   maxBytes: boundedEnvInteger(process.env.SOURCE_LOG_MAX_BYTES, 64 * 1024, 100 * 1024 * 1024, 10 * 1024 * 1024)
 });
+const requestCostLog = createJsonlStore({ path: join(ROOT, "data", "request-costs.jsonl"),
+  maxAgeMs: 30 * 24 * 60 * 60 * 1_000, maxLines: 50_000, maxBytes: 10 * 1024 * 1024 });
+const requestCosts = createRequestCostTracker({ append: record => requestCostLog.append(record),
+  onWriteError: code => console.error(code) });
+const requestCostContexts = new WeakMap();
 const dailyBudget = createDailyBudgetStore({ path: join(ROOT, "data", "daily-budget.json") });
 const providerCircuit = createProviderCircuitBreaker({ path: join(ROOT, "data", "provider-circuit.json") });
 const dailyLimits = {
@@ -87,6 +101,8 @@ const server = createServer(async (request, response) => {
       return;
     }
     if (paidProviderApiPath(request.method, requestPath) && paidApiEmergencyStopped()) {
+      if (requestPath === "/api/extract-screenshot") await observeMeasurement(request, "input", "screenshot", "started");
+      if (requestPath === "/api/restaurants/details") await observeMeasurement(request, "details", null, "started");
       sendJson(response, 503, { code: "PAID_API_EMERGENCY_STOP", error: "安全のため外部 API 呼び出しを一時停止しています。" });
       return;
     }
@@ -116,6 +132,7 @@ const server = createServer(async (request, response) => {
         hotPepper: Boolean(process.env.HOTPEPPER_API_KEY),
         webpageExtraction: true,
         pilotAccessRequired: pilotAccessRequired(process.env),
+        offerResearch: offerResearchConfig,
         publicReleaseMode: publicReleaseMode(process.env),
         releaseAccessMode: releaseAccessMode(process.env),
         releaseAccessConfigured: releaseAccessConfigured(process.env),
@@ -200,9 +217,27 @@ const server = createServer(async (request, response) => {
       await handleRestaurantDetails(request, response);
       return;
     }
+    if(request.method === "GET" && request.url === "/api/offers") {
+      response.setHeader("Cache-Control","no-store");sendJson(response,200,offerResearchConfig);return;
+    }
+    if(request.method === "POST" && request.url === "/api/price-signals") {
+      if(!allowExpensiveRequest(request,response,eventLimiter)) return;
+      const result=validateConsumerPriceSignal(await readJsonBody(request),offerResearchConfig);
+      if(!result.valid) {sendJson(response,result.errors.includes("inactive_offer")?410:400,{code:"PRICE_SIGNAL_REJECTED",errors:result.errors});return;}
+      await priceSignalLog.append({recordedAt:new Date().toISOString(),...result.signal,sourceContextTrust:"client_reported",evidenceLayer:"anonymous_interest",purchaseConfirmed:false});
+      sendJson(response,202,{accepted:true,purchaseConfirmed:false});return;
+    }
     if (request.method === "POST" && request.url === "/api/events") {
       if (!allowExpensiveRequest(request, response, eventLimiter)) return;
       await handleEvent(request, response);
+      return;
+    }
+    if (request.method === "POST" && ["/api/measurement-flows", "/api/research-consent"].includes(request.url)) {
+      if (!allowExpensiveRequest(request, response, eventLimiter)) return;
+      const body = await readJsonBody(request);
+      const result = request.url === "/api/measurement-flows" ? await commercialStore.registerFlow(body) : await commercialStore.consent(body);
+      response.setHeader("Cache-Control", "no-store");
+      sendJson(response, 200, result);
       return;
     }
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -212,6 +247,10 @@ const server = createServer(async (request, response) => {
     const standaloneDocument = ["/pilot", "/privacy", "/terms"].includes(requestPath) ? requestPath.slice(1) : "";
     await serveStatic(request, response, standaloneDocument ? "/index.html" : "", standaloneDocument ? { "X-TabiTabi-Document": standaloneDocument } : {});
   } catch (error) {
+    if (error instanceof CommercialStoreError) {
+      sendJson(response, error.status, { code: error.code, error: "Measurement request could not be accepted" });
+      return;
+    }
     console.error("REQUEST_FAILED", safeErrorSummary(error, "request"));
     if (!response.headersSent && error?.statusCode === 413) sendJson(response, 413, { code: "BODY_TOO_LARGE", error: "Request body is too large" });
     else if (!response.headersSent) sendJson(response, 500, { error: "Internal server error" });
@@ -247,17 +286,21 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 
 async function handleRestaurantSearch(request, response) {
   const body = await readJsonBody(request);
+  const costs = await requestCostContext(request);
+  await observeMeasurement(request, "search", null, "started");
   const startedAt = Date.now();
   try {
     const cacheKey = stableCacheKey([body?.query, body?.clues || {}]);
-    const { value: result, cacheStatus } = await placesSearchCache.getOrLoad(cacheKey, async () => {
+    const { value: result, cacheStatus } = await requestCosts.cached(placesSearchCache, cacheKey, costs, "text_search", async (loadId) => {
       await admitProviderCall("google_places");
       const budget = await dailyBudget.consume("places_search", dailyLimits.placesSearch);
       response.setHeader("X-Daily-Budget-Remaining", String(budget.remaining));
-      return searchGooglePlaces({ query: body?.query, clues: body?.clues || {}, apiKey: process.env.GOOGLE_MAPS_API_KEY });
+      return searchGooglePlaces({ query: body?.query, clues: body?.clues || {}, apiKey: process.env.GOOGLE_MAPS_API_KEY,
+        fetchImpl: requestCosts.trackedFetch(costs, { provider: "google_places", operation: "text_search", sku: "text_search_pro", loadId }) });
     });
     await providerCircuit.recordOutcome("google_places", { status: "success" });
     await recordSourceMetric({ source: "google_places", operation: "text_search", skuClass: "pro", status: "success", durationMs: Date.now() - startedAt, resultCount: result.candidates.length, cacheStatus });
+    await observeMeasurement(request, "search");
     sendJson(response, 200, { ...result, mode: "live", cacheStatus });
   } catch (error) {
     await recordProviderFailure("google_places", error);
@@ -268,14 +311,16 @@ async function handleRestaurantSearch(request, response) {
 
 async function handleCandidatePreview(request, response) {
   const body = await readJsonBody(request);
+  const costs = await requestCostContext(request);
   const startedAt = Date.now();
   try {
     const placeId = String(body?.placeId || "").trim();
-    const { value: place, cacheStatus } = await placesDetailsCache.getOrLoad(placeId, async () => {
+    const { value: place, cacheStatus } = await requestCosts.cached(placesDetailsCache, placeId, costs, "candidate_preview", async (loadId) => {
       await admitProviderCall("google_places");
       const budget = await dailyBudget.consume("places_details", dailyLimits.placesDetails);
       response.setHeader("X-Daily-Budget-Remaining", String(budget.remaining));
-      return getGooglePlaceDetails({ placeId, apiKey: process.env.GOOGLE_MAPS_API_KEY });
+      return getGooglePlaceDetails({ placeId, apiKey: process.env.GOOGLE_MAPS_API_KEY,
+        fetchImpl: requestCosts.trackedFetch(costs, { provider: "google_places", operation: "candidate_preview", sku: "place_details_enterprise", loadId }) });
     });
     await providerCircuit.recordOutcome("google_places", { status: "success" });
     await recordSourceMetric({ source: "google_places", operation: "candidate_preview", skuClass: "enterprise", status: "success", durationMs: Date.now() - startedAt, resultCount: 1, cacheStatus });
@@ -301,7 +346,10 @@ async function handleCandidatePreview(request, response) {
 async function handleTextExtraction(request, response) {
   try {
     const body = await readJsonBody(request);
-    sendJson(response, 200, parseTextInput(body?.text));
+    await observeMeasurement(request, "input", "text", "started");
+    const result = parseTextInput(body?.text);
+    if (result.kind === "text_clues" && result.searchQuery) await observeMeasurement(request, "input", "text");
+    sendJson(response, 200, result);
   } catch (error) {
     if (error instanceof TextInputError) {
       sendJson(response, error.status, { code: error.code, error: error.message });
@@ -314,7 +362,9 @@ async function handleTextExtraction(request, response) {
 async function handleWebpageExtraction(request, response) {
   try {
     const body = await readJsonBody(request);
+    await observeMeasurement(request, "input", "webpage", "started");
     const result = await extractPublicWebpageClues({ url: body?.url });
+    await observeMeasurement(request, "input", "webpage");
     sendJson(response, 200, result);
   } catch (error) {
     if (error instanceof WebpageExtractionError) {
@@ -328,13 +378,16 @@ async function handleWebpageExtraction(request, response) {
 
 async function handleRestaurantDetails(request, response) {
   const body = await readJsonBody(request);
+  const costs = await requestCostContext(request);
+  await observeMeasurement(request, "details", null, "started");
   const googleStartedAt = Date.now();
   try {
-    const { value: place, cacheStatus } = await placesDetailsCache.getOrLoad(String(body?.placeId || ""), async () => {
+    const { value: place, cacheStatus } = await requestCosts.cached(placesDetailsCache, String(body?.placeId || ""), costs, "place_details", async (loadId) => {
       await admitProviderCall("google_places");
       const budget = await dailyBudget.consume("places_details", dailyLimits.placesDetails);
       response.setHeader("X-Daily-Budget-Remaining", String(budget.remaining));
-      return getGooglePlaceDetails({ placeId: body?.placeId, apiKey: process.env.GOOGLE_MAPS_API_KEY });
+      return getGooglePlaceDetails({ placeId: body?.placeId, apiKey: process.env.GOOGLE_MAPS_API_KEY,
+        fetchImpl: requestCosts.trackedFetch(costs, { provider: "google_places", operation: "place_details", sku: "place_details_enterprise", loadId }) });
     });
     await providerCircuit.recordOutcome("google_places", { status: "success" });
     await recordSourceMetric({ source: "google_places", operation: "place_details", skuClass: "enterprise", status: "success", durationMs: Date.now() - googleStartedAt, resultCount: 1, cacheStatus });
@@ -346,6 +399,7 @@ async function handleRestaurantDetails(request, response) {
         address: place.address,
         phone: place.phone,
         apiKey: process.env.HOTPEPPER_API_KEY,
+        fetchImpl: requestCosts.trackedFetch(costs, { provider: "hotpepper", operation: "shop_search", sku: "gourmet_api" }),
         beforeRequest: async () => {
           await admitProviderCall("hotpepper");
           await dailyBudget.consume("hotpepper_attempts", dailyLimits.hotPepperAttempts);
@@ -376,6 +430,7 @@ async function handleRestaurantDetails(request, response) {
           officialContact: discovery.officialContact || null,
           diningNotices: discovery.diningNotices || [],
           sourceUrl: discovery.sourceUrl || discoveryWebsiteUri,
+          retrievedAt: discovery.retrievedAt || null,
           sourceVerified: Boolean(verifiedOfficialSource),
           sourceLabel: verifiedOfficialSource?.label || ""
         };
@@ -387,6 +442,7 @@ async function handleRestaurantDetails(request, response) {
     }
     const userProvidedReservationLinks = normalizeUserProvidedReservationLinks(body?.userProvidedLinks);
     const restaurant = buildRestaurantResult({ place, hotPepperResult, discoveredReservationLinks: userProvidedReservationLinks, officialWebsiteDiscovery, verifiedOfficialSource, userClues: body?.clues || {}, planIntent: body?.plan || {} });
+    await observeMeasurement(request, "details");
     sendJson(response, 200, { restaurant, mode: "live", hotPepperAvailable: hotPepperResult.available, cacheStatus });
   } catch (error) {
     await recordProviderFailure("google_places", error);
@@ -467,6 +523,12 @@ function allowExpensiveRequest(request, response, limiter) {
 
 async function handleEvent(request, response) {
   const body = await readJsonBody(request);
+  if (body?.schemaVersion === 2) {
+    const receipt = await commercialStore.ingest(body, measurementCredentials(request));
+    response.setHeader("Cache-Control", "no-store");
+    sendJson(response, 202, receipt);
+    return;
+  }
   const record = sanitizeEvent(body, new Date(), { releaseRevision: process.env.RELEASE_REVISION });
   if (!record) {
     sendJson(response, 400, { code: "INVALID_EVENT", error: "Unsupported event" });
@@ -474,6 +536,28 @@ async function handleEvent(request, response) {
   }
   await eventLog.append(record);
   sendJson(response, 202, { accepted: true });
+}
+
+function measurementCredentials(request) {
+  return { flowId: request.headers["x-measurement-flow"], token: request.headers["x-measurement-token"] };
+}
+
+async function requestCostContext(request) {
+  if (!requestCostContexts.has(request)) requestCostContexts.set(request, (async () => {
+    let attribution = { releaseRevision: process.env.RELEASE_REVISION, trafficType: auditWorkbench ? "audit" : "unknown" };
+    if (request.headers["x-measurement-flow"] && request.headers["x-measurement-token"]) {
+      try { attribution = await commercialStore.resolveAttribution(measurementCredentials(request)); }
+      catch { /* Count unattributed operating costs even if optional measurement is unavailable. */ }
+    }
+    return requestCosts.context(attribution);
+  })());
+  return requestCostContexts.get(request);
+}
+
+async function observeMeasurement(request, stage, inputType = null, outcome = "succeeded") {
+  if (!request.headers["x-measurement-flow"] && !request.headers["x-measurement-token"]) return;
+  try { await commercialStore.observe(measurementCredentials(request), { stage, inputType, sourceMode: "live", outcome }); }
+  catch { console.error("MEASUREMENT_OBSERVATION_UNAVAILABLE"); }
 }
 
 async function recordSourceMetric(record) {
@@ -500,22 +584,29 @@ async function handleScreenshotExtraction(request, response) {
     }
     throw error;
   }
+  const costs = await requestCostContext(request);
   const imageDataUrl = body?.imageDataUrl;
+  await observeMeasurement(request, "input", "screenshot", "started");
   let result;
   let cacheStatus = "miss";
   try {
     validateImageDataUrl(imageDataUrl);
     const fingerprint = imageContentFingerprint(imageDataUrl);
-    const cached = await visionResultCache.getOrLoad(fingerprint, () => visionConcurrency.run(async () => {
+    const cached = await requestCosts.cached(visionResultCache, fingerprint, costs, "screenshot_extraction", (loadId) => visionConcurrency.run(async () => {
       const budget = await dailyBudget.consume("vision_requests", dailyLimits.visionRequests);
       response.setHeader("X-Daily-Budget-Remaining", String(budget.remaining));
+      let activeProvider;
+      const measuredFetch = requestCosts.trackedFetch(costs, () => ({ provider: activeProvider.name,
+        operation: "screenshot_extraction", sku: activeProvider.model, loadId, fallback: activeProvider.name !== visionCapabilities.primaryProvider }));
       const extracted = await extractScreenshotWithFallback({
         imageDataUrl,
         env: process.env,
+        fetchImpl: measuredFetch,
         beforeProviderAttempt: async (provider) => {
           await admitProviderCall(provider.name);
           if (provider.name === "qwen") await dailyBudget.consume("vision_qwen_attempts", dailyLimits.visionQwenAttempts);
           else if (provider.name === "openai") await dailyBudget.consume("vision_openai_fallback_attempts", dailyLimits.visionFallbackAttempts);
+          activeProvider = provider;
         }
       });
       await recordVisionAttempts(extracted.attempts);
@@ -550,6 +641,7 @@ async function handleScreenshotExtraction(request, response) {
     sendJson(response, 500, { code: "VISION_INTERNAL_ERROR", error: "Screenshot extraction failed unexpectedly" });
     return;
   }
+  await observeMeasurement(request, "input", "screenshot");
   sendJson(response, 200, {
     extraction: result.extraction,
     provider: result.provider,

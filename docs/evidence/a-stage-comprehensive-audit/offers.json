@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "scope": "offline_offer_research_snapshot_only",
+  "evidenceType": "synthetic",
+  "realWorldEvidence": false,
+  "releaseGateEvidence": false,
+  "realOffersActivated": false,
+  "networkCalls": 0,
+  "realCustomerRecordsStored": false,
+  "interviewAssertions": {
+    "suppliedRecords": 6,
+    "suppliedUniqueActualMaintainersWithTaskReference": 6,
+    "actualMaintainerEvidenceVerified": false
+  },
+  "audiences": {
+    "consumer": {
+      "offerVersions": [
+        {
+          "offerId": "synthetic-consumer",
+          "offerVersion": "synthetic-v1",
+          "status": "draft",
+          "price": {
+            "currency": "JPY",
+            "amountMinor": 321,
+            "taxTreatment": "pending_confirmation"
+          },
+          "period": {
+            "unit": "one_time",
+            "count": 1
+          },
+          "costEvidenceStatus": "pending_confirmation",
+          "costEvidenceCompleteForSuppliedOffer": false,
+          "approvedActivationClaim": "not_approved",
+          "evidenceType": "synthetic"
+        }
+      ],
+      "interestChoices": {
+        "interested": 1,
+        "not_needed": 1,
+        "too_expensive": 1,
+        "unsure": 1
+      },
+      "layers": {
+        "interested": {
+          "records": 1,
+          "uniqueSubjects": null
+        },
+        "explicit_price_accepted": {
+          "records": 0,
+          "uniqueSubjects": 0
+        },
+        "contracted": {
+          "records": 0,
+          "uniqueSubjects": 0
+        },
+        "real_task_provided": {
+          "records": 0,
+          "uniqueSubjects": 0
+        },
+        "paid": {
+          "records": 0,
+          "uniqueSubjects": 0
+        },
+        "delivered": {
+          "records": 0,
+          "uniqueSubjects": 0
+        },
+        "accepted": {
+          "records": 0,
+          "uniqueSubjects": 0
+        },
+        "renewed": {
+          "records": 0,
+          "uniqueSubjects": 0
+        },
+        "refunded": {
+          "records": 0,
+          "uniqueSubjects": 0
+        }
+      },
+      "currencies": {},
+      "paymentUnverifiedRecords": 0,
+      "priceOrCurrencyMismatchRecords": 0,
+      "paidCyclesAwaitingDelivery": 0,
+      "deliveredCyclesAwaitingAcceptance": 0,
+      "acceptanceRevisionMismatchRecords": 0,
+      "renewalWithoutVerifiedPriorCycleRecords": 0
+    },
+    "business_maintenance": {
+      "offerVersions": [
+        {
+          "offerId": "synthetic-maintenance",
+          "offerVersion": "synthetic-v1",
+          "status": "draft",
+          "price": {
+            "currency": "JPY",
+            "amountMinor": 12345,
+            "taxTreatment": "pending_confirmation"
+          },
+          "period": {
+            "unit": "month",
+            "count": 1
+          },
+          "costEvidenceStatus": "pending_confirmation",
+          "costEvidenceCompleteForSuppliedOffer": false,
+          "approvedActivationClaim": "not_approved",
+          "evidenceType": "synthetic"
+        }
+      ],
+      "interestChoices": {
+        "interested": 0,
+        "not_needed": 0,
+        "too_expensive": 0,
+        "unsure": 0
+      },
+      "layers": {
+        "interested": {
+          "records": 0,
+          "uniqueSubjects": null
+        },
+        "explicit_price_accepted": {
+          "records": 2,
+          "uniqueSubjects": 2
+        },
+        "contracted": {
+          "records": 2,
+          "uniqueSubjects": 2
+        },
+        "real_task_provided": {
+          "records": 2,
+          "uniqueSubjects": 2
+        },
+        "paid": {
+          "records": 2,
+          "uniqueSubjects": 2
+        },
+        "delivered": {
+          "records": 4,
+          "uniqueSubjects": 2
+        },
+        "accepted": {
+          "records": 4,
+          "uniqueSubjects": 2
+        },
+        "renewed": {
+          "records": 2,
+          "uniqueSubjects": 2
+        },
+        "refunded": {
+          "records": 1,
+          "uniqueSubjects": 1
+        }
+      },
+      "currencies": {
+        "JPY": {
+          "minorUnitDigits": 0,
+          "receivedKnownSubtotalMinor": 49380,
+          "refundedKnownSubtotalMinor": 1000,
+          "netKnownSubtotalMinor": 48380,
+          "completeFinancialCoverage": false
+        }
+      },
+      "paymentUnverifiedRecords": 0,
+      "priceOrCurrencyMismatchRecords": 0,
+      "paidCyclesAwaitingDelivery": 0,
+      "deliveredCyclesAwaitingAcceptance": 0,
+      "acceptanceRevisionMismatchRecords": 0,
+      "renewalWithoutVerifiedPriorCycleRecords": 0
+    }
+  },
+  "sameVersionAcceptanceAndTask": [
+    {
+      "offerId": "synthetic-maintenance",
+      "offerVersion": "synthetic-v1",
+      "suppliedSubjectsWithPriceAcceptanceAndTask": 2
+    }
+  ],
+  "diagnostics": {
+    "invalidRecords": {},
+    "duplicateRecords": 0,
+    "conflictingRecords": 0,
+    "unknownOfferVersionRecords": 0,
+    "audienceMismatchRecords": 0,
+    "outsideOfferValidityRecords": 0,
+    "conflictingPaymentEvidence": 0,
+    "duplicatePaymentEvidence": 0,
+    "syntheticRecords": 29,
+    "unverifiedLocalRecords": 0
+  },
+  "gates": {
+    "G1": {
+      "status": "evidence_insufficient",
+      "reasons": [
+        "offline_assertions_are_not_verified_human_evidence",
+        "gq_evidence_not_verified",
+        "actual_interviews_and_exact_offer_task_acceptance_require_review"
+      ]
+    },
+    "GB": {
+      "status": "evidence_insufficient",
+      "reasons": [
+        "offline_assertions_are_not_verified_commercial_evidence",
+        "per_customer_first_and_paid_renewal_delivery_acceptance_require_review",
+        "complete_per_cycle_cost_and_positive_contribution_require_review"
+      ]
+    }
+  },
+  "limitations": [
+    "Interest, explicit price acceptance, contract, real task, reconciled payment, delivery, acceptance, paid renewal and refund are counted separately; none implies another.",
+    "Consumer and business maintenance assertions are separate. Missing, unverified, mismatched and conflicting evidence never becomes a paid conversion.",
+    "Offer versions are immutable identities: old acceptance and task records do not transfer to changed prices, scope or terms.",
+    "Known currency subtotals are supplied snapshot amounts, not verified revenue, complete customer margins or company profit. Currencies are never added.",
+    "No contacts, free text, customer material, payment documents or source contents are accepted. IDs are local opaque references only.",
+    "This module has no intake storage, network, payment, delivery or service activation side effects. G1/GB and release remain evidence_insufficient."
+  ],
+  "inputMode": "built_in_synthetic_only",
+  "snapshotBoundary": {
+    "maxBytes": 5242880,
+    "maxRecords": 10000,
+    "maxOffers": 100,
+    "maxInterviews": 100,
+    "networkCalls": 0,
+    "realCustomerDataAuthorized": false,
+    "suppliedAssertionsVerified": false
+  }
+}

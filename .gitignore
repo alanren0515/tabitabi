@@ -4,6 +4,8 @@
 output/playwright/
 output/manual/
 output/platform-audit/
+output/ui-refinement-2026-10-05/*.jpg
+!output/ui-refinement-2026-10-05/home-final-*.jpg
 .env
 .env.local
 .env.*.local
@@ -13,4 +15,7 @@ data/daily-budget.json
 data/provider-circuit.json
 data/release-evidence/
 data/monitoring/
+data/benchmark-baselines/
+data/commercial-state.json
+data/commercial-state.json.tmp-*
 eval/latest-*-results.json

@@ -13,7 +13,10 @@ export function protectedPilotApiPath(method, pathname) {
   if (String(method || "").toUpperCase() !== "POST") return false;
   return pathname === "/api/extract-screenshot"
     || pathname === "/api/extract-webpage"
+    || pathname === "/api/price-signals"
     || pathname === "/api/events"
+    || pathname === "/api/measurement-flows"
+    || pathname === "/api/research-consent"
     || pathname.startsWith("/api/restaurants/");
 }
 

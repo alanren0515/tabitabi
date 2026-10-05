@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 2,
+  "domain": "saved",
+  "items": [
+    {
+      "schemaVersion": 2,
+      "id": "48c85e4c-6347-4db7-8e94-85b9a1c46f58",
+      "restaurantId": "google:fixture-place",
+      "legacyId": "google:fixture-place",
+      "revision": 4,
+      "sourceMode": "live",
+      "placeId": "fixture-place",
+      "name": "検証食堂",
+      "userClues": {
+        "name": "検証食堂",
+        "area": "東京"
+      },
+      "requiresRefresh": true,
+      "planDate": "",
+      "planTime": "",
+      "partySize": 2,
+      "planStatus": "information_needed",
+      "userProgress": "reserved_by_user",
+      "note": "友人との夕食メモ",
+      "lastAnalyzedAt": "2026-10-02T19:51:58.691Z",
+      "lastReviewedAt": "2026-10-03T03:47:33.860Z",
+      "lastReviewOutcome": "unknown",
+      "savedAt": "2026-10-02T19:51:58.691Z",
+      "updatedAt": "2026-10-03T03:47:33.860Z"
+    },
+    {
+      "schemaVersion": 2,
+      "id": "81265157-75c8-499e-9a47-fc6324070de1",
+      "restaurantId": "google:fixture-place",
+      "legacyId": null,
+      "revision": 1,
+      "sourceMode": "live",
+      "placeId": "fixture-place",
+      "name": "検証食堂",
+      "userClues": {
+        "name": "検証食堂",
+        "area": "東京"
+      },
+      "requiresRefresh": true,
+      "planDate": "2026-10-10",
+      "planTime": "",
+      "partySize": 2,
+      "planStatus": "information_needed",
+      "userProgress": "reserved_by_user",
+      "note": "友人との夕食メモ",
+      "lastAnalyzedAt": null,
+      "lastReviewedAt": null,
+      "lastReviewOutcome": null,
+      "savedAt": "2026-10-03T03:48:03.021Z",
+      "updatedAt": "2026-10-03T03:48:03.021Z"
+    },
+    {
+      "schemaVersion": 2,
+      "id": "bbea3b04-651a-456f-843d-6391735e6152",
+      "restaurantId": "google:branch-a",
+      "legacyId": null,
+      "revision": 1,
+      "sourceMode": "live",
+      "placeId": "branch-a",
+      "name": "分店",
+      "userClues": {
+        "name": "分店",
+        "branch": "同名店"
+      },
+      "requiresRefresh": true,
+      "planDate": "",
+      "planTime": "",
+      "partySize": 2,
+      "planStatus": "information_needed",
+      "userProgress": "want_to_go",
+      "note": "東京店の予定A",
+      "lastAnalyzedAt": null,
+      "lastReviewedAt": null,
+      "lastReviewOutcome": null,
+      "savedAt": "2026-10-03T07:52:27.085Z",
+      "updatedAt": "2026-10-03T07:52:27.085Z"
+    },
+    {
+      "schemaVersion": 2,
+      "id": "69f6a8b6-6382-4b39-96c7-08d8977f2001",
+      "restaurantId": "google:branch-b",
+      "legacyId": null,
+      "revision": 1,
+      "sourceMode": "live",
+      "placeId": "branch-b",
+      "name": "分店",
+      "userClues": {
+        "name": "分店",
+        "branch": "同名店"
+      },
+      "requiresRefresh": true,
+      "planDate": "",
+      "planTime": "",
+      "partySize": 2,
+      "planStatus": "information_needed",
+      "userProgress": "want_to_go",
+      "note": "横浜店の予定B",
+      "lastAnalyzedAt": null,
+      "lastReviewedAt": null,
+      "lastReviewOutcome": null,
+      "savedAt": "2026-10-03T07:52:40.499Z",
+      "updatedAt": "2026-10-03T07:52:40.499Z"
+    }
+  ],
+  "status": "ready",
+  "omittedCount": 0
+}

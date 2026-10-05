@@ -21,7 +21,7 @@ test("returns explicitly marked fallback candidates for unknown input", () => {
 
 test("maps recommendation enum to user-facing copy", () => {
   assert.equal(recommendationLabel("walk_in_ok"), "直接来店を検討");
-  assert.equal(recommendationLabel("unexpected"), "情報を確認中");
+  assert.equal(recommendationLabel("unexpected"), "店舗への確認が必要です");
 });
 
 test("matches the restaurant extracted from the supplied TikTok screenshot", () => {

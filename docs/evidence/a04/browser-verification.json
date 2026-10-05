@@ -1,0 +1,40 @@
+{
+  "evidenceType": "isolated_local_browser_with_provider_stubs",
+  "realWorldEvidence": false,
+  "paidProviderCalls": 0,
+  "browser": "Codex in-app Browser",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "completedAnalyses": 1,
+  "completedLiveAnalyses": 1,
+  "flows": [
+    {
+      "inputType": "webpage",
+      "inputAttemptObserved": false,
+      "inputSuccessObserved": false,
+      "invalidSequence": true
+    },
+    {
+      "inputType": "webpage",
+      "inputAttemptObserved": true,
+      "inputSuccessObserved": true,
+      "invalidSequence": false
+    },
+    {
+      "inputType": "webpage",
+      "inputAttemptObserved": true,
+      "inputSuccessObserved": false,
+      "invalidSequence": false
+    }
+  ],
+  "requestAttempts": 4,
+  "verifiedFlowAttempts": 4,
+  "unknownPriceAttempts": 4,
+  "notes": [
+    "First navigation reused older offline shell; input observation missing and flow remained unknown. Reloaded flow completed live; old flow was not upgraded.",
+    "Pure reservation URL only records a real input attempt; no successful input or completed analysis.",
+    "Provider dispatches were local stub responses; these counts do not prove actual supplier calls or business metrics."
+  ]
+}

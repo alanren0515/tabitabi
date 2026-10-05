@@ -1,18 +1,27 @@
-import { confidenceLabel, recommendationLabel } from "./analyzer.js";
+import { resolveAuditSession, auditNavigationPath } from "./audit-session.js";
+import { offerResearchHtml, offerResearchCopy } from "./offer-research-ui.js";
+import { savedListHtml, queueListHtml, localRecordHtml, taskListActions, taskRecoveryHtml, taskNavigationHtml, batchSummaryHtml, verificationSummaryHtml } from "./local-task-ui.js";
+import { createLocalTaskStorage, restoreDeletedTasks } from "./local-task-storage.js";
+import { taskCopy } from "./task-copy.js";
+import { demoRestaurants } from "./data.js";
+import { exampleRestaurant } from "./example-experience.js";
+import { confidenceLabel } from "./analyzer.js";
 import { buildRestaurantQuery, extractionReviewState, formatBudget, isKnownSampleScreenshot, mergeScreenshotSupplemental, normalizeExtraction, sampleTikTokExtraction, selectExtractedRestaurant } from "./screenshot-extraction.js";
-import { createSavedPlan, normalizeSavedPlans, PLAN_STATUSES, sortSavedPlansByUrgency, updateSavedPlan } from "./saved-plans.js";
+import { createSavedPlan, normalizeSavedPlans, PLAN_STATUSES, sortSavedPlansByUrgency, updateSavedPlan, searchSavedPlans, recordPlanReview, savedPlanMatchesRestaurant, cleanTimestamp } from "./saved-plans.js";
 import { deleteLocalData, LOCAL_STORAGE_KEY, summarizeLocalData, VISIT_STORAGE_KEY } from "./privacy-data.js";
 import { candidateDecision, rejectCandidate, restoreCandidates, visibleCandidates } from "./candidate-selection.js";
 import { localizedCandidateDecisionCopy as resolveLocalizedCandidateDecisionCopy } from "./candidate-copy.js";
-import { resultActionCopy as resolveResultActionCopy } from "./result-actions.js";
+import { resultActionCopy as resolveResultActionCopy, resultLinkHtml } from "./result-actions.js";
 import { PUBLIC_TERMS_SECTIONS, TERMS_EFFECTIVE_DATE, TERMS_SECTIONS } from "./terms-data.js";
 import { addRecentAnalysis, createRecentAnalysis, normalizeRecentAnalyses, RECENT_STORAGE_KEY } from "./recent-analyses.js";
 import { buildSharePayload } from "./share-result.js";
 import { DEFAULT_SETTINGS, loadSettingsFromStorage, normalizeSettings, persistentSettings, pilotAccessHeaders, pilotAccessLocked, pilotAccessRejected, savePilotAccessForSession, settingsFromForm, settingsWithoutPilotAccess, SETTINGS_STORAGE_KEY } from "./settings.js";
-import { addPendingRestaurants, normalizePendingAnalyses, parseBatchRestaurantLines, pendingAnalysisToTextExtraction, PENDING_STORAGE_KEY, removePendingAnalysis, restaurantClueKey } from "./analysis-queue.js";
+import { addPendingRestaurants, addPendingRestaurantsWithReport, batchProgress, pausePendingAnalysis, pendingWork, recoverPendingAnalyses, transitionPendingAnalysis, normalizePendingAnalyses, parseBatchRestaurantLines, pendingAnalysisToTextExtraction, PENDING_STORAGE_KEY, removePendingAnalysis, restaurantClueKey } from "./analysis-queue.js";
 import { parseShareTarget, urlWithoutShareTarget } from "./shared-input.js";
 import { createCapabilitiesLoader } from "./capabilities.js";
 import { clipboardScreenshotFile, optimizeScreenshotFile, SCREENSHOT_ACCEPT, validateScreenshotFile } from "./image-input.js";
+import { createMeasurementClient, measurementActionCapability } from "./measurement-client.js";
+import { researchCopy } from "./research-copy.js";
 import { sendEvent } from "./event-client.js";
 import { pathnameForView, viewFromPathname } from "./client-routes.js";
 import { SUPPORTED_LOCALES, localeNumberFormat, translate } from "./i18n.js";
@@ -23,17 +32,23 @@ const app = document.querySelector("#app");
 const toast = document.querySelector("#toast");
 const routeStatus = document.querySelector("#route-status");
 const loadCapabilities = createCapabilitiesLoader();
-const AUDIT_SESSION_KEY = "tabitabi-audit-session-v1";
 const DEFAULT_PUBLIC_OPERATOR_NAME = "Ren";
 const DEFAULT_PUBLIC_CONTACT_EMAIL = "rgq.alan515@gmail.com";
+const deviceStorage = safeStorage("localStorage");
+const pageSessionStorage = safeStorage("sessionStorage");
+function safeStorage(name) { try { return window[name]; } catch { return null; } }
 const initialParams = new URLSearchParams(window.location.search);
-if (initialParams.get("audit") === "1") sessionStorage.setItem(AUDIT_SESSION_KEY, "1");
-const trafficType = sessionStorage.getItem(AUDIT_SESSION_KEY) === "1" ? "audit" : "product";
-const initialSettings = loadSettingsFromStorage(localStorage, sessionStorage);
+const auditSession = resolveAuditSession({ search: window.location.search, storage: pageSessionStorage });
+const trafficType = auditSession.trafficType;
+const taskStorage = createLocalTaskStorage({ storage: deviceStorage });
+const localData = Object.fromEntries(["saved", "recent", "pending"].map(domain => [domain, taskStorage.load(domain)]));
+const initialSettings = loadSettingsFromStorage(deviceStorage, pageSessionStorage);
 const initialSharedInput = parseShareTarget(window.location.search);
-if (initialParams.get("share") === "1" || initialParams.get("audit") === "1") {
+const campaignId = /^[a-z0-9_-]{1,40}$/.test(initialParams.get("campaign") || "") ? initialParams.get("campaign") : undefined;
+if (initialParams.get("share") === "1" || initialParams.get("audit") === "1" || initialParams.has("campaign")) {
   const cleanUrl = new URL(urlWithoutShareTarget(window.location.href), window.location.origin);
-  cleanUrl.searchParams.delete("audit");
+  if (!auditSession.active || auditSession.persisted) cleanUrl.searchParams.delete("audit");
+  cleanUrl.searchParams.delete("campaign");
   history.replaceState(null, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
 }
 const state = {
@@ -72,13 +87,30 @@ const state = {
   restaurant: null,
   planEditorOpen: false,
   deleteConfirmOpen: false,
-  saved: normalizeSavedPlans(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]")),
-  recent: normalizeRecentAnalyses(JSON.parse(localStorage.getItem(RECENT_STORAGE_KEY) || "[]")),
-  pending: normalizePendingAnalyses(JSON.parse(localStorage.getItem(PENDING_STORAGE_KEY) || "[]")),
+  saved: localData.saved.items,
+  recent: localData.recent.items,
+  pending: recoverPendingAnalyses(localData.pending.items),
   activePendingId: null,
+  activePlanId: null,
+  savedSearch: "",
+  localDetail: null,
+  localDetailDomain: "",
+  localUndo: null,
   settings: initialSettings
 };
 
+const measurement = createMeasurementClient({
+  fetchImpl: (...args) => fetch(...args), storage: deviceStorage, sessionStorage: pageSessionStorage,
+  cryptoImpl: globalThis.crypto, headers: () => pilotAccessHeaders(state.settings),
+  onChange: () => renderResearchPanel()
+});
+window.addEventListener("storage", () => measurement.syncResearch());
+window.addEventListener("online", () => {
+  if (measurement.research.state === "pending_revocation") void measurement.retryResearch();
+});
+if (measurement.research.state === "pending_revocation") void measurement.retryResearch();
+let researchBusy = false;
+let workGeneration=0;
 let lastRenderedView = "";
 let lastRenderedLocale = "";
 let uploadOptimizationJob = 0;
@@ -117,6 +149,8 @@ function esc(value = "") {
 function t(key, variables = {}) {
   return translate(state.settings.locale, key, variables);
 }
+
+function tx(key, variables = {}) { return taskCopy(currentLocale(), key, variables); }
 
 function currentLocale() {
   return state.settings.locale || "ja";
@@ -162,6 +196,15 @@ function localizedPlanStatus(value) {
 function syncShellLanguage() {
   const locale = currentLocale();
   document.documentElement.lang = locale;
+  const testBanner = document.querySelector("#test-mode-banner");
+  if (testBanner) {
+    testBanner.hidden = !auditSession.active;
+    if (auditSession.active) {
+      testBanner.querySelector("strong").textContent = t("testing.title");
+      testBanner.querySelector("p").textContent = t("testing.body");
+      testBanner.querySelector("small").textContent = t(auditSession.persisted ? "testing.tabs" : "testing.linkPersistence");
+    }
+  }
   document.querySelector('meta[name="description"]')?.setAttribute("content", t("meta.description"));
   document.querySelector(".brand")?.setAttribute("aria-label", t("shell.home"));
   const languageSelect = document.querySelector("#language-select");
@@ -198,32 +241,39 @@ function showToast(message) {
 }
 
 function syncSaved() {
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.saved));
+  localData.saved = taskStorage.write("saved", state.saved);
+  state.saved = localData.saved.items;
   document.querySelector("#saved-count").textContent = state.saved.length;
   document.querySelector('[data-action="saved"]')?.setAttribute("aria-label", t("shell.count", { label: t("route.saved"), count: state.saved.length }));
 }
 
 function syncRecent() {
-  localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(state.recent));
+  localData.recent = taskStorage.write("recent", state.recent);
+  state.recent = localData.recent.items;
   const count = document.querySelector("#history-count");
   if (count) count.textContent = state.recent.length;
   document.querySelector('[data-action="history"]')?.setAttribute("aria-label", t("shell.count", { label: t("route.history"), count: state.recent.length }));
 }
 
 function syncSettings() {
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(persistentSettings(state.settings)));
-  savePilotAccessForSession(state.settings, sessionStorage);
+  try { deviceStorage?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(persistentSettings(state.settings))); } catch {}
+  savePilotAccessForSession(state.settings, pageSessionStorage);
 }
 
 function syncPending() {
-  localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(state.pending));
+  localData.pending = taskStorage.write("pending", state.pending);
+  state.pending = localData.pending.items;
   const count = document.querySelector("#pending-count");
-  if (count) count.textContent = state.pending.length;
+  if (count) count.textContent = pendingWork(state.pending).length;
 }
 
 function render() {
   const viewChanged = state.view !== lastRenderedView;
   const localeChanged = currentLocale() !== lastRenderedLocale;
+  const previousFocus = app.contains(document.activeElement) ? document.activeElement : null;
+  const listFocus = !viewChanged && ["saved", "history", "queue"].includes(state.view) && previousFocus;
+  const deleting = previousFocus?.matches("[data-delete-saved],[data-delete-recent],[data-delete-pending],[data-clear-domain]");
+  const undoing = previousFocus?.matches("[data-undo-domain]");
   if (state.view !== "loading") app.removeAttribute("aria-busy");
   if (state.view === "home") renderHome();
   if (state.view === "extraction") renderExtraction();
@@ -233,6 +283,7 @@ function render() {
   if (state.view === "loading") renderLoading();
   if (state.view === "result") renderResult();
   if (state.view === "saved") renderSaved();
+  if (state.view === "local_detail") renderLocalDetail();
   if (state.view === "history") renderHistory();
   if (state.view === "queue") renderQueue();
   if (state.view === "pilot") renderPilot();
@@ -245,6 +296,13 @@ function render() {
   syncRecent();
   syncSettings();
   syncPending();
+  renderStorageNotice();
+  if (listFocus && !previousFocus.isConnected) {
+    const target = deleting ? app.querySelector("[data-undo-domain]") : undoing ? app.querySelector("[data-open-saved],[data-open-recent],[data-open-pending]") : null;
+    const fallback = target || app.querySelector(".section-heading h2") || app;
+    if (!fallback.hasAttribute("tabindex") && !fallback.matches("button,input")) fallback.tabIndex = -1;
+    fallback.focus({ preventScroll: true });
+  }
   document.title = state.view === "pilot" ? (isPublicRelease() ? ({ ja: "公開ベータについて | TabiTabi", en: "About the public beta | TabiTabi", "zh-CN": "关于公开测试 | TabiTabi" }[currentLocale()] || t("meta.pilotTitle")) : t("meta.pilotTitle")) : state.view === "privacy" ? t("meta.privacyTitle") : state.view === "terms" ? t("meta.termsTitle") : t("meta.title");
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
@@ -271,11 +329,6 @@ function renderHome() {
       <div class="hero-intro">
         <h1>${t("home.title")}</h1>
         <p class="hero-copy">${t("home.copy")}</p>
-        <ol class="route-steps" aria-label="${t("home.routeLabel")}">
-          <li class="is-active"><span aria-hidden="true"></span><strong>${t("home.routeFind")}</strong></li>
-          <li><span aria-hidden="true"></span><strong>${t("home.routeConfirm")}</strong></li>
-          <li><span aria-hidden="true"></span><strong>${t("home.routeAct")}</strong></li>
-        </ol>
       </div>
       <div class="hero-workbench">
       ${state.sharedInputPending ? `<aside class="shared-input-banner"><strong>${t("home.sharedTitle")}</strong><span>${t("home.sharedBody")}</span></aside>` : ""}
@@ -317,9 +370,10 @@ function renderHome() {
           <button data-example="京都 喫茶 こもれび">${t("home.demoCafe")}</button>
         </div>
       </details>
+      ${taskNavigationHtml("home", { tx })}
       </div>
     </section>
-    ${state.pending.length ? `<section class="recent-preview queue-preview"><div><p class="overline">${t("home.queueOverline")}</p><h2>${t("home.queueTitle")}</h2></div><div class="recent-preview-list">${state.pending.slice(0, 3).map((item) => `<button data-open-pending="${esc(item.id)}"><strong>${esc(item.clues.name)}</strong><span>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || t("queue.locationUnknown"))}</span></button>`).join("")}</div><button class="text-button" data-action="queue">${t("home.viewAll", { count: state.pending.length })}</button></section>` : ""}
+    ${pendingWork(state.pending).length ? `<section class="recent-preview queue-preview"><div><p class="overline">${t("home.queueOverline")}</p><h2>${t("home.queueTitle")}</h2></div><div class="recent-preview-list">${pendingWork(state.pending).slice(0, 3).map((item) => `<button data-open-pending="${esc(item.id)}"><strong>${esc(item.draft.clues.name)}</strong><span>${esc([item.draft.clues.branch, item.draft.clues.area || item.draft.clues.address].filter(Boolean).join(" · ") || t("queue.locationUnknown"))}</span></button>`).join("")}</div><button class="text-button" data-action="queue">${t("home.viewAll", { count: pendingWork(state.pending).length })}</button></section>` : ""}
     ${state.recent.length ? `<section class="recent-preview"><div><p class="overline">${t("home.recentOverline")}</p><h2>${t("home.recentTitle")}</h2></div><div class="recent-preview-list">${state.recent.slice(0, 3).map((item) => `<button data-open-recent="${esc(item.id)}"><strong>${esc(item.name)}</strong><span>${esc(item.area || t("history.areaUnknown"))} · ${formatClientTime(item.analyzedAt)}</span></button>`).join("")}</div><button class="text-button" data-action="history">${t("home.viewAll", { count: state.recent.length })}</button></section>` : ""}
     <section class="promise-strip" aria-label="${t("home.promiseLabel")}">
       <article><span class="promise-dot" aria-hidden="true"></span><div><strong>${t("home.routeFind")}</strong><small>${t("home.promise1Body")}</small></div></article>
@@ -497,6 +551,7 @@ async function handleAnalyze(event) {
   state.input = value || state.uploadName;
   state.sharedInputPending = false;
   state.activePendingId = null;
+  state.activePlanId = null;
   state.userProvidedReservationLinks = [];
   state.analysisError = "";
   state.analysisErrorTarget = "";
@@ -504,9 +559,15 @@ async function handleAnalyze(event) {
   state.searchRecovery = null;
   state.restaurant = null;
   state.currentPlanIntent = { planDate: "", planTime: "", partySize: state.settings.defaultPartySize };
+  const generation=++workGeneration;
   state.analysisRunId = createAnalysisRunId();
   state.analysisInputType = classifyInputType(value, Boolean(state.uploadFile));
   state.analysisSourceMode = state.exampleInput ? "demo" : "live";
+  if (event.submitter) event.submitter.disabled = true;
+  await measurement.start({ kind: "analysis", inputType: state.analysisInputType,
+    sourceMode: state.analysisSourceMode, trafficType, campaignId, batchId: measurement.newBatchId() });
+  if(generation!==workGeneration) return;
+  void measurement.emit("analysis_started");
   postEvent("input_submitted", {
     inputType: state.analysisInputType,
     sourceMode: state.analysisSourceMode
@@ -518,11 +579,13 @@ async function handleAnalyze(event) {
     render();
     try {
       const result = await extractScreenshot(state.uploadFile);
+      if(generation!==workGeneration) return;
       if (result.mode === "sample") {
         state.analysisSourceMode = "demo";
         state.exampleInput = true;
       }
       const supplemental = value ? await extractTextInput(value) : null;
+      if(generation!==workGeneration) return;
       state.extraction = mergeScreenshotSupplemental(result.extraction, supplemental);
       if (supplemental) state.currentPlanIntent = withDefaultPlan(supplemental.plan);
       state.extractionMode = result.mode;
@@ -533,6 +596,8 @@ async function handleAnalyze(event) {
       state.view = "extraction";
       render();
     } catch (error) {
+      if(generation!==workGeneration) return;
+      void measurement.emit("analysis_failed", { failureStage: "extraction" });
       state.analysisError = error.message || t("error.retryOrName");
       state.analysisErrorTarget = "upload";
       state.loadingMode = "";
@@ -545,6 +610,7 @@ async function handleAnalyze(event) {
 
   try {
     const parsed = await extractTextInput(value);
+    if(generation!==workGeneration) return;
     state.textExtraction = parsed;
     state.userProvidedReservationLinks = (parsed.links || []).filter((link) => link.linkType).map((link) => ({ url: link.url }));
     state.currentPlanIntent = withDefaultPlan(parsed.plan);
@@ -553,6 +619,7 @@ async function handleAnalyze(event) {
       state.view = "loading";
       render();
       const webpage = await extractWebpageInput(parsed.links[0]?.url);
+      if(generation!==workGeneration) return;
       state.textExtraction = {
         ...parsed,
         kind: "webpage_clues",
@@ -577,6 +644,8 @@ async function handleAnalyze(event) {
     state.view = "text_extraction";
     render();
   } catch (error) {
+    if(generation!==workGeneration) return;
+    void measurement.emit("analysis_failed", { failureStage: "input" });
     if (recoverFromPilotAccessError(error)) return;
     state.analysisError = error.message || t("error.searchUnavailable");
     state.analysisErrorTarget = "clue";
@@ -588,7 +657,7 @@ async function handleAnalyze(event) {
 async function extractTextInput(text) {
   const response = await fetch("/api/extract-text", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings), ...measurement.requestHeaders("text") },
     body: JSON.stringify({ text })
   });
   const payload = await response.json().catch(() => ({}));
@@ -599,7 +668,7 @@ async function extractTextInput(text) {
 async function extractWebpageInput(url) {
   const response = await fetch("/api/extract-webpage", {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
+    headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings), ...measurement.requestHeaders() },
     body: JSON.stringify({ url })
   });
   const payload = await response.json().catch(() => ({}));
@@ -621,18 +690,34 @@ function renderTextExtraction() {
       ${compactLocation ? `<p class="review-location-summary"><strong>${t("review.locationSummary")}</strong><span>${esc(compactLocation)}</span></p>` : ""}
       <details class="review-more"><summary>${t("review.more")}</summary><div class="field-pair"><label>${t("review.area")}<input name="area" value="${esc(clues.area)}"></label><label>${t("review.address")}<input name="address" value="${esc(clues.address)}"></label></div></details>
       ${clues.aliasExpanded ? `<aside class="alias-expansion"><strong>${t("review.aliasTitle")}</strong><span>${esc(clues.originalName)} → ${esc(clues.name)}</span><p>${t("review.aliasBody")}</p></aside>` : ""}
+      <details class="review-more"><summary>${t("review.plan")}</summary><div class="plan-fields"><label>${t("plan.date")}<input type="date" name="planDate" value="${esc(state.currentPlanIntent.planDate)}"></label><label>${t("plan.time")}<input type="time" name="planTime" value="${esc(state.currentPlanIntent.planTime)}"></label><label>${t("plan.party")}<input type="number" name="partySize" min="1" max="20" value="${state.currentPlanIntent.partySize || state.settings.defaultPartySize}"></label></div></details>
       ${hasPlanDetails ? `<div class="plan-preview"><strong>${t("review.plan")}</strong><span>${parsed.plan.planDate || t("review.dateUnknown")} · ${parsed.plan.planTime || t("review.timeUnknown")} · ${t("review.people", { count: state.currentPlanIntent.partySize })}</span></div>` : ""}
       ${parsed.kind === "pending_analysis" ? `<aside class="link-capability"><p>${t("review.pendingNotice")}</p></aside>` : parsed.webpage ? `<aside class="link-capability"><p>${t("review.webNotice")}</p><a href="${esc(safeExternalUrl(parsed.webpage.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.sourceLanguage")}</a></aside>` : parsed.links.length ? `<aside class="link-capability"><strong>${esc(parsedPlatformLabel)}</strong><p>${t("review.linkNotice")}</p></aside>` : ""}
       <button class="primary-button" type="submit">${t("review.search")} ${icons.arrow}</button>
     </form></section>
   </section>`;
+  document.querySelector("#text-extraction-form").addEventListener("input",event=>{
+    const values=Object.fromEntries(new FormData(event.currentTarget));
+    state.currentClues={...state.textExtraction.clues,name:values.name,branch:values.branch,area:values.area,address:values.address};
+    state.textExtraction={...state.textExtraction,clues:state.currentClues};
+    if(values.planDate!==undefined) state.currentPlanIntent={planDate:values.planDate,planTime:values.planTime,partySize:values.partySize};
+    saveActiveDraft("paused");
+  });
+  if(state.activePendingId) {
+    const button=document.createElement("button");button.type="button";button.className="secondary-button";button.textContent=tx("pause");
+    button.addEventListener("click",()=>{saveActiveDraft("paused");state.activePendingId=null;state.view="queue";render();});
+    document.querySelector("#text-extraction-form").append(button);
+  }
   document.querySelector("#text-extraction-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = Object.fromEntries(new FormData(event.currentTarget));
     const search = [form.name, form.branch, form.area, form.address].filter(Boolean).join(" ");
-    try { await searchCandidates(search, form); }
+    state.currentPlanIntent={planDate:form.planDate,planTime:form.planTime,partySize:Number(form.partySize)};
+    state.textExtraction={...state.textExtraction,plan:state.currentPlanIntent};
+    try { await searchCandidates(search, {name:form.name,branch:form.branch,area:form.area,address:form.address}); }
     catch (error) {
       if (recoverFromPilotAccessError(error)) return;
+      saveActiveDraft("failed","input");
       state.view = "text_extraction";
       showToast(error.message || t("error.searchUnavailable"));
       render();
@@ -640,11 +725,13 @@ function renderTextExtraction() {
   });
 }
 
-function enterSearchRecovery({ reason = "unavailable", query = state.input, clues = state.currentClues } = {}) {
+function enterSearchRecovery({ reason = "unavailable", query = state.input, clues = state.currentClues, message = "", failureStage = "search" } = {}) {
+  void measurement.emit("analysis_failed", { failureStage: "search" });
+  saveActiveDraft("failed",failureStage);
   state.loadingMode = "";
   state.candidates = [];
   state.candidateMode = "live";
-  state.searchRecovery = { reason, query: String(query || ""), clues: { ...clues } };
+  state.searchRecovery = { reason, query: String(query || ""), clues: { ...clues }, message };
   state.view = "search_recovery";
   render();
 }
@@ -657,6 +744,7 @@ function renderSearchRecovery() {
     <section class="panel recovery-card" role="alert">
       <span class="recovery-mark" aria-hidden="true">?</span>
       <div><p class="overline">${t("recovery.overline")}</p><h2>${t(noResults ? "recovery.noResultsTitle" : "recovery.unavailableTitle")}</h2><p>${t(noResults ? "recovery.noResultsBody" : "recovery.unavailableBody")}</p></div>
+      ${recovery.message ? `<p class="inline-error" role="status">${esc(recovery.message)}</p>` : ""}
       <ul><li>${t("recovery.tipName")}</li><li>${t("recovery.tipLocation")}</li><li>${t("recovery.tipBranch")}</li></ul>
       <div class="recovery-actions"><button class="primary-button" id="retry-search">${t("recovery.retry")}</button><button class="secondary-button" data-edit-clues>${t("recovery.edit")}</button></div>
     </section>
@@ -673,17 +761,20 @@ function renderSearchRecovery() {
   document.querySelectorAll("[data-recovery-example]").forEach((button) => button.addEventListener("click", () => openExampleExperience(button.dataset.recoveryExample)));
 }
 
-function returnToClues(reason = "no_match") {
-  state.homeRecoveryNotice = reason === "example" ? "" : t(reason === "unavailable" ? "home.searchUnavailableNotice" : "home.noMatchNotice");
-  state.analysisError = "";
-  state.analysisErrorTarget = "";
-  state.searchRecovery = null;
-  state.view = "home";
+function returnToClues(reason="no_match") {
+  state.activePlanId=null;
+  state.analysisError=""; state.analysisErrorTarget="";state.searchRecovery=null;
+  state.candidates=[];state.confirmedCandidate=null;state.restaurant=null;
+  if(state.extraction) {state.extraction={...state.extraction,restaurant:{...state.extraction.restaurant,...state.currentClues}};state.view="extraction";}
+  else if(state.textExtraction) {state.textExtraction={...state.textExtraction,clues:{...state.textExtraction.clues,...state.currentClues},plan:state.currentPlanIntent};state.view="text_extraction";}
+  else state.view="home";
   render();
-  requestAnimationFrame(() => document.querySelector("#clue")?.focus());
 }
 
 function openExampleExperience(query) {
+  detachPendingWork();
+  resetCurrentSearchState();
+  measurement.reset();
   state.input = String(query || "");
   state.exampleInput = true;
   state.analysisInputType = "example";
@@ -807,6 +898,11 @@ function renderExtraction() {
     <dialog class="screenshot-dialog" id="screenshot-dialog"><div><button type="button" data-close-screenshot>${t("extraction.closeImage")}</button><img src="${state.uploadPreviewUrl}" alt="${t("extraction.imageAlt")}"></div></dialog>
   </section>`;
 
+  document.querySelector("#extraction-form").addEventListener("input",event=>{
+    const values=Object.fromEntries(new FormData(event.currentTarget));
+    state.currentClues={...state.extraction.restaurant,name:values.restaurant_name,branch:values.branch,address:values.address,nearest_station:values.nearest_station};
+    state.extraction={...state.extraction,restaurant:state.currentClues};
+  });
   document.querySelector("#extraction-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -831,6 +927,8 @@ function renderExtraction() {
       checkbox?.focus();
       return;
     }
+    state.currentClues = clues;
+    state.extraction={...state.extraction,restaurant:{...state.extraction.restaurant,...clues}};
     state.input = [clues.name, clues.branch, clues.address || clues.area || clues.nearest_station].filter(Boolean).join(" ");
     try {
       await searchCandidates(state.input, clues);
@@ -851,17 +949,17 @@ function renderExtraction() {
   document.querySelector("[data-close-screenshot]")?.addEventListener("click", () => screenshotDialog?.close());
   document.querySelectorAll("[data-extracted-restaurant]").forEach((button) => button.addEventListener("click", () => {
     state.extraction = selectExtractedRestaurant(state.extraction, Number(button.dataset.extractedRestaurant));
+    state.currentClues={...state.extraction.restaurant};
     state.input = buildRestaurantQuery(state.extraction);
     renderExtraction();
   }));
   document.querySelector("#queue-extracted")?.addEventListener("click", () => {
-    const before = state.pending.length;
-    state.pending = addPendingRestaurants(state.pending, e.restaurants, { excludeRestaurant: r, sourcePlatform: e.platform });
-    const added = state.pending.length - before;
+    const report=addPendingRestaurantsWithReport(state.pending,e.restaurants,{excludeRestaurant:r,sourcePlatform:e.platform,batchId:measurement.flow?.batchId});
+    state.pending=report.items;
     syncPending();
     postEvent("pending_queue_added", { queueCount: state.pending.length });
     renderExtraction();
-    showToast(added ? t("queue.addedOther", { count: added }) : t("queue.duplicateOther"));
+    showToast(tx("capacity",{added:report.addedCount,duplicate:report.duplicateCount,rejected:report.rejectedCount}));
   });
 }
 
@@ -939,6 +1037,7 @@ async function openConfirmedCandidate(focus) {
   if (state.candidateMode === "live") {
     await loadRestaurantDetails(candidate, {
       recordConfirmation: false,
+      identityConfirmedAt: new Date().toISOString(),
       selectedRank: candidate.rank,
       candidateCount: state.candidates.length,
       returnView: "candidates"
@@ -970,13 +1069,15 @@ function renderResultActionCard(r, { primaryAction, mapUrl, mapsIsPrimary, saved
   const actionLabel = currentLocale() === "ja" && actionCopy.label ? esc(actionCopy.label) : t(actionCopy.buttonKey);
   return `<article class="action-card"><p class="overline">${t("result.next")}</p><h3>${t(actionCopy.headingKey)}</h3>
     ${renderCurrentOpeningStatus(r.currentOpeningHours)}
-    <a class="primary-button" id="primary-action" data-action-type="${esc(actionCopy.type)}" href="${esc(actionCopy.href)}" ${actionCopy.type === "phone" ? "" : 'target="_blank" rel="noreferrer"'}>${actionLabel} ${actionCopy.type === "phone" ? icons.phone : icons.arrow}</a>
-    ${mapUrl !== "#" && !mapsIsPrimary ? `<a class="secondary-button map-action" id="map-action" data-action-type="map" href="${esc(mapUrl)}" target="_blank" rel="noreferrer">${t("result.actionMap")} ${icons.arrow}</a>` : ""}
-    <details class="action-more" ${state.planEditorOpen ? "open" : ""}><summary>${t("result.otherActions")}</summary><div>
-      ${r.phone && actionCopy.type !== "phone" ? `<a class="secondary-button" id="phone-action" href="tel:${esc(r.phone)}">${icons.phone} ${esc(r.phone)} · ${t("result.phone")}</a>` : ""}
+    <p class="action-boundary">${isExampleRestaurant(r) ? tx("exampleActionBody") : `${r.recommendation === "unknown" || r.confidence === "low" || r.confidence === "低" ? `${tx("uncertainBoundary")} ` : ""}${tx("actionBoundary")}`}</p>
+    ${resultLinkHtml({href:actionCopy.href,labelHtml:`${actionLabel} ${actionCopy.type === "phone" ? icons.phone : icons.arrow}`,className:"primary-button",id:"primary-action",actionType:actionCopy.type,example:isExampleRestaurant(r)})}
+    ${mapUrl !== "#" && !mapsIsPrimary ? resultLinkHtml({href:mapUrl,labelHtml:`${t("result.actionMap")} ${icons.arrow}`,className:"secondary-button map-action",id:"map-action",actionType:"map",example:isExampleRestaurant(r)}) : ""}
+    ${isExampleRestaurant(r) ? `<p id="example-action-status" class="example-action-status" role="status"></p>` : ""}
+    <button class="secondary-button save-plan-action" id="save-button">${icons.bookmark} ${saved ? t("result.editPlan") : t("result.savePlan")}</button>
+    ${state.planEditorOpen ? renderPlanForm(savedPlan, r) : ""}
+    <details class="action-more"><summary>${t("result.otherActions")}</summary><div>
+      ${r.phone && actionCopy.type !== "phone" ? resultLinkHtml({href:`tel:${r.phone}`,labelHtml:`${icons.phone} ${esc(r.phone)} · ${t("result.phone")}`,className:"secondary-button",id:"phone-action",example:isExampleRestaurant(r)}) : ""}
       <button class="secondary-button" id="share-result">${t("result.share")}</button>
-      <button class="secondary-button" id="save-button">${icons.bookmark} ${saved ? t("result.editPlan") : t("result.savePlan")}</button>
-      ${state.planEditorOpen ? renderPlanForm(savedPlan, r) : ""}
     </div></details>
   </article>`;
 }
@@ -987,6 +1088,7 @@ function resultActionCopy(action, restaurant) {
 
 function returnToCandidates() {
   if (!state.candidates.length) return;
+  state.activePlanId=null;
   state.confirmedCandidate = null;
   state.restaurant = null;
   state.planEditorOpen = false;
@@ -999,22 +1101,24 @@ function returnToCandidates() {
 function renderResult() {
   const r = state.restaurant;
   const exampleMode = isExampleRestaurant(r);
-  const saved = state.saved.some((item) => item.id === r.id);
+  const saved = Boolean(currentSavedPlan());
   const primaryAction = r.primaryAction || (r.booking ? { label: r.booking.label, url: r.booking.url, type: "open_booking_source" } : null);
   const resolvedPrimaryAction = resultActionCopy(primaryAction, r);
   const mapUrl = safeExternalUrl(r.mapSearchUrl || r.googleMapsUri || "");
   const mapsIsPrimary = resolvedPrimaryAction.type === "map";
   const reservationOptions = Array.isArray(r.reservationOptions) ? r.reservationOptions : [];
   const displayedReservationOptions = reservationOptions.filter((option) => option.provider !== "google_maps");
-  const savedPlan = state.saved.find((item) => item.id === r.id);
+  const savedPlan = currentSavedPlan();
   app.innerHTML = `<section class="content-view result-view">
     <div class="result-nav">${state.candidates.length ? `<button class="back-button candidate-return-button" id="choose-another-candidate">${t("result.chooseCandidate")}</button>` : ""}<button class="back-button result-home-button" data-action="home">${t("result.newSearch")}</button></div>
     ${exampleMode ? `<aside class="example-mode-banner result-example-banner" role="status"><strong>${t("example.bannerTitle")}</strong><span>${t("example.resultBody")}</span></aside>` : ""}
     ${currentLocale() !== "ja" ? `<aside class="language-beta-note result-language-note"><strong>${t("language.beta")}</strong><span>${t("result.dynamicNotice")}</span></aside>` : ""}
-    ${state.pending.length ? `<aside class="result-queue"><div><strong>${t("result.moreQueue", { count: state.pending.length })}</strong><span>${t("result.moreQueueBody")}</span></div><button id="continue-pending">${t("result.nextQueue")} ${icons.arrow}</button></aside>` : ""}
+    ${pendingWork(state.pending).length ? `<aside class="result-queue"><div><strong>${t("result.moreQueue", { count: pendingWork(state.pending).length })}</strong><span>${t("result.moreQueueBody")}</span></div><button id="continue-pending">${t("result.nextQueue")} ${icons.arrow}</button></aside>` : ""}
     <div class="result-title"><div><span class="category-line">${[r.category, r.price].filter(Boolean).map(esc).join(" · ")}</span><h1>${esc(r.name)}</h1><p>${[r.reading, r.area].filter(Boolean).map(esc).join(" · ")}</p></div>${exampleMode ? `<span class="demo-pill">${t("example.badge")}</span>` : ""}</div>
-    <div class="decision-grid">${renderResultActionCard(r, { primaryAction, mapUrl, mapsIsPrimary, savedPlan, saved })}${renderResultDecisionCard(r)}</div>
-    ${r.conflict ? `<aside class="conflict"><strong>${currentLocale() === "ja" ? esc(r.conflictTitle || "情報が一致していません") : t("result.conflict")}</strong><p lang="ja">${esc(r.conflict)}</p></aside>` : ""}
+    ${r.conflict && !exampleMode ? `<aside class="conflict"><strong>${currentLocale() === "ja" ? esc(r.conflictTitle || "情報が一致していません") : t("result.conflict")}</strong><p lang="ja">${esc(r.conflict)}</p></aside>` : ""}
+    <div class="decision-grid">${renderResultDecisionCard(r)}${renderResultActionCard(r, { primaryAction, mapUrl, mapsIsPrimary, savedPlan, saved })}</div>
+    ${verificationSummaryHtml(r,{tx,esc,formatTime:formatClientTime})}
+    ${!exampleMode ? `<details class="issue-card"><summary>${tx("issue")}</summary><form id="issue-form"><label>${tx("issue")}<select name="issueCategory">${["wrong_branch","wrong_link","outdated_info","unclear_condition","other"].map(value=>`<option value="${value}">${tx(value)}</option>`).join("")}</select></label><button>${tx("issue")}</button><p role="status"></p></form></details>` : ""}
     <details class="result-more"><summary><span>${t("result.moreTitle")}</span><small>${t("result.moreBody")}</small></summary><div class="result-more-body">
     ${r.reservationGuidance ? `<section class="panel reservation-guidance"><div><p class="overline">${t("result.reservationRules")}</p><h2 lang="ja">${esc(r.reservationGuidance.label)}</h2><p lang="ja">${esc(r.reservationGuidance.excerpt)}</p><small>${t("result.ruleBoundary")}</small></div><a href="${esc(safeExternalUrl(r.reservationGuidance.sourceUrl))}" target="_blank" rel="noreferrer">${t("result.openOriginal")} ${icons.arrow}</a></section>` : ""}
     ${displayedReservationOptions.length ? `<section class="panel reservation-options"><div class="panel-heading"><div><p class="overline">${t("result.options")}</p><h2>${t("result.optionsTitle")}</h2></div><span>${t("result.optionsBody")}</span></div><div class="reservation-option-grid">${displayedReservationOptions.map((option) => `<a class="reservation-option ${reservationOptionClass(option)}" href="${esc(option.url)}" ${option.actionType === "phone" ? "" : 'target="_blank" rel="noreferrer"'} data-reservation-provider="${esc(option.provider)}" data-action-type="${esc(option.actionType)}"><span>${reservationOptionBadge(option)}</span><strong>${esc(option.label)}</strong><small>${esc(currentLocale() === "ja" ? option.capability?.label || reservationModeLabel(option.bookingMode) : reservationModeLabel(option.bookingMode))}</small>${option.capability?.confirmation ? `<em lang="ja">${esc(option.capability.confirmation)}</em>` : ""}${option.feeNote ? `<p lang="ja">${esc(option.feeNote)}</p>` : ""}</a>`).join("")}</div></section>` : ""}
@@ -1043,27 +1147,70 @@ function renderResult() {
     </form></section>
   </section>`;
   document.querySelector("#choose-another-candidate")?.addEventListener("click", returnToCandidates);
+  if (exampleMode) {
+    // Includes facts, sources and optional booking links, not just the main CTA.
+    document.querySelectorAll(".result-view a[href]").forEach(link => {
+      link.outerHTML = resultLinkHtml({ href: link.getAttribute("href"), labelHtml: link.innerHTML, className: link.className, id: link.id, actionType: link.dataset.actionType, reservationProvider: link.dataset.reservationProvider, example: true });
+    });
+  }
+  const simulateExampleAction = () => {
+    document.querySelector("#example-action-status").textContent = tx("exampleActionDone");
+    showToast(tx("exampleActionDone"));
+  };
+  document.querySelectorAll("[data-example-action]").forEach(button => button.addEventListener("click", simulateExampleAction));
   document.querySelector("#save-button").addEventListener("click", toggleSaved);
-  document.querySelector("#continue-pending")?.addEventListener("click", () => openPendingAnalysis(state.pending[0]?.id));
+  document.querySelector("#continue-pending")?.addEventListener("click", () => openPendingAnalysis(pendingWork(state.pending)[0]?.id));
   document.querySelector("#plan-form")?.addEventListener("submit", savePlanFromForm);
+  document.querySelector("#plan-form")?.addEventListener("input",event=>{
+    const values=Object.fromEntries(new FormData(event.currentTarget));
+    state.currentPlanIntent={planDate:values.planDate,planTime:values.planTime,partySize:Number(values.partySize)};
+  });
+  document.querySelector("#issue-form")?.addEventListener("submit",async event=>{
+    event.preventDefault(); const form=event.currentTarget; const button=form.querySelector("button");button.disabled=true;
+    const issueCategory=new FormData(form).get("issueCategory");
+    const accepted=await measurement.emit("issue_reported",{issueCategory});
+    form.querySelector('[role="status"]').textContent=accepted ? tx("issueSent") : t("feedback.failed");
+    button.disabled=false;
+    if(accepted && issueCategory==="wrong_branch") returnToCandidates();
+  });
   document.querySelector("#cancel-plan")?.addEventListener("click", () => { state.planEditorOpen = false; render(); });
   document.querySelector("#primary-action")?.addEventListener("click", (event) => {
+    if (exampleMode) return;
     const actionType = event.currentTarget.dataset.actionType;
-    postEvent("primary_action_clicked", { actionType });
+    const option = state.restaurant?.reservationOptions?.find(item => item.url === event.currentTarget.getAttribute("href"));
+    postEvent("primary_action_clicked", { actionType, actionCapability: measurementActionCapability(actionType, option) });
     if (actionType === "phone") postEvent("phone_button_clicked", { actionType });
     else if (actionType === "open_booking_source") postEvent("booking_link_clicked", { actionType });
   });
+  document.querySelector("#map-action")?.addEventListener("click", () => { if (!exampleMode) postEvent("primary_action_clicked", { actionType: "map" }); });
   document.querySelector("#phone-action")?.addEventListener("click", () => {
+    if (exampleMode) return;
     postEvent("primary_action_clicked", { actionType: "phone" });
     postEvent("phone_button_clicked", { actionType: "phone" });
   });
-  document.querySelector("#share-result")?.addEventListener("click", shareCurrentResult);
+  document.querySelector("#share-result")?.addEventListener("click", exampleMode ? simulateExampleAction : shareCurrentResult);
   document.querySelectorAll("[data-reservation-provider]").forEach((link) => link.addEventListener("click", () => {
+    if (exampleMode) return;
     const actionType = link.dataset.actionType || "reservation_option";
-    postEvent("primary_action_clicked", { actionType });
+    const option = state.restaurant?.reservationOptions?.find(item => item.url === link.getAttribute("href"));
+    postEvent("primary_action_clicked", { actionType, actionCapability: measurementActionCapability(actionType, option) });
     if (actionType === "phone") postEvent("phone_button_clicked", { actionType });
     else if (actionType === "open_booking_source") postEvent("booking_link_clicked", { actionType });
   }));
+  if(!exampleMode) {
+    const card=offerResearchHtml(state.capabilities?.offerResearch,{locale:currentLocale(),esc});
+    if(card) app.insertAdjacentHTML("beforeend",card);
+    document.querySelector("#offer-research-form")?.addEventListener("submit",async event=>{
+      event.preventDefault();const form=event.currentTarget;const button=form.querySelector("button");button.disabled=true;
+      const copy=offerResearchCopy(currentLocale());const choice=new FormData(form).get("choice");
+      try {
+        const response=await fetch("/api/price-signals",{method:"POST",headers:{"Content-Type":"application/json",...pilotAccessHeaders(state.settings)},body:JSON.stringify({schemaVersion:1,offerId:form.dataset.offerId,offerVersion:form.dataset.offerVersion,choice,sourceContext:measurement.flow?.kind==="review"?"completed_review":"completed_analysis"})});
+        const payload=await response.json();
+        if(!response.ok || payload.accepted!==true) throw new Error("PRICE_SIGNAL_REJECTED");
+        form.querySelector('[role="status"]').textContent=copy.accepted;
+      } catch {form.querySelector('[role="status"]').textContent=copy.failed;button.disabled=false;}
+    });
+  }
   document.querySelector("#feedback-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -1106,7 +1253,6 @@ function reservationModeLabel(value) {
 }
 
 function localizedRecommendationLabel(value) {
-  if (currentLocale() === "ja") return recommendationLabel(value);
   return {
     strongly_recommended: t("result.recommendStrong"),
     recommended: t("result.recommend"),
@@ -1180,21 +1326,24 @@ function renderPlanForm(savedPlan, restaurant) {
   const date = savedPlan?.planDate || state.currentPlanIntent.planDate || "";
   const time = savedPlan?.planTime || state.currentPlanIntent.planTime || "";
   const party = savedPlan?.partySize || state.currentPlanIntent.partySize || state.settings.defaultPartySize;
-  const status = savedPlan?.planStatus || createSavedPlan({ restaurant }).planStatus;
-  return `<form id="plan-form" class="plan-form"><strong>${savedPlan ? t("plan.edit") : t("plan.add")}</strong><div class="plan-fields"><label>${t("plan.date")}<input type="date" name="planDate" value="${esc(date)}"></label><label>${t("plan.time")}<input type="time" name="planTime" value="${esc(time)}"></label><label>${t("plan.party")}<input type="number" name="partySize" min="1" max="20" value="${esc(party)}"></label><label>${t("plan.status")}<select name="planStatus">${PLAN_STATUSES.map((item) => `<option value="${item.value}" ${item.value === status ? "selected" : ""}>${localizedPlanStatus(item.value)}</option>`).join("")}</select></label></div><div class="plan-actions"><button type="button" id="cancel-plan">${t("plan.cancel")}</button><button type="submit">${savedPlan ? t("plan.saveChanges") : t("plan.addSaved")}</button></div></form>`;
+  const progress = savedPlan?.userProgress || "want_to_go";
+  return `<form id="plan-form" class="plan-form"><strong>${savedPlan ? t("plan.edit") : t("plan.add")}</strong><div class="plan-fields"><label>${t("plan.date")}<input type="date" name="planDate" value="${esc(date)}"></label><label>${t("plan.time")}<input type="time" name="planTime" value="${esc(time)}"></label><label>${t("plan.party")}<input type="number" name="partySize" min="1" max="20" value="${esc(party)}"></label><label>${tx("progress")}<select name="userProgress">${["want_to_go","reserved_by_user","visited","skipped"].map(value=>`<option value="${value}" ${value===progress?"selected":""}>${tx(value)}</option>`).join("")}</select></label></div><label>${tx("note")}<textarea name="note" maxlength="500" rows="3">${esc(savedPlan?.note || "")}</textarea></label><div class="plan-actions"><button type="button" id="cancel-plan">${t("plan.cancel")}</button>${savedPlan ? `<button type="submit" name="operation" value="new">${tx("newPlan")}</button>` : ""}<button type="submit">${savedPlan ? t("plan.saveChanges") : t("plan.addSaved")}</button></div></form>`;
 }
 
 function savePlanFromForm(event) {
   event.preventDefault();
   const values = Object.fromEntries(new FormData(event.currentTarget));
-  const existing = state.saved.find((item) => item.id === state.restaurant.id);
+  const existing = event.submitter?.value === "new" ? null : currentSavedPlan();
   const item = existing
     ? updateSavedPlan(existing, values)
-    : createSavedPlan({ restaurant: state.restaurant, userClues: state.currentClues, userLabel: state.extraction?.restaurant?.name || state.restaurant.userLabel || state.input, plan: values });
+    : createSavedPlan({ restaurant: state.restaurant, userClues: state.currentClues, userLabel: state.currentClues.name || state.extraction?.restaurant?.name || state.restaurant.userLabel, plan: values });
   state.saved = existing ? state.saved.map((saved) => saved.id === item.id ? item : saved) : [...state.saved, item];
+  state.activePlanId = item.id;
+  state.currentPlanIntent={planDate:item.planDate,planTime:item.planTime,partySize:item.partySize};
+  syncSaved();
   state.planEditorOpen = false;
   postEvent(existing ? "saved_plan_updated" : "saved_to_list", { planStatus: item.planStatus, hasDate: Boolean(item.planDate) });
-  showToast(existing ? t("plan.updated") : t("plan.saved"));
+  showToast(localData.saved.status === "ready" ? (existing ? t("plan.updated") : t("plan.saved")) : tx("storageError"));
   render();
 }
 
@@ -1216,6 +1365,7 @@ function clearUpload({ renderView = true } = {}) {
 }
 
 function resetCurrentSearchState() {
+  workGeneration++;
   clearUpload({ renderView: false });
   state.input = "";
   state.sharedInputPending = false;
@@ -1242,6 +1392,7 @@ function resetCurrentSearchState() {
   state.planEditorOpen = false;
   state.deleteConfirmOpen = false;
   state.activePendingId = null;
+  state.activePlanId = null;
 }
 
 async function extractScreenshot(file) {
@@ -1261,7 +1412,7 @@ async function extractScreenshot(file) {
   try {
     const response = await fetch("/api/extract-screenshot", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
+      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings), ...measurement.requestHeaders() },
       body: JSON.stringify({ imageDataUrl })
     });
     const payload = await response.json().catch(() => ({}));
@@ -1312,6 +1463,12 @@ async function getCapabilities({ force = false } = {}) {
 }
 
 async function searchCandidates(query, clues = {}) {
+  const generation=workGeneration;
+  state.currentClues = clues;
+  if(navigator.onLine===false) { enterSearchRecovery({query,clues,message:t("error.offline"),failureStage:"offline"}); return; }
+  try { await startPendingMeasurement(query); } catch(error) { if(generation!==workGeneration) return; throw error; }
+  if(generation!==workGeneration) return;
+  saveActiveDraft("reviewing");
   state.loadingMode = "search";
   state.currentClues = clues;
   state.view = "loading";
@@ -1329,6 +1486,7 @@ async function searchCandidates(query, clues = {}) {
     return;
   }
   const capabilities = await getCapabilities();
+  if(generation!==workGeneration) return;
   if (capabilities.capabilitiesUnavailable || !capabilities.placesSearch) {
     enterSearchRecovery({ reason: "unavailable", query, clues });
     return;
@@ -1338,24 +1496,27 @@ async function searchCandidates(query, clues = {}) {
   try {
     response = await fetch("/api/restaurants/search", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
+      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings), ...measurement.requestHeaders() },
       body: JSON.stringify({ query, clues })
     });
     payload = await response.json().catch(() => ({}));
+    if(generation!==workGeneration) return;
   } catch {
+    if(generation!==workGeneration) return;
     enterSearchRecovery({ reason: "failed", query, clues });
     return;
   }
   if (!response.ok) {
     const error = apiResponseError(payload, t("error.realSearch"));
     if (pilotAccessRejected(error)) throw error;
-    enterSearchRecovery({ reason: "failed", query, clues });
+    enterSearchRecovery({ reason: "failed", query, clues, message:error.message, failureStage:error.code?.includes("BUDGET")?"budget":"search" });
     return;
   }
   if (!payload.candidates?.length) {
     enterSearchRecovery({ reason: "no_results", query, clues });
     return;
   }
+  void measurement.emit("candidates_shown");
   state.candidates = payload.candidates;
   state.candidatePreviews = {};
   state.candidatePreviewLoadingId = "";
@@ -1369,29 +1530,36 @@ async function searchCandidates(query, clues = {}) {
 
 async function loadCandidatePreview(placeId) {
   if (!placeId || state.candidatePreviews[placeId] || state.candidatePreviewLoadingId) return;
+  const generation=workGeneration;
   state.candidatePreviewLoadingId = placeId;
   postEvent("candidate_preview_requested", { placeId, sourceMode: state.analysisSourceMode || "live" });
   renderCandidates();
   try {
     const response = await fetch("/api/restaurants/candidate-preview", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
+      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings), ...measurement.requestHeaders() },
       body: JSON.stringify({ placeId })
     });
     const payload = await response.json().catch(() => ({}));
+    if(generation!==workGeneration) return;
     if (!response.ok) throw apiResponseError(payload, t("error.rating"));
     state.candidatePreviews = { ...state.candidatePreviews, [placeId]: payload.preview };
     postEvent("candidate_preview_loaded", { placeId, sourceMode: state.analysisSourceMode || "live", cacheStatus: payload.cacheStatus });
   } catch (error) {
+    if(generation!==workGeneration) return;
     if (recoverFromPilotAccessError(error)) return;
     showToast(error.message || t("error.ratingShort"));
   } finally {
-    state.candidatePreviewLoadingId = "";
-    if (state.view === "candidates") renderCandidates();
+    if(generation===workGeneration) {
+      state.candidatePreviewLoadingId = "";
+      if (state.view === "candidates") renderCandidates();
+    }
   }
 }
 
 async function loadRestaurantDetails(candidate, selection = {}) {
+  const generation=workGeneration;
+  const identityConfirmedAt=cleanTimestamp(selection.identityConfirmedAt);
   const recordsNewAnalysis = selection.recordCompletion !== false;
   if (recordsNewAnalysis) state.analysisStartedAt = Date.now();
   state.loadingMode = "details";
@@ -1400,13 +1568,19 @@ async function loadRestaurantDetails(candidate, selection = {}) {
   try {
     const response = await fetch("/api/restaurants/details", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings) },
+      headers: { "Content-Type": "application/json", ...pilotAccessHeaders(state.settings), ...measurement.requestHeaders() },
       body: JSON.stringify({ placeId: candidate.placeId, clues: state.currentClues, plan: state.currentPlanIntent, userProvidedLinks: state.userProvidedReservationLinks })
     });
     const payload = await response.json().catch(() => ({}));
+    if(generation!==workGeneration) return;
     if (!response.ok) throw apiResponseError(payload, t("error.details"));
     if (selection.recordConfirmation !== false) postEvent("candidate_confirmed", { placeId: candidate.placeId, sourceMode: state.analysisSourceMode || "live", selectedRank: selection.selectedRank || null, candidateCount: selection.candidateCount || null });
     state.restaurant = payload.restaurant;
+    if(state.restaurant.verification) state.restaurant={...state.restaurant,verification:{...state.restaurant.verification,identityConfirmedAt:state.restaurant.sourceMode==="live" && state.restaurant.placeId===candidate.placeId ? identityConfirmedAt : null}};
+    if (state.activePlanId && state.restaurant.sourceMode === "live") {
+      state.saved = state.saved.map(item => item.id === state.activePlanId && savedPlanMatchesRestaurant(item,state.restaurant) ? recordPlanReview(item, { sourceMode: "live", requestStatus: "completed", resultGeneratedAt: state.restaurant.verification?.resultGeneratedAt, outcome: state.restaurant.verification?.actionEvidence || "unknown" }) : item);
+      syncSaved();
+    }
     if (state.restaurant.conflict) postEvent("source_conflict_seen");
     completeActivePendingAnalysis();
     rememberCurrentAnalysis();
@@ -1416,8 +1590,11 @@ async function loadRestaurantDetails(candidate, selection = {}) {
     if (recordsNewAnalysis) {
       postEvent("analysis_completed", { analysisDurationMs: Math.max(0, Date.now() - state.analysisStartedAt) });
       state.analysisStartedAt = null;
-    }
+    } else void measurement.emit("review_completed");
   } catch (error) {
+    if(generation!==workGeneration) return;
+    saveActiveDraft("failed",error.code==="DAILY_BUDGET_EXHAUSTED"?"budget":"details");
+    void measurement.emit(recordsNewAnalysis ? "analysis_failed" : "review_failed", { failureStage: recordsNewAnalysis ? "details" : "review" });
     if (recordsNewAnalysis) state.analysisStartedAt = null;
     if (recoverFromPilotAccessError(error)) return;
     state.view = selection.returnView || "candidates";
@@ -1427,13 +1604,14 @@ async function loadRestaurantDetails(candidate, selection = {}) {
 }
 
 function apiResponseError(payload = {}, fallbackMessage) {
-  const error = new Error(currentLocale() === "ja" ? payload.error || fallbackMessage : fallbackMessage);
+  const error = new Error(payload.code === "DAILY_BUDGET_EXHAUSTED" ? tx("budget") : currentLocale() === "ja" ? payload.error || fallbackMessage : fallbackMessage);
   error.code = typeof payload.code === "string" ? payload.code : "";
   return error;
 }
 
 function recoverFromPilotAccessError(error) {
   if (!pilotAccessRejected(error)) return false;
+  saveActiveDraft("failed","access");
   state.settings = settingsWithoutPilotAccess(state.settings);
   state.loadingMode = "";
   state.analysisError = t("error.accessInvalidBody");
@@ -1447,6 +1625,7 @@ function recoverFromPilotAccessError(error) {
 }
 
 function formatClientTime(value) {
+  if (!cleanTimestamp(value)) return tx("unknownTime");
   try {
     return new Intl.DateTimeFormat(currentLocale(), { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
   } catch {
@@ -1490,6 +1669,13 @@ function safeExternalUrl(value) {
 }
 
 function postEvent(event, extra = {}) {
+  const measuredEvent = { input_submitted: "input_submitted", restaurant_identified: "clues_extracted",
+    candidate_confirmed: "candidate_confirmed", analysis_completed: "analysis_completed",
+    saved_plan_updated: "saved_plan_updated", saved_to_list: "saved_plan_updated", primary_action_clicked: "primary_action_clicked" }[event];
+  if (measuredEvent) void measurement.emit(measuredEvent, {
+    sourceMode: extra.sourceMode || state.analysisSourceMode || state.restaurant?.sourceMode || "unknown",
+    ...(event === "primary_action_clicked" ? { actionCapability: extra.actionCapability || measurementActionCapability(extra.actionType) } : {})
+  });
   const payload = {
     event,
     placeId: state.restaurant?.placeId || null,
@@ -1508,11 +1694,11 @@ function createAnalysisRunId() {
 function recordVisit(now = Date.now()) {
   if (trafficType !== "product") return;
   let visit = {};
-  try { visit = JSON.parse(localStorage.getItem(VISIT_STORAGE_KEY) || "{}"); } catch { visit = {}; }
+  try { visit = JSON.parse(deviceStorage?.getItem(VISIT_STORAGE_KEY) || "{}"); } catch { visit = {}; }
   const firstSeenAt = Number(visit.firstSeenAt);
   const lastSeenAt = Number(visit.lastSeenAt);
   if (!Number.isFinite(firstSeenAt)) {
-    localStorage.setItem(VISIT_STORAGE_KEY, JSON.stringify({ firstSeenAt: now, lastSeenAt: now, returnWithin7DaysRecorded: false, returnAfter7DaysRecorded: false }));
+    try { deviceStorage?.setItem(VISIT_STORAGE_KEY, JSON.stringify({ firstSeenAt: now, lastSeenAt: now, returnWithin7DaysRecorded: false, returnAfter7DaysRecorded: false })); } catch {}
     postEvent("app_visit", { visitType: "first_open", analysisRunId: null });
     return;
   }
@@ -1526,7 +1712,7 @@ function recordVisit(now = Date.now()) {
     next.returnAfter7DaysRecorded = true;
     postEvent("app_visit", { visitType: "return_after_7d", analysisRunId: null });
   }
-  localStorage.setItem(VISIT_STORAGE_KEY, JSON.stringify(next));
+  try { deviceStorage?.setItem(VISIT_STORAGE_KEY, JSON.stringify(next)); } catch {}
 }
 
 function classifyInputType(value, hasUpload) {
@@ -1546,138 +1732,189 @@ function readFileAsDataUrl(file) {
   });
 }
 
+function currentSavedPlan() {
+  if (state.activePlanId) {
+    const active=state.saved.find(item=>item.id===state.activePlanId);
+    if(savedPlanMatchesRestaurant(active,state.restaurant)) return active;
+  }
+  return state.saved.find(item => savedPlanMatchesRestaurant(item,state.restaurant)
+    && item.planDate === (state.currentPlanIntent.planDate || "") && item.planTime === (state.currentPlanIntent.planTime || ""));
+}
 function renderSaved() {
-  const savedPlans = sortSavedPlansByUrgency(state.saved);
-  app.innerHTML = `<section class="content-view narrow saved-view">
-    <button class="back-button" data-action="home">${t("common.backHome")}</button>
-    <div class="section-heading"><span class="step-chip">${t("saved.step")}</span><h2>${t("saved.title")}</h2><p>${t("saved.body")}</p></div>
-    ${state.saved.length ? `<div class="saved-list">${savedPlans.map((r) => `<article><div class="saved-main"><span class="plan-status status-${esc(r.planStatus)}">${esc(localizedPlanStatus(r.planStatus))}</span>${r.sourceMode === "demo" ? `<span class="example-list-badge">${t("example.badge")}</span>` : ""}<h3>${esc(r.name)}</h3><p>${r.planDate ? `${esc(r.planDate)}${r.planTime ? ` · ${esc(r.planTime)}` : ""} · ${t("saved.people", { count: esc(r.partySize) })}` : `${t("saved.dateUnknown")} · ${t("saved.people", { count: esc(r.partySize) })}`}</p><small>${t("saved.lastCheck", { time: r.lastAnalyzedAt ? formatClientTime(r.lastAnalyzedAt) : t("saved.noRecord") })}</small></div><div class="saved-controls"><select data-plan-status="${esc(r.id)}" aria-label="${t("saved.updateAria", { name: esc(r.name) })}">${PLAN_STATUSES.map((item) => `<option value="${item.value}" ${item.value === r.planStatus ? "selected" : ""}>${localizedPlanStatus(item.value)}</option>`).join("")}</select><button data-open-saved="${esc(r.id)}" aria-label="${t("saved.recheckAria", { name: esc(r.name) })}">${icons.arrow}</button><button class="delete-plan" data-delete-saved="${esc(r.id)}" aria-label="${t("saved.deleteAria", { name: esc(r.name) })}">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>た</span><h3>${t("saved.emptyTitle")}</h3><p>${t("saved.emptyBody")}</p><button class="primary-button" data-action="home">${t("saved.start")} ${icons.arrow}</button></div>`}
-  </section>`;
-  document.querySelectorAll("[data-open-saved]").forEach((button) => button.addEventListener("click", async () => {
-    const item = state.saved.find((saved) => saved.id === button.dataset.openSaved);
-    resetAnalysisAttribution();
-    state.analysisInputType = "restaurant_name";
-    state.userProvidedReservationLinks = [];
-    if (item.requiresRefresh && item.placeId) {
-      state.currentClues = item.userClues || { name: item.name };
-      state.currentPlanIntent = { planDate: item.planDate || "", planTime: item.planTime || "", partySize: item.partySize || null };
-      await loadRestaurantDetails({ placeId: item.placeId }, { recordConfirmation: false, recordCompletion: false });
-    } else {
-      state.restaurant = item.snapshot || item;
-      state.view = "result";
-      render();
-    }
+  if (!state.saved.length) state.savedSearch = "";
+  app.innerHTML = savedListHtml(state, { t, tx, esc, formatTime: formatClientTime, needsRecovery: localData.saved.status !== "ready" });
+  document.querySelector("#saved-search-form")?.addEventListener("submit", event => {
+    event.preventDefault(); state.savedSearch = new FormData(event.currentTarget).get("query"); render();
+  });
+  document.querySelector("[data-reset-saved-search]")?.addEventListener("click", () => { state.savedSearch = ""; render(); });
+  document.querySelectorAll("[data-open-saved]").forEach(button => button.addEventListener("click", () => openLocalRecord("saved",button.dataset.openSaved)));
+  document.querySelectorAll("[data-recheck-saved]").forEach(button => button.addEventListener("click", () => recheckLocalRecord("saved",button.dataset.recheckSaved)));
+  document.querySelectorAll("[data-delete-saved]").forEach(button => button.addEventListener("click", () => deleteTaskRecord("saved",button.dataset.deleteSaved)));
+  attachTaskListActions();
+}
+function openLocalRecord(domain,id) {
+  const item = state[domain].find(entry=>entry.id===id);
+  if (!item) return;
+  resetCurrentSearchState(); resetAnalysisAttribution();
+  state.localDetail = item; state.localDetailDomain = domain;
+  state.activePlanId = domain === "saved" ? item.id : null;
+  state.view = "local_detail"; render();
+}
+function renderLocalDetail() {
+  const item = state[state.localDetailDomain]?.find(entry=>entry.id===state.localDetail?.id);
+  if (!item) { state.view="saved"; render(); return; }
+  app.innerHTML = localRecordHtml(item,state.localDetailDomain,{t,tx,esc,formatTime:formatClientTime});
+  document.querySelector("#local-plan-form")?.addEventListener("input",event=>{
+    const values=Object.fromEntries(new FormData(event.currentTarget));
+    state.saved=state.saved.map(entry=>entry.id===item.id?updateSavedPlan(entry,values):entry); syncSaved(); renderStorageNotice();
+  });
+  document.querySelector("#local-plan-form")?.addEventListener("submit",event=>{
+    event.preventDefault(); syncSaved(); render(); showToast(localData.saved.status==="ready" ? tx("save") : tx("storageError"));
+  });
+  document.querySelector("[data-recheck-local]")?.addEventListener("click",()=>recheckLocalRecord(state.localDetailDomain,item.id));
+  document.querySelector("[data-open-demo]")?.addEventListener("click",()=>{
+    const demo=demoRestaurants.find(entry=>entry.id===(item.restaurantId || item.id));
+    if (!demo) return;
+    resetAnalysisAttribution(); state.restaurant=exampleRestaurant(demo); state.view="result"; render();
+  });
+}
+async function recheckLocalRecord(domain,id) {
+  const item=state[domain].find(entry=>entry.id===id);
+  if (!item?.placeId || item.sourceMode !== "live") return;
+  if (navigator.onLine === false) { showToast(t("error.offline")); return; }
+  resetCurrentSearchState(); resetAnalysisAttribution(); state.activePlanId=domain==="saved"?item.id:null;
+  state.analysisInputType="restaurant_name"; state.userProvidedReservationLinks=[];
+  state.currentClues=item.userClues || {name:item.name};
+  state.currentPlanIntent=withDefaultPlan(item);
+  const generation=workGeneration;
+  await measurement.start({kind:"review",reviewIntent:domain==="saved"?"saved_plan_refresh":"history_open",sourceMode:"live",trafficType,campaignId});
+  if(generation!==workGeneration) return;
+  void measurement.emit("review_started");
+  await loadRestaurantDetails({placeId:item.placeId},{recordConfirmation:false,recordCompletion:false,returnView:domain==="saved"?"saved":"history"});
+}
+function deleteTaskRecord(domain,id) {
+  state.localUndo={domain,items:state[domain].filter(item=>item.id===id)};
+  state[domain]=state[domain].filter(item=>item.id!==id);
+  syncTaskDomain(domain); render();
+  showToast(tx("undo"));
+}
+function syncTaskDomain(domain) {
+  if(domain==="saved") syncSaved(); else if(domain==="recent") syncRecent(); else syncPending();
+}
+function attachTaskListActions() {
+  document.querySelectorAll("[data-export-domain]").forEach(button=>button.addEventListener("click",()=>{
+    const domain=button.dataset.exportDomain;
+    const payload=taskStorage.exportDomain(domain);
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    document.querySelector("#task-export-dialog")?.close();
+    const url=URL.createObjectURL(blob);
+    const dialog=document.createElement("dialog"); dialog.id="task-export-dialog"; dialog.className="task-export-dialog";
+    dialog.setAttribute("aria-labelledby","task-export-title");
+    dialog.innerHTML=`<h2 id="task-export-title">${tx("export")}</h2><p>${tx("exportBody")}</p>${payload.status!=="ready" || payload.omittedCount>0 ? `<p class="inline-error" role="alert">${tx("exportIncomplete")}</p>` : ""}<a class="primary-button" href="${esc(url)}" download="tabitabi-${esc(domain)}.json">${tx("download")}</a><details><summary>${tx("exportPreview")}</summary><label>${tx("exportContent")}<textarea readonly rows="12">${esc(JSON.stringify(payload,null,2))}</textarea></label></details><button data-close-export>${tx("close")}</button>`;
+    dialog.querySelector("[data-close-export]").addEventListener("click",()=>dialog.close());
+    dialog.addEventListener("close",()=>{URL.revokeObjectURL(url);dialog.remove();button.focus();},{once:true});
+    document.body.append(dialog); dialog.showModal();
   }));
-  document.querySelectorAll("[data-plan-status]").forEach((select) => select.addEventListener("change", () => {
-    state.saved = state.saved.map((item) => item.id === select.dataset.planStatus ? updateSavedPlan(item, { planStatus: select.value }) : item);
-    syncSaved();
-    postEvent("saved_plan_status_changed", { planStatus: select.value, analysisRunId: null });
-    renderSaved();
-    showToast(t("saved.statusUpdated"));
+  document.querySelectorAll("[data-clear-domain]").forEach(button=>button.addEventListener("click",()=>{
+    if (!window.confirm(tx("confirm"))) return;
+    const domain=button.dataset.clearDomain;
+    state.localUndo=(localData[domain].status==="corrupt" || localData[domain].omittedCount>0)?null:{domain,items:[...state[domain]]};
+    localData[domain]=taskStorage.clear(domain); state[domain]=localData[domain].items; render();
   }));
-  document.querySelectorAll("[data-delete-saved]").forEach((button) => button.addEventListener("click", () => {
-    state.saved = state.saved.filter((item) => item.id !== button.dataset.deleteSaved);
-    postEvent("removed_from_list", { analysisRunId: null });
-    showToast(t("saved.removed"));
-    renderSaved();
-    syncSaved();
-  }));
+  document.querySelectorAll("[data-undo-domain]").forEach(button=>{
+    button.disabled=state.localUndo?.domain!==button.dataset.undoDomain;
+    button.addEventListener("click",()=>{
+      const {domain,items}=state.localUndo;
+      const restored=restoreDeletedTasks(domain,state[domain],items);
+      if(!restored.restored) { showToast(tx("undoBlocked")); return; }
+      state[domain]=restored.items; state.localUndo=null; syncTaskDomain(domain); render();
+    });
+  });
+}
+function renderStorageNotice() {
+  document.querySelector("#task-storage-notice")?.remove();
+  const domains=Object.keys(localData).filter(domain=>localData[domain].status!=="ready");
+  if(!domains.length) return;
+  const notice=document.createElement("aside"); notice.id="task-storage-notice"; notice.className="inline-error"; notice.setAttribute("role","status");
+  notice.innerHTML="<p>"+esc(tx("storageError"))+"</p>"+domains.filter(domain=>localData[domain].omittedCount).map(domain=>"<p>"+esc(tx("omitted",{count:localData[domain].omittedCount}))+"</p>").join("")+"<button>"+esc(tx("retryStorage"))+"</button>";
+  notice.querySelector("button").addEventListener("click",()=>{for(const domain of domains){localData[domain]=taskStorage.retry(domain); state[domain]=localData[domain].items;} render();});
+  app.prepend(notice);
 }
 
 function renderHistory() {
   app.innerHTML = `<section class="content-view narrow saved-view">
     <button class="back-button" data-action="home">${t("common.backHome")}</button>
+    ${taskNavigationHtml("history", { tx })}
     <div class="section-heading"><span class="step-chip">${t("history.step")}</span><h2>${t("history.title")}</h2><p>${t("history.body")}</p></div>
-    ${state.recent.length ? `<div class="saved-list">${state.recent.map((item) => `<article><div class="saved-main"><span class="plan-status">${item.sourceMode === "live" ? t("history.live") : t("history.demo")}</span><h3>${esc(item.name)}</h3><p>${esc(item.area || t("history.areaUnknown"))}${item.planDate ? ` · ${esc(item.planDate)}${item.planTime ? ` ${esc(item.planTime)}` : ""} · ${t("saved.people", { count: esc(item.partySize) })}` : ""}</p><small>${t("history.checkedAt", { time: formatClientTime(item.analyzedAt) })}</small></div><div class="saved-controls history-controls"><button data-open-recent="${esc(item.id)}" aria-label="${t("history.openAria", { name: esc(item.name) })}">${icons.arrow}</button><button class="delete-plan" data-delete-recent="${esc(item.id)}" aria-label="${t("history.deleteAria", { name: esc(item.name) })}">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>た</span><h3>${t("history.emptyTitle")}</h3><p>${t("history.emptyBody")}</p><button class="primary-button" data-action="home">${t("saved.start")} ${icons.arrow}</button></div>`}
+    ${state.recent.length ? `<div class="saved-list">${state.recent.map((item) => `<article><div class="saved-main"><span class="plan-status">${item.sourceMode === "live" ? t("history.live") : t("history.demo")}</span><h3>${esc(item.name)}</h3><p>${esc(item.area || t("history.areaUnknown"))}${item.planDate ? ` · ${esc(item.planDate)}${item.planTime ? ` ${esc(item.planTime)}` : ""} · ${t("saved.people", { count: esc(item.partySize) })}` : ""}</p><small>${t("history.checkedAt", { time: formatClientTime(item.analyzedAt) })}</small></div><div class="saved-controls history-controls"><button data-open-recent="${esc(item.id)}" aria-label="${t("history.openAria", { name: esc(item.name) })}">${icons.arrow}</button><button class="delete-plan" data-delete-recent="${esc(item.id)}" aria-label="${t("history.deleteAria", { name: esc(item.name) })}">×</button></div></article>`).join("")}</div>` : localData.recent.status !== "ready" ? taskRecoveryHtml({tx}) : `<div class="empty-state"><span>た</span><h3>${t("history.emptyTitle")}</h3><p>${t("history.emptyBody")}</p><button class="primary-button" data-action="home">${t("saved.start")} ${icons.arrow}</button></div>`}
+    ${taskListActions("recent",{tx,esc,count:state.recent.length,canUndo:state.localUndo?.domain === "recent",needsRecovery:localData.recent.status !== "ready"})}
   </section>`;
+  document.querySelectorAll("[data-open-recent]").forEach(button => button.innerHTML = `${tx("open")} ${icons.arrow}`);
   document.querySelectorAll("[data-open-recent]").forEach((button) => button.addEventListener("click", () => openRecentAnalysis(button.dataset.openRecent)));
   document.querySelectorAll("[data-delete-recent]").forEach((button) => button.addEventListener("click", () => {
+    state.localUndo={domain:"recent",items:state.recent.filter(item=>item.id===button.dataset.deleteRecent)};
     state.recent = state.recent.filter((item) => item.id !== button.dataset.deleteRecent);
     syncRecent();
+    render();
     showToast(t("history.removed"));
-    renderHistory();
   }));
+  attachTaskListActions();
 }
 
 function renderQueue() {
-  app.innerHTML = `<section class="content-view narrow saved-view">
-    <button class="back-button" data-action="home">${t("common.backHome")}</button>
-    <div class="section-heading"><span class="step-chip">${t("queue.step")}</span><h2>${t("queue.title")}</h2><p>${t("queue.body")}</p></div>
-    <section class="panel batch-queue-panel"><p class="overline">${t("queue.batch")}</p><h3>${t("queue.batchTitle")}</h3><p>${t("queue.batchBody")}</p><form id="batch-queue-form"><textarea name="restaurants" rows="6" maxlength="10000" placeholder="${esc(t("queue.placeholder"))}"></textarea><div><small>${t("queue.limit")}</small><button type="submit">${t("queue.add")}</button></div></form></section>
-    ${state.pending.length ? `<div class="saved-list queue-list">${state.pending.map((item) => `<article><div class="saved-main"><span class="plan-status">${esc(platformLabel(item.sourcePlatform))}</span><h3>${esc(item.clues.name)}</h3><p>${esc([item.clues.branch, item.clues.area || item.clues.address].filter(Boolean).join(" · ") || t("queue.locationUnknown"))}</p><small>${t("queue.addedAt", { time: formatClientTime(item.addedAt) })}</small></div><div class="saved-controls history-controls"><button data-open-pending="${esc(item.id)}" aria-label="${t("queue.openAria", { name: esc(item.clues.name) })}">${icons.arrow}</button><button class="delete-plan" data-delete-pending="${esc(item.id)}" aria-label="${t("queue.deleteAria", { name: esc(item.clues.name) })}">×</button></div></article>`).join("")}</div>` : `<div class="empty-state"><span>✓</span><h3>${t("queue.emptyTitle")}</h3><p>${t("queue.emptyBody")}</p><button class="primary-button" data-action="home">${t("queue.addImage")} ${icons.arrow}</button></div>`}
-  </section>`;
-  document.querySelector("#batch-queue-form").addEventListener("submit", (event) => {
-    event.preventDefault();
-    const parsed = parseBatchRestaurantLines(new FormData(event.currentTarget).get("restaurants"));
-    if (!parsed.restaurants.length) {
-      showToast(t("queue.inputRequired"));
-      return;
-    }
-    const before = state.pending.length;
-    state.pending = addPendingRestaurants(state.pending, parsed.restaurants, { sourcePlatform: "unknown" });
-    const added = state.pending.length - before;
-    syncPending();
-    postEvent("pending_queue_added", { queueCount: state.pending.length, analysisRunId: null });
-    renderQueue();
-    showToast(parsed.truncated ? t("queue.addedTruncated", { count: added }) : added ? t("queue.added", { count: added }) : t("queue.duplicate"));
+  app.innerHTML=queueListHtml(state,{t,tx,esc,formatTime:formatClientTime,needsRecovery:localData.pending.status !== "ready"});
+  document.querySelector("#batch-queue-form").addEventListener("submit",event=>{
+    event.preventDefault(); const parsed=parseBatchRestaurantLines(new FormData(event.currentTarget).get("restaurants"));
+    const report=addPendingRestaurantsWithReport(state.pending,parsed.restaurants,{batchId:measurement.newBatchId()});
+    state.pending=report.items; syncPending(); render();
+    showToast(tx("capacity",{added:report.addedCount,duplicate:report.duplicateCount,rejected:report.rejectedCount+Math.max(0,parsed.totalLineCount-parsed.restaurants.length)}));
   });
-  document.querySelectorAll("[data-open-pending]").forEach((button) => button.addEventListener("click", () => openPendingAnalysis(button.dataset.openPending)));
-  document.querySelectorAll("[data-delete-pending]").forEach((button) => button.addEventListener("click", () => {
-    state.pending = removePendingAnalysis(state.pending, button.dataset.deletePending);
-    syncPending();
-    postEvent("pending_queue_removed", { queueCount: state.pending.length, analysisRunId: null });
-    renderQueue();
-    showToast(t("queue.removed"));
+  document.querySelectorAll("[data-open-pending]").forEach(button=>button.addEventListener("click",()=>openPendingAnalysis(button.dataset.openPending)));
+  document.querySelectorAll("[data-skip-pending]").forEach(button=>button.addEventListener("click",()=>{
+    state.pending=transitionPendingAnalysis(state.pending,button.dataset.skipPending,"skipped");syncPending();render();
   }));
+  document.querySelectorAll("[data-delete-pending]").forEach(button=>button.addEventListener("click",()=>deleteTaskRecord("pending",button.dataset.deletePending)));
+  document.querySelector("[data-clear-finished]")?.addEventListener("click",()=>{
+    state.localUndo={domain:"pending",items:state.pending.filter(item=>["completed","skipped"].includes(item.status))}; state.pending=pendingWork(state.pending);syncPending();render();
+  });
+  attachTaskListActions();
 }
-
-async function openPendingAnalysis(id) {
-  const item = state.pending.find((entry) => entry.id === id);
-  if (!item) return;
-  const capabilities = await getCapabilities();
-  if (capabilities.capabilitiesUnavailable) {
-    showToast(t("error.service"));
-    return;
-  }
-  const parsed = pendingAnalysisToTextExtraction(item, state.settings.defaultPartySize);
-  if (!parsed) return;
-  state.analysisRunId = createAnalysisRunId();
-  state.analysisSourceMode = "live";
-  state.analysisInputType = "restaurant_name";
-  state.exampleInput = false;
-  state.activePendingId = item.id;
-  state.userProvidedReservationLinks = [];
-  state.textExtraction = parsed;
-  state.currentPlanIntent = withDefaultPlan(parsed.plan);
-  state.input = parsed.searchQuery;
-  state.view = "text_extraction";
-  postEvent("input_submitted", { inputType: "restaurant_name", sourceMode: state.analysisSourceMode });
-  postEvent("restaurant_identified", { inputType: "restaurant_name", sourceMode: state.analysisSourceMode });
-  postEvent("pending_queue_opened", { queueCount: state.pending.length });
-  render();
+function openPendingAnalysis(id) {
+  const item=state.pending.find(entry=>entry.id===id);
+  if(!item || ["completed","skipped"].includes(item.status)) return;
+  resetCurrentSearchState(); resetAnalysisAttribution(); state.activePlanId=null; state.activePendingId=item.id;
+  state.analysisSourceMode="live"; state.analysisInputType="restaurant_name"; state.exampleInput=false;
+  state.userProvidedReservationLinks=[]; state.textExtraction=pendingAnalysisToTextExtraction(item,state.settings.defaultPartySize);
+  state.currentClues=state.textExtraction.clues; state.currentPlanIntent=withDefaultPlan(state.textExtraction.plan);
+  state.input=state.textExtraction.searchQuery; state.pendingAnalysisStarted=false; state.view="text_extraction";render();
 }
-
-function completeActivePendingAnalysis() {
-  if (!state.activePendingId) return;
-  state.pending = removePendingAnalysis(state.pending, state.activePendingId);
-  state.activePendingId = null;
+async function startPendingMeasurement(query) {
+  const generation=workGeneration;
+  if(!state.activePendingId || state.pendingAnalysisStarted) return;
+  const item=state.pending.find(entry=>entry.id===state.activePendingId);
+  state.analysisRunId=createAnalysisRunId();
+  await measurement.start({kind:"analysis",inputType:"restaurant_name",sourceMode:"live",trafficType,campaignId,...(item.batchId?{batchId:item.batchId}:{}),batchOriginKnown:Boolean(item.batchId)});
+  if(generation!==workGeneration) return;
+  void measurement.emit("analysis_started");postEvent("input_submitted",{inputType:"restaurant_name",sourceMode:"live"});
+  const parsed=await extractTextInput(query);
+  if(generation!==workGeneration) return;
+  if(parsed.clues?.name) postEvent("restaurant_identified",{inputType:"restaurant_name",sourceMode:"live"});
+  state.pendingAnalysisStarted=true;
+}
+function saveActiveDraft(status="paused",failureStage=null) {
+  if(!state.activePendingId) return;
+  if(status==="failed") state.pendingAnalysisStarted=false;
+  state.pending=transitionPendingAnalysis(state.pending,state.activePendingId,status,{draft:{clues:state.currentClues,plan:state.currentPlanIntent},failureStage});
   syncPending();
-  postEvent("pending_queue_completed", { queueCount: state.pending.length });
 }
-
-async function openRecentAnalysis(id) {
-  const item = state.recent.find((entry) => entry.id === id);
-  if (!item) return;
-  resetAnalysisAttribution();
-  state.analysisInputType = item.sourceMode === "demo" ? item.snapshot?.exampleInputType || "example" : "restaurant_name";
-  state.userProvidedReservationLinks = [];
-  state.currentClues = item.userClues || { name: item.name };
-  state.currentPlanIntent = { planDate: item.planDate || "", planTime: item.planTime || "", partySize: item.partySize || null };
-  if (item.requiresRefresh && item.placeId) await loadRestaurantDetails({ placeId: item.placeId }, { recordConfirmation: false, recordCompletion: false });
-  else if (item.snapshot) { state.restaurant = item.snapshot; state.view = "result"; render(); }
+function completeActivePendingAnalysis() {
+  if(!state.activePendingId) return;
+  saveActiveDraft("completed"); state.activePendingId=null;postEvent("pending_queue_completed",{queueCount:pendingWork(state.pending).length});
 }
+function openRecentAnalysis(id) { openLocalRecord("recent",id); }
 
 function resetAnalysisAttribution() {
+  measurement.reset();
   state.analysisRunId = "";
   state.analysisSourceMode = "";
   state.analysisStartedAt = null;
@@ -1731,14 +1968,60 @@ function renderPrivacy() {
   attachPrivacyDeleteHandlers();
 }
 
+function renderResearchPanel() {
+  const privacy = document.querySelector(".privacy-view");
+  if (!privacy) return;
+  let panel = privacy.querySelector("#research-panel");
+  if (!panel) {
+    panel = document.createElement("section");
+    panel.id = "research-panel";
+    panel.className = "panel privacy-section";
+    privacy.querySelector(".danger-zone").before(panel);
+  }
+  const copy = researchCopy(currentLocale());
+  const research = measurement.research;
+  const closed = ["not_asked", "declined", "revoked", "expired"].includes(research.state);
+  const pending = ["pending_accept", "pending_revocation"].includes(research.state);
+  panel.innerHTML = `<h2>${copy.title}</h2><p><strong>${copy.intro}</strong></p><p>${copy.body}</p><p>${copy.withdrawal}</p>
+    <p id="research-status" role="status" tabindex="-1">${esc(copy.states[research.state] || copy.states.unavailable)}${research.expiresAt ? ` ${copy.until}${esc(new Date(research.expiresAt).toLocaleString(currentLocale()))}` : ""}</p>
+    <div class="research-actions" aria-busy="${researchBusy}">
+      ${closed ? `<button type="button" data-research="acceptResearch">${copy.join}</button><button type="button" data-research="declineResearch">${copy.decline}</button>` : ""}
+      ${pending ? `<button type="button" data-research="retryResearch">${copy.retry}</button>` : ""}
+      ${["accepted", "pending_accept"].includes(research.state) ? `<button type="button" data-research="revokeResearch">${copy.revoke}</button>` : ""}
+      ${researchBusy ? `<span role="status">${copy.busy}</span>` : ""}
+    </div>`;
+  panel.querySelectorAll("[data-research]").forEach((button) => {
+    button.disabled = researchBusy;
+    button.addEventListener("click", async () => {
+      const action = button.dataset.research;
+      researchBusy = true;
+      renderResearchPanel();
+      try { await measurement[action](); }
+      finally {
+        researchBusy = false;
+        renderResearchPanel();
+        document.querySelector("#research-status")?.focus();
+      }
+    });
+  });
+}
+
 function attachPrivacyDeleteHandlers() {
+  renderResearchPanel();
   document.querySelector("#start-delete")?.addEventListener("click", () => { state.deleteConfirmOpen = true; renderPrivacy(); });
   document.querySelector("#cancel-delete")?.addEventListener("click", () => { state.deleteConfirmOpen = false; renderPrivacy(); });
-  document.querySelector("#confirm-delete")?.addEventListener("click", () => {
-    deleteLocalData(localStorage, sessionStorage);
+  document.querySelector("#confirm-delete")?.addEventListener("click", async (event) => {
+    event.currentTarget.disabled = true;
+    await measurement.revokeResearch();
+    measurement.clearLocalSession();
+    deleteLocalData(deviceStorage, pageSessionStorage);
+    for(const domain of ["saved","recent","pending"]) localData[domain]=taskStorage.clear(domain);
     state.saved = [];
     state.recent = [];
     state.pending = [];
+    state.localUndo=null;
+    state.localDetail=null;
+    state.activePlanId=null;
     state.activePendingId = null;
     state.settings = { ...DEFAULT_SETTINGS };
     state.deleteConfirmOpen = false;
@@ -1825,13 +2108,13 @@ function renderSettings() {
     <section class="panel"><p class="overline">${t("settings.defaults")}</p><h2>${t("settings.reduceInput")}</h2><form id="settings-form" class="settings-form">
       <input type="hidden" name="locale" value="${esc(currentLocale())}">
       <label>${t("settings.party")}<input type="number" name="defaultPartySize" min="1" max="20" value="${esc(state.settings.defaultPartySize)}"></label>
-      ${capabilities.publicReleaseMode ? "" : `<label>${t("settings.access")}${capabilities.pilotAccessRequired ? t("settings.required") : t("settings.optional")}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="${t("home.accessHelp")}"><small>${capabilities.pilotAccessRequired ? t("settings.accessRequiredHelp") : t("settings.accessOptionalHelp")}</small></label>${state.settings.pilotAccessCode ? `<button type="button" class="text-button clear-access-code" id="clear-access-code">${t("settings.clearAccess")}</button>` : ""}`}
+      ${capabilities.publicReleaseMode || (!capabilities.pilotAccessRequired && !state.settings.pilotAccessCode) ? "" : `<label>${t("settings.access")}${capabilities.pilotAccessRequired ? t("settings.required") : t("settings.optional")}<input type="password" name="pilotAccessCode" maxlength="256" autocomplete="off" value="${esc(state.settings.pilotAccessCode)}" placeholder="${t("home.accessPlaceholder")}"><small>${capabilities.pilotAccessRequired ? t("settings.accessRequiredHelp") : t("settings.accessOptionalHelp")}</small></label>${state.settings.pilotAccessCode ? `<button type="button" class="text-button clear-access-code" id="clear-access-code">${t("settings.clearAccess")}</button>` : ""}`}
       <label class="settings-toggle"><input type="checkbox" name="saveRecentAnalyses" ${state.settings.saveRecentAnalyses ? "checked" : ""}><span><strong>${t("settings.history")}</strong><small>${t("settings.historyHelp")}</small></span></label>
       <button type="submit" class="primary-button">${t("settings.submit")}</button>
     </form></section>
     <details class="operations-settings"><summary><span>${t("settings.operationsTitle")}</span><small>${t("settings.operationsBody")}</small></summary><div class="operations-settings-body">
       ${providerStopped ? `<aside class="inline-error"><strong>${t("settings.apiStopped")}</strong><span>${esc(providerStopMessage)} ${t("settings.resume", { time: esc(providerStopUntil) })}</span></aside>` : ""}
-      <section class="panel capability-panel"><div class="panel-heading"><div><p class="overline">${t("settings.capabilities")}</p><h2>${t("settings.apiStatus")}</h2></div><button type="button" class="text-button" id="refresh-capabilities">${t("settings.refresh")}</button></div>${capabilitiesUnavailable ? `<aside class="inline-error"><strong>${t("settings.unavailable")}</strong><span>${t("settings.unavailableBody")}</span></aside>` : `<div class="capability-grid">${providers.map((item) => `<article class="${item.ready ? "ready" : "pending"}"><span>${item.ready ? t("settings.ready") : t("settings.notSet")}</span><strong>${esc(item.label)}</strong><p>${esc(item.detail)}</p></article>`).join("")}</div>`}<p class="source-disclaimer">${t("settings.keysHidden")}</p></section>
+      <section class="panel capability-panel"><div class="panel-heading"><div><p class="overline">${t("settings.capabilities")}</p><h2>${t("settings.apiStatus")}</h2></div><button type="button" class="text-button" id="refresh-capabilities">${t("settings.refresh")}</button></div>${capabilitiesUnavailable ? `<aside class="inline-error"><strong>${t("settings.unavailable")}</strong><span>${t("settings.unavailableBody")}</span></aside>` : `<div class="capability-grid">${providers.map((item) => `<article class="${item.ready ? "ready" : "pending"}"><span>${item.ready ? t("settings.ready") : t("settings.notSet")}</span><strong>${esc(item.label)}</strong><p>${esc(item.detail)}</p></article>`).join("")}</div>`}<p class="source-disclaimer">${t("settings.keysHidden")}</p>${auditSession.active ? `<p class="test-release-version"><strong>${t("testing.version")}</strong><code>${/^[a-f0-9]{40}$/.test(capabilities.releaseRevision || "") && !capabilitiesUnavailable ? esc(capabilities.releaseRevision) : t("testing.versionUnknown")}</code></p>` : ""}</section>
       ${renderDailyBudget(budget)}
     </div></details>
   </section>`;
@@ -1899,9 +2182,19 @@ function renderTerms() {
   </section>`;
 }
 
+function detachPendingWork() {
+  if(state.activePendingId) {
+    state.pending=pausePendingAnalysis(state.pending,state.activePendingId,{clues:state.currentClues,plan:state.currentPlanIntent});
+    syncPending();state.activePendingId=null;state.pendingAnalysisStarted=false;
+  }
+  if(state.view==="loading") resetAnalysisAttribution();
+  workGeneration++;
+}
+
 document.addEventListener("click", (event) => {
   const action = event.target.closest("[data-action]")?.dataset.action;
   if (!action) return;
+  detachPendingWork();
   event.preventDefault();
   if (action === "home") {
     resetCurrentSearchState();
@@ -1914,8 +2207,8 @@ document.addEventListener("click", (event) => {
   if (action === "privacy") state.view = "privacy";
   if (action === "terms") state.view = "terms";
   if (action === "settings") state.view = "settings";
-  const nextPath = pathnameForView(state.view);
-  if (window.location.pathname !== nextPath) history.pushState(null, "", nextPath);
+  const nextPath = auditNavigationPath(pathnameForView(state.view), auditSession);
+  if (`${window.location.pathname}${window.location.search}` !== nextPath) history.pushState(null, "", nextPath);
   render();
   if (action === "settings") getCapabilities({ force: true }).then(() => { if (state.view === "settings") renderSettings(); });
 });
@@ -1929,6 +2222,7 @@ document.querySelector("#language-select")?.addEventListener("change", (event) =
 });
 
 window.addEventListener("popstate", () => {
+  detachPendingWork();
   state.view = viewFromPathname(window.location.pathname);
   render();
 });
