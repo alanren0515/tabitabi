@@ -8,6 +8,7 @@ import { invalidateReleaseEvidence, writeReleaseEvidence } from "../server/relea
 import { currentGitState } from "../server/release-revision.mjs";
 
 const run = promisify(execFile);
+let stage = "configuration";
 
 try {
   const app = flyApplicationName(await readFile("fly.toml", "utf8"));
@@ -20,10 +21,15 @@ try {
   let secretResult;
   let releaseResult;
   try {
+    stage = "machines";
     machineResult = await flyJson(["machine", "list", "-a", app, "--json"], runtime.env);
+    stage = "volumes";
     volumeResult = await flyJson(["volumes", "list", "-a", app, "--json"], runtime.env);
+    stage = "checks";
     checkResult = await flyChecksJson(["checks", "list", "-a", app, "--json"], runtime.env);
+    stage = "secrets";
     secretResult = await flyJson(["secrets", "list", "-a", app, "--json"], runtime.env);
+    stage = "releases";
     releaseResult = await flyJson(["releases", "-a", app, "--json"], runtime.env);
   } finally {
     await runtime.cleanup();
@@ -35,7 +41,9 @@ try {
   console.log(JSON.stringify(report, null, 2));
   if (!result.passed) process.exitCode = 1;
 } catch (error) {
-  const report = { generatedAt: new Date().toISOString(), passed: false, error: safeMessage(error) };
+  const report = { generatedAt: new Date().toISOString(), passed: false, stage,
+    errorCategory: classifyFlyCliError(error).category,
+    cliExitCode: Number.isInteger(error?.code) ? error.code : null, error: safeMessage(error) };
   await writeReleaseEvidence("data/release-evidence/latest-fly.json", report);
   console.error(JSON.stringify(report, null, 2));
   process.exitCode = 1;

@@ -15,7 +15,11 @@ export async function readFlyDailyMonitor({ application, run, env }) {
     "-a", application, "--json", "--timeout", "30"], { env, timeout: 45_000, maxBuffer: 512 * 1024 });
   // flyctl --json can exit zero even when the executed process fails.
   const result = JSON.parse(stdout);
-  if (result?.exit_code !== 0 || typeof result.stdout !== "string") throw new Error("Remote monitoring command failed");
+  if (!result || typeof result !== "object" || Array.isArray(result)) throw new Error("Remote monitoring command failed");
+  // fly-go serializes exit_code with omitempty: a successful zero is absent.
+  // An explicitly present field must still be the number zero.
+  const exitCode = Object.hasOwn(result, "exit_code") ? result.exit_code : 0;
+  if (exitCode !== 0 || typeof result.stdout !== "string") throw new Error("Remote monitoring command failed");
   const markers = result.stdout.split(/\r?\n/).filter((line) => line.startsWith("TABITABI_DAILY_MONITOR="));
   if (markers.length !== 1) throw new Error("Remote daily monitor marker was not returned exactly once");
   const report = JSON.parse(markers[0].slice("TABITABI_DAILY_MONITOR=".length));
