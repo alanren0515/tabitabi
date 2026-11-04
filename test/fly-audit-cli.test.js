@@ -33,6 +33,7 @@ esac
   assert.equal(report.stage, "secrets");
   assert.equal(report.errorCategory, "authentication");
   assert.equal(report.cliExitCode, 3);
-  assert.deepEqual(report.metadataAccess, { httpStatus: 403, access: "denied" });
+  assert.deepEqual(report.metadataAccess, { httpStatus: 403, access: "denied", reasonTerms: [] });
+  assert.equal(report.graphqlMetadata.access, "unavailable");
   assert.doesNotMatch(JSON.stringify(report) + result.stderr, /raw-private-value|synthetic-test-only/);
 });
