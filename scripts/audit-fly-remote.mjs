@@ -6,12 +6,14 @@ import { evaluateFlyRemoteState, parseFlyChecksJson, parseFlyJson } from "../ser
 import { classifyFlyCliError, createFlyCliRuntime } from "../server/fly-cli-runtime.mjs";
 import { invalidateReleaseEvidence, writeReleaseEvidence } from "../server/release-evidence-store.mjs";
 import { currentGitState } from "../server/release-revision.mjs";
+import { probeFlySecretMetadata } from "./fly-secret-access-diagnostic.mjs";
 
 const run = promisify(execFile);
 let stage = "configuration";
+let app;
 
 try {
-  const app = flyApplicationName(await readFile("fly.toml", "utf8"));
+  app = flyApplicationName(await readFile("fly.toml", "utf8"));
   if (!app) throw new Error("fly.toml must contain a valid committed app name");
   await invalidateReleaseEvidence("data/release-evidence/latest-fly.json");
   const runtime = await createFlyCliRuntime();
@@ -44,6 +46,7 @@ try {
   const report = { generatedAt: new Date().toISOString(), passed: false, stage,
     errorCategory: classifyFlyCliError(error).category,
     cliExitCode: Number.isInteger(error?.code) ? error.code : null, error: safeMessage(error) };
+  if (stage === "secrets") report.metadataAccess = await probeFlySecretMetadata({ app });
   await writeReleaseEvidence("data/release-evidence/latest-fly.json", report);
   console.error(JSON.stringify(report, null, 2));
   process.exitCode = 1;
