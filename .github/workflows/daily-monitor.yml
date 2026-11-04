@@ -31,9 +31,4 @@ jobs:
         run: npm run monitor:daily
       - name: Publish monitoring summary
         if: always()
-        run: |
-          if [ -f data/monitoring/latest.json ]; then
-            cat data/monitoring/latest.json >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Daily monitor did not produce a report." >> "$GITHUB_STEP_SUMMARY"
-          fi
+        run: node scripts/monitoring-summary.mjs >> "$GITHUB_STEP_SUMMARY"

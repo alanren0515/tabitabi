@@ -3,10 +3,39 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { buildDailyMonitoringReport, mergeExternalMonitoring, writeMonitoringSnapshot } from "../server/daily-monitoring.mjs";
+import { buildDailyMonitoringReport, buildUnavailableDailyMonitoringReport, renderMonitoringSummary, mergeExternalMonitoring, writeMonitoringSnapshot } from "../server/daily-monitoring.mjs";
 
 const revision = "a".repeat(40);
 const budgetLimits = { places_search: 10 };
+
+test("CI summary separates unavailable private usage from unchecked public health and omits arbitrary content", () => {
+  const report = buildUnavailableDailyMonitoringReport({ error: { code: "MONITOR_TOKEN_MISSING" } });
+  report.alerts.push({ code: "<script>private-value</script>", message: "sensitive-test-text" });
+  const summary = renderMonitoringSummary(report);
+  assert.match(summary, /Public health: not checked/);
+  assert.match(summary, /Private usage: unknown/);
+  assert.match(summary, /Secret availability/);
+  assert.doesNotMatch(summary, /private-value|sensitive-test-text/);
+  assert.match(renderMonitoringSummary(null), /Usage is unknown/);
+});
+
+test("missing monitoring credentials keep usage unknown and direct operators to Secrets instead of deployment", () => {
+  const report = buildUnavailableDailyMonitoringReport({ error: { code: "MONITOR_TOKEN_MISSING" }, revision, now: "2026-11-03T04:00:00Z" });
+  assert.equal(report.status, "critical");
+  assert.equal(report.remoteDiagnostic.category, "credentialMissing");
+  assert.equal(report.alerts[0].code, "MONITOR_CREDENTIAL_MISSING");
+  assert.equal(report.budget, null);
+  assert.equal(report.eventCounts.eligibleLiveEventsToday, null);
+  assert.equal(report.date, "2026-11-03");
+  assert.match(report.alerts[0].action, /Actions Secrets/);
+});
+
+test("remote authentication failures produce sanitized diagnostics rather than claiming a missing script", () => {
+  const report = buildUnavailableDailyMonitoringReport({ error: { message: "unauthorized secret-test-value", stderr: "private details" }, revision });
+  assert.equal(report.remoteDiagnostic.category, "authentication");
+  assert.doesNotMatch(JSON.stringify(report), /secret-test-value|private details|先部署包含/);
+  assert.equal(report.alerts[0].code, "REMOTE_DAILY_MONITOR_UNAVAILABLE");
+});
 
 function event(eventName, run, extra = {}) {
   return { event: eventName, analysisRunId: run, trafficType: "product", sourceMode: "live", occurredAt: "2026-08-04T02:00:00.000Z", ...extra };

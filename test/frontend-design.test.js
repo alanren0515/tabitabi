@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-test("keeps the home hierarchy compact, input-first, and mobile-readable", async () => {
+test("keeps labeled input routes before submission and readable theme contrast", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../src/app.js", import.meta.url), "utf8"),
     readFile(new URL("../src/styles.css", import.meta.url), "utf8")
@@ -12,18 +12,25 @@ test("keeps the home hierarchy compact, input-first, and mobile-readable", async
   assert.match(app, /class="hero-workbench"/);
   assert.doesNotMatch(app, /class="hero-route"/);
   assert.match(app, /home\.startEmpty/);
-  assert.match(css, /\.hero\s*\{[^}]*grid-template-columns:/s);
-  assert.match(css, /@media \(max-width:760px\)[^]*?\.hero h1\s*\{[^}]*font-size:31px/s);
-  assert.match(css, /body\s*\{[^}]*font-size:16px/s);
-  assert.match(css, /--paper:#f2f4f5/);
-  assert.match(css, /--primary:#1d4b73/);
-  assert.match(css, /--success:#2f6d59/);
-  assert.match(css, /--accent:#f0a43b/);
-  assert.match(css, /\.primary-input-method \{[^}]*border:2px solid var\(--primary\)[^}]*background:var\(--primary-soft\)/);
-  assert.match(css, /\.upload-button \{[^}]*min-height:164px[^}]*border:2px dashed/);
-  assert.match(css, /\.secondary-input-method \{[^}]*margin-top:12px[^}]*background:var\(--card\)/);
-  assert.match(css, /\.secondary-input-method textarea,.supplemental-clue textarea \{ min-height:76px; \}/);
-  assert.doesNotMatch(css, /--green:#(?:28624c|174b3a|e1ebe4)/);
+  const home = app.slice(app.indexOf("function renderHome()"), app.indexOf("async function attachScreenshotFile"));
+  assert.match(home, /aria-labelledby="image-method-title"/);
+  assert.match(home, /for="clue"/);
+  assert.ok(home.indexOf('id="image-method-title"') < home.indexOf('id="analyze-submit-label"'));
+  assert.ok(home.indexOf('for="clue"') < home.indexOf('id="analyze-submit-label"'));
+  const tokens = Object.fromEntries([...css.match(/:root\s*\{([^]*?)\}/)[1].matchAll(/--([a-z-]+):\s*([^;]+);/g)].map(([, key, value]) => [key, value.trim()]));
+  const luminance = hex => {
+    const rgb = hex.replace("#", "").match(/../g).map(part => parseInt(part, 16) / 255)
+      .map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4);
+    return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
+  };
+  for (const [foreground, background, minimum] of [
+    ["ink", "paper", 4.5], ["muted", "paper", 4.5], ["subtle", "card", 4.5],
+    ["primary", "card", 4.5], ["amber", "surface-warning", 4.5],
+    ["red", "surface-danger", 4.5], ["control-border", "card", 3], ["focus", "paper", 3]
+  ]) {
+    const [light, dark] = [luminance(tokens[foreground]), luminance(tokens[background])].sort((a, b) => b - a);
+    assert.ok((light + .05) / (dark + .05) >= minimum, `${foreground} on ${background} needs ${minimum}:1 contrast`);
+  }
   assert.match(css, /@media \(prefers-reduced-motion:reduce\)/);
 });
 
@@ -54,9 +61,11 @@ test("uses action-specific result labels and readable secondary reasons", async 
   assert.match(css, /\.secondary-decision-card \.decision-details>summary,.secondary-decision-card \.decision-details>summary::marker \{ color:var\(--primary-strong\); \}/);
 });
 
-test("bumps the offline shell when core interface assets change", async () => {
+test("moves the redesigned interface beyond the previous offline shell", async () => {
   const sw = await readFile(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(sw, /const CACHE_NAME = "tabitabi-shell-v85"/);
+  const version = Number(sw.match(/const CACHE_NAME = "tabitabi-shell-v(\d+)"/)?.[1]);
+  assert.ok(version > 85, "the redesigned assets must not reuse the previous v85 cache");
+  assert.match(sw, /key !== CACHE_NAME/);
 });
 
 test("keeps key stage headings and empty-input action available in all languages", async () => {

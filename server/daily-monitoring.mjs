@@ -2,6 +2,44 @@ import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/pro
 import { join } from "node:path";
 import { pilotEligibleLiveEvents, summarizePilotMetrics } from "./pilot-metrics.mjs";
 import { dailyBudgetSnapshot } from "./daily-budget.mjs";
+import { classifyFlyCliError } from "./fly-cli-runtime.mjs";
+
+export function renderMonitoringSummary(report) {
+  if (!report || typeof report !== "object") return "## TabiTabi daily monitoring\n\nNo readable report was produced; inspect the failed step. Usage is unknown.\n";
+  const status = ["healthy", "warning", "critical"].includes(report.status) ? report.status : "unknown";
+  const codes = Array.isArray(report.alerts) ? [...new Set(report.alerts.map((item) => item?.code).filter((code) => /^[A-Z][A-Z0-9_]{0,79}$/.test(code)))] : [];
+  const missingCredential = codes.includes("MONITOR_CREDENTIAL_MISSING");
+  return ["## TabiTabi daily monitoring", "", `Status: **${status}**`, "",
+    `Public health: ${report.http?.health?.ok === true ? "passed" : report.http ? "failed" : "not checked"}`,
+    `Private usage: ${report.budget ? "report available" : "unknown"}`, "",
+    ...codes.map((code) => `- ${code}`), "",
+    missingCredential ? "Actions did not receive FLY_API_TOKEN. Check repository Secret availability or the job environment. Do not redeploy or copy a personal login credential to fix this."
+      : "Use the monitoring report and runbook to investigate. A private monitoring failure alone does not prove a website outage.", ""].join("\n");
+}
+
+export function buildUnavailableDailyMonitoringReport({ error, revision, now = new Date() } = {}) {
+  const diagnostic = error?.code === "MONITOR_TOKEN_MISSING"
+    ? { category: "credentialMissing", message: "GitHub Actions 未获得 FLY_API_TOKEN；私有监测与预算状态未知。" }
+    : classifyFlyCliError(error);
+  const actions = {
+    credentialMissing: "在仓库 Actions Secrets 配置仅限本应用及指定监控命令的 Fly machine-exec 凭据；若使用 Environment Secret，工作流必须声明对应 environment。不要复制个人登录凭据或通过重新部署解决。",
+    authentication: "核对 Actions Secret 的有效期、目标应用及所需权限；不要通过重新部署解决鉴权失败。",
+    machineStopped: "当前没有运行中的 Machine；先检查现有 HTTP 健康探测结果与自动启动配置，不要扩容。",
+    cliMissing: "检查 Fly CLI 安装和 PATH。",
+    timeout: "检查网络和 Fly 状态；超时不能证明远端脚本缺失。"
+  };
+  return {
+    schemaVersion: 1, generatedAt: new Date(now).toISOString(), date: tokyoDate(now), timeZone: "Asia/Tokyo",
+    releaseRevision: validRevision(revision) ? revision : null,
+    eventCounts: { totalEventsToday: null, eligibleLiveEventsToday: null },
+    dailyAllReleases: null, dailyCurrentRelease: null, budget: null, providerCircuit: null,
+    readiness: { ready: false, missing: ["remote_daily_monitor_unavailable"] }, sources: [],
+    remoteDiagnostic: diagnostic,
+    alerts: [{ severity: "critical", code: diagnostic.category === "credentialMissing" ? "MONITOR_CREDENTIAL_MISSING" : "REMOTE_DAILY_MONITOR_UNAVAILABLE",
+      message: diagnostic.message, action: actions[diagnostic.category] || "检查 Fly 私有监测访问与远端脚本；先确定原因，不要直接重新部署。" }],
+    status: "critical"
+  };
+}
 
 export const DEFAULT_MONITORING_LIMITS = Object.freeze({
   vision_requests: 60,

@@ -7,7 +7,10 @@ test("declares an installable text/link share target with real PNG icons", async
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   assert.equal(manifest.id, "/");
   assert.equal(manifest.scope, "/");
-  assert.equal(manifest.background_color, "#f2f4f5");
+  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  const canvas = css.match(/--paper:\s*(#[a-f0-9]{6})/i)?.[1];
+  assert.ok(canvas, "the application canvas token must be defined");
+  assert.equal(manifest.background_color, canvas);
   assert.equal(manifest.theme_color, manifest.background_color);
   assert.match(html, new RegExp(`<meta name="theme-color" content="${manifest.theme_color}"`));
   assert.doesNotMatch(html, /fonts\.(?:googleapis|gstatic)\.com/);
