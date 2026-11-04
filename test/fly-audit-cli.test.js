@@ -31,8 +31,9 @@ esac
   const report = JSON.parse(await readFile(join(directory, "data/release-evidence/latest-fly.json"), "utf8"));
   assert.equal(report.passed, false);
   assert.equal(report.stage, "secrets");
-  assert.equal(report.errorCategory, "authentication");
+  assert.equal(report.errorCategory, "secretMetadataAccessDenied");
   assert.equal(report.cliExitCode, 3);
-  assert.deepEqual(report.metadataAccess, { httpStatus: 403, access: "denied" });
+  assert.deepEqual(report.metadataAccess, { httpStatus: 403, access: "denied", reasonTerms: [] });
+  assert.match(report.error, /Keep the deployed-secret check failing/);
   assert.doesNotMatch(JSON.stringify(report) + result.stderr, /raw-private-value|synthetic-test-only/);
 });

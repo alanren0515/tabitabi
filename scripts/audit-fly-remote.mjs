@@ -6,7 +6,7 @@ import { evaluateFlyRemoteState, parseFlyChecksJson, parseFlyJson } from "../ser
 import { classifyFlyCliError, createFlyCliRuntime } from "../server/fly-cli-runtime.mjs";
 import { invalidateReleaseEvidence, writeReleaseEvidence } from "../server/release-evidence-store.mjs";
 import { currentGitState } from "../server/release-revision.mjs";
-import { probeFlySecretMetadata } from "./fly-secret-access-diagnostic.mjs";
+import { probeFlySecretMetadata, safeDiagnosticTerms } from "./fly-secret-access-diagnostic.mjs";
 
 const run = promisify(execFile);
 let stage = "configuration";
@@ -45,8 +45,15 @@ try {
 } catch (error) {
   const report = { generatedAt: new Date().toISOString(), passed: false, stage,
     errorCategory: classifyFlyCliError(error).category,
-    cliExitCode: Number.isInteger(error?.code) ? error.code : null, error: safeMessage(error) };
-  if (stage === "secrets") report.metadataAccess = await probeFlySecretMetadata({ app });
+    cliExitCode: Number.isInteger(error?.code) ? error.code : null,
+    cliFailureTerms: safeDiagnosticTerms(error?.stderr || error?.message), error: safeMessage(error) };
+  if (stage === "secrets") {
+    report.metadataAccess = await probeFlySecretMetadata({ app });
+    if (report.metadataAccess.access === "denied") {
+      report.errorCategory = "secretMetadataAccessDenied";
+      report.error = "Fly rejected Secret metadata access for the scoped monitoring credential. Keep the deployed-secret check failing until the approved access scope is supported.";
+    }
+  }
   await writeReleaseEvidence("data/release-evidence/latest-fly.json", report);
   console.error(JSON.stringify(report, null, 2));
   process.exitCode = 1;
