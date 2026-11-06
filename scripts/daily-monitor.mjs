@@ -33,7 +33,8 @@ console.log(JSON.stringify(report, null, 2));
 if (report.status === "critical") process.exitCode = 2;
 
 async function readRemoteMonitor(application) {
-  const runtime = await createFlyCliRuntime();
+  const { FLY_SECRET_METADATA_TOKEN: ignoredMetadataToken, ...env } = process.env;
+  const runtime = await createFlyCliRuntime({ env });
   try {
     return await readFlyDailyMonitor({ application, run, env: runtime.env });
   } finally { await runtime.cleanup(); }
@@ -48,7 +49,7 @@ async function readRemoteMonitorOrUnavailable(application, revision) {
 }
 
 async function runFlyAudit() {
-  try { await run(process.execPath, ["scripts/audit-fly-remote.mjs"], { timeout: 60_000, maxBuffer: 512 * 1024 }); }
+  try { await run(process.execPath, ["scripts/audit-fly-remote.mjs"], { timeout: 180_000, maxBuffer: 512 * 1024 }); }
   catch { /* The sanitized evidence file is the source for the combined alert. */ }
   return readJson("data/release-evidence/latest-fly.json", { passed: false });
 }

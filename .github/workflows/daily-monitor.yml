@@ -14,7 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       TABITABI_BASE_URL: https://tabitabi-jp.fly.dev
     steps:
       - name: Check out the monitored revision
@@ -28,6 +27,9 @@ jobs:
       - name: Add Fly CLI to PATH
         run: echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
       - name: Run daily monitor
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_SECRET_METADATA_TOKEN: ${{ secrets.FLY_SECRET_METADATA_TOKEN }}
         run: npm run monitor:daily
       - name: Publish monitoring summary
         if: always()

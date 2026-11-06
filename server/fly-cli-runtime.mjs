@@ -65,10 +65,11 @@ export async function pruneStaleFlyCliRuntimes({ tempRoot = tmpdir(), readdirImp
 export function classifyFlyCliError(error, { remotePilot = false } = {}) {
   const message = `${String(error?.message || "Fly CLI request failed")} ${String(error?.stderr || "")}`;
   if (error?.code === "ENOENT") return failure("cliMissing", "flyctl is not installed or is not on PATH.");
-  if (/operation not permitted|permission denied/i.test(message)) {
+  if (["EACCES", "EPERM"].includes(error?.code) || /(?:open|mkdir|chmod|config directory perms)[^\n]*(?:operation not permitted|permission denied)/i.test(message)) {
     return failure("configAccess", "Fly CLI could not initialize its private local runtime directory. Run the audit as the same OS user that owns the Fly login; do not print or manually copy the token.");
   }
   if (/not logged in|unauthorized|authentication/i.test(message)) return failure("authentication", "Fly CLI login is missing or expired.");
+  if (/permission denied|forbidden|operation not permitted/i.test(message)) return failure("accessDenied", "Fly rejected this operation for the supplied credential. Review its approved access scope; a local directory change will not grant remote access.");
   if (/timed out|timeout/i.test(message)) return failure("timeout", remotePilot ? "Remote pilot audit timed out; retry without changing resources." : "Fly remote audit timed out; retry without changing resources.");
   if (/Machine .* is not started|could not find a running machine/i.test(message)) return failure("machineStopped", "The Fly Machine is stopped; run the provider-free smoke first, then retry.");
   if (/could not find app|failed to get app/i.test(message)) return failure("appMissing", "Fly app does not exist. Create it only after cost authorization.");

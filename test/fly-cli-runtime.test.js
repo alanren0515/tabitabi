@@ -71,6 +71,8 @@ test("classifies Fly failures without exposing stderr contents", () => {
   const denied = classifyFlyCliError({ message: "open /Users/person/.fly/perms: operation not permitted" });
   assert.equal(denied.category, "configAccess");
   assert.doesNotMatch(denied.message, /Users\/person|perms/);
+  assert.equal(classifyFlyCliError({ stderr: "API request failed: permission denied private-token" }).category, "accessDenied");
+  assert.equal(classifyFlyCliError({ code: "EACCES", message: "restricted local path" }).category, "configAccess");
   assert.equal(classifyFlyCliError({ stderr: "unauthorized token-value" }).category, "authentication");
   assert.equal(classifyFlyCliError({ message: "request timeout" }).category, "timeout");
   assert.equal(classifyFlyCliError({ message: "unexpected secret-value" }).category, "remoteUnavailable");
@@ -93,8 +95,8 @@ test("persists a current-revision remote pilot failure shape instead of reusing 
     auditRevision: revision,
     repositoryClean: true,
     gatePassed: false,
-    errorCategory: "configAccess",
-    error: "Fly CLI could not initialize its private local runtime directory. Run the audit as the same OS user that owns the Fly login; do not print or manually copy the token."
+    errorCategory: "accessDenied",
+    error: "Fly rejected this operation for the supplied credential. Review its approved access scope; a local directory change will not grant remote access."
   });
 });
 
