@@ -119,6 +119,24 @@ test("unset metadata credential preserves the existing monitor credential", asyn
   assert.equal(probes[0].usesMetadataToken, false);
 });
 
+test("a recent routing transition gets one bounded health observation without repeating Secret or exec work", async (t) => {
+  const machines = structuredClone(valid.machines);
+  machines[0].events = [{ type: "cordon", status: "started", timestamp: Date.now() - 55_000 }];
+  const { report, calls, environments } = await runAudit(t, {
+    machines, metadataToken: "synthetic-metadata-test-only", expectedStatus: 0, expectedCalls: 7,
+    checkSequence: [
+      { "machine-1": [{ name: "http_service", status: "warning" }] }, valid.checks
+    ]
+  });
+  assert.equal(report.passed, true);
+  assert.equal(report.healthObservation.attempted, true);
+  assert.equal(report.healthObservation.accepted, true);
+  assert.equal(report.healthObservation.waitMs, 0);
+  assert.deepEqual(calls, ["machines", "volumes", "checks", "secrets", "releases", "machines", "checks"]);
+  assert.equal(environments.filter((item) => item.usesMetadataToken).length, 1);
+  assert.ok(environments.filter((item) => item.stage !== "secrets").every((item) => item.usesLegacyToken));
+});
+
 test("complete collection still requires all required Secrets to be deployed", async (t) => {
   for (const [name, secrets, expectedPassed] of [
     ["deployed", valid.secrets, true],
@@ -135,11 +153,11 @@ test("complete collection still requires all required Secrets to be deployed", a
   }
 });
 
-async function runAudit(t, { failures = {}, machines = valid.machines, secrets = valid.secrets, metadataProbeStatus = 403, expectedStatus = 1, metadataToken, legacyAccessToken } = {}) {
+async function runAudit(t, { failures = {}, machines = valid.machines, secrets = valid.secrets, metadataProbeStatus = 403, expectedStatus = 1, metadataToken, legacyAccessToken, checkSequence, expectedCalls = 5 } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "tabitabi-fly-audit-cli-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   await writeFile(join(directory, "fly.toml"), 'app = "tabitabi-jp"\n');
-  await writeFile(join(directory, "responses.json"), JSON.stringify({ ...valid, machines, secrets, failures }));
+  await writeFile(join(directory, "responses.json"), JSON.stringify({ ...valid, machines, secrets, failures, checkSequence }));
   await writeFile(join(directory, "probe-calls.txt"), "");
   const preload = join(directory, "metadata-probe.mjs");
   await writeFile(preload, `import { appendFileSync } from "node:fs";
@@ -169,7 +187,12 @@ appendFileSync(join(directory, "environments.jsonl"), JSON.stringify({ stage,
 const failure = responses.failures[stage];
 if (failure) { process.stderr.write(failure.stderr); process.exit(failure.code); }
 if (!Object.hasOwn(responses, stage)) process.exit(9);
-process.stdout.write(JSON.stringify(responses[stage]));
+let response = responses[stage];
+if (stage === "checks" && Array.isArray(responses.checkSequence)) {
+  const count = readFileSync(join(directory, "calls.txt"), "utf8").split("\\n").filter(item => item === "checks").length;
+  response = responses.checkSequence[Math.min(count - 1, responses.checkSequence.length - 1)];
+}
+process.stdout.write(JSON.stringify(response));
 `, { mode: 0o700 });
   await writeFile(join(directory, "git"), `#!/bin/sh
 if [ "$1" = "rev-parse" ]; then printf '${"a".repeat(40)}\\n'; fi
@@ -185,7 +208,7 @@ if [ "$1" = "rev-parse" ]; then printf '${"a".repeat(40)}\\n'; fi
   assert.equal(result.status, expectedStatus, result.stderr);
   const report = JSON.parse(await readFile(join(directory, "data/release-evidence/latest-fly.json"), "utf8"));
   const calls = (await readFile(join(directory, "calls.txt"), "utf8")).trim().split("\n");
-  assert.equal(calls.length, 5);
+  assert.equal(calls.length, expectedCalls);
   const probeText = (await readFile(join(directory, "probe-calls.txt"), "utf8")).trim();
   const probes = probeText ? probeText.split("\n").map((line) => JSON.parse(line)) : [];
   assert.equal(probes.length, failures.secrets ? 1 : 0);

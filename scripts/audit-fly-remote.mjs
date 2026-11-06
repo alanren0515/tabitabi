@@ -7,14 +7,17 @@ import { classifyFlyCliError, createFlyCliRuntime } from "../server/fly-cli-runt
 import { invalidateReleaseEvidence, writeReleaseEvidence } from "../server/release-evidence-store.mjs";
 import { currentGitState } from "../server/release-revision.mjs";
 import { probeFlySecretMetadata, safeDiagnosticTerms } from "./fly-secret-access-diagnostic.mjs";
+import { observeFlyHealthTransition } from "../server/fly-health-observation.mjs";
 
 const run = promisify(execFile);
 const { FLY_SECRET_METADATA_TOKEN: configuredMetadataToken, ...defaultFlyEnv } = process.env;
 const metadataToken = String(configuredMetadataToken || "").trim();
+const auditDeadline = Date.now() + 170_000;
 let stage = "configuration";
 let app;
 const remoteState = {};
 const collection = {};
+let healthObservation;
 
 try {
   app = flyApplicationName(await readFile("fly.toml", "utf8"));
@@ -35,9 +38,27 @@ try {
       stage = name;
       await collectSource(name, request, runtime.env);
     }
+    if (Object.values(collection).every((item) => item.status === "succeeded")) {
+      stage = "evaluation";
+      evaluateCollectedState();
+      stage = "health_observation";
+      const observed = await observeFlyHealthTransition({
+        state: remoteState, deadline: auditDeadline,
+        readMachines: () => {
+          stage = "health_machine_refresh";
+          return flyJson(["machine", "list", "-a", app, "--json"], runtime.env);
+        },
+        readChecks: () => {
+          stage = "health_checks_refresh";
+          return flyChecksJson(["checks", "list", "-a", app, "--json"], runtime.env);
+        }
+      });
+      Object.assign(remoteState, observed.state);
+      healthObservation = observed.evidence;
+    }
   } finally {
-    stage = "cleanup";
-    await runtime.cleanup();
+    try { await runtime.cleanup(); }
+    catch (error) { stage = "cleanup"; throw error; }
   }
   stage = "evaluation";
   const result = evaluateCollectedState();
@@ -45,7 +66,7 @@ try {
   const { status: ignoredStatus, ...failure } = firstFailure || {};
   stage = "revision";
   const git = await currentGitState();
-  const report = { generatedAt: new Date().toISOString(), app, revision: git.revision, repositoryClean: git.clean, ...result, ...failure };
+  const report = { generatedAt: new Date().toISOString(), app, revision: git.revision, repositoryClean: git.clean, ...result, ...failure, healthObservation };
   stage = "evidence";
   await writeReleaseEvidence("data/release-evidence/latest-fly.json", report);
   if (firstFailure) console.error(JSON.stringify(report, null, 2));
@@ -55,7 +76,7 @@ try {
   let result;
   try { result = evaluateCollectedState(); }
   catch { result = { collectionComplete: false, collection }; }
-  const report = { generatedAt: new Date().toISOString(), app, ...result, passed: false, ...await boundedFailure(stage, error) };
+  const report = { generatedAt: new Date().toISOString(), app, ...result, passed: false, ...await boundedFailure(stage, error), healthObservation };
   await writeReleaseEvidence("data/release-evidence/latest-fly.json", report);
   console.error(JSON.stringify(report, null, 2));
   process.exitCode = 1;
